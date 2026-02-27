@@ -39,8 +39,8 @@ langchain-openai>=0.2,<0.3
 langchain-pinecone>=0.2,<0.3
 openai>=1.50,<2.0
 
-# Push Notifications
-pyfcm>=2.0,<3.0
+# Push Notifications (Firebase V1 API)
+firebase-admin>=6.5,<7.0
 
 # Excel Import/Export
 openpyxl>=3.1,<4.0

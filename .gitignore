@@ -59,6 +59,7 @@ admin_panel/dist/
 *.pem
 *.key
 *.crt
+firebase-service-account.json
 
 # ---- Docker ----
 docker-compose.override.yml

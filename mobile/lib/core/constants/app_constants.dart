@@ -6,8 +6,8 @@ class AppConstants {
   static const String appNameAr = 'إيدو كونكت الجزائر';
 
   // API Configuration
-  static const String baseUrl = 'http://10.0.2.2:8000/api/v1';
-  static const String wsBaseUrl = 'ws://10.0.2.2:8000/ws';
+  static const String baseUrl = 'http://10.0.2.2:8001/api/v1';
+  static const String wsBaseUrl = 'ws://10.0.2.2:8001/ws';
 
   // Pagination
   static const int defaultPageSize = 20;

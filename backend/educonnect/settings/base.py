@@ -130,14 +130,14 @@ AUTH_USER_MODEL = "accounts.User"
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        "NAME": "django.contrib.auth.password_validators.UserAttributeSimilarityValidator"
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
     },
     {
-        "NAME": "django.contrib.auth.password_validators.MinimumLengthValidator",
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
         "OPTIONS": {"min_length": 8},
     },
-    {"NAME": "django.contrib.auth.password_validators.CommonPasswordValidator"},
-    {"NAME": "django.contrib.auth.password_validators.NumericPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
 
@@ -297,10 +297,16 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 # ===========================================================================
-# FCM (Firebase Cloud Messaging)
+# Firebase (V1 API — Push Notifications)
 # ===========================================================================
 
-FCM_SERVER_KEY = config("FCM_SERVER_KEY", default="")
+import os
+
+FIREBASE_SERVICE_ACCOUNT_PATH = os.path.join(
+    BASE_DIR,
+    config("FIREBASE_SERVICE_ACCOUNT_PATH", default="firebase-service-account.json"),
+)
+FIREBASE_PROJECT_ID = config("FIREBASE_PROJECT_ID", default="educonnectdz")
 
 
 # ===========================================================================
