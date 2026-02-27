@@ -2,7 +2,6 @@ import 'package:get_it/get_it.dart';
 
 import '../network/dio_client.dart';
 import '../storage/hive_storage_service.dart';
-import '../storage/hive_storage_service.dart';
 import '../storage/secure_storage_service.dart';
 import '../../features/auth/data/datasources/auth_remote_datasource.dart';
 import '../../features/auth/data/repositories/auth_repository.dart';
@@ -30,13 +29,7 @@ Future<void> configureDependencies() async {
 
   getIt.registerLazySingleton<HiveStorageService>(() => HiveStorageService());
 
-  getIt.registerLazySingleton<HiveStorageService>(() => HiveStorageService());
-
   getIt.registerLazySingleton<DioClient>(
-    () => DioClient(
-      secureStorage: getIt<SecureStorageService>(),
-      cacheStorage: getIt<HiveStorageService>(),
-    ),
     () => DioClient(
       secureStorage: getIt<SecureStorageService>(),
       cacheStorage: getIt<HiveStorageService>(),
