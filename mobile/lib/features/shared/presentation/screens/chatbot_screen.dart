@@ -40,8 +40,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     _messageController.clear();
     _scrollToBottom();
 
-    // TODO: Call AIchatbot repository → RAG pipeline
-    // Simulating a response delay
+    // Simulating a response delay — will be replaced with AI chatbot repository call
     Future.delayed(const Duration(seconds: 1), () {
       if (!mounted) return;
       setState(() {

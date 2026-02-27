@@ -9,6 +9,14 @@ class TeacherHomeScreen extends StatelessWidget {
 
   const TeacherHomeScreen({super.key, required this.child});
 
+  int _currentIndex(BuildContext context) {
+    final location = GoRouterState.of(context).uri.toString();
+    if (location.startsWith('/teacher/grades')) return 2;
+    if (location.startsWith('/teacher/attendance')) return 3;
+    if (location.startsWith('/teacher/homework')) return 1;
+    return 0;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -35,9 +43,18 @@ class TeacherHomeScreen extends StatelessWidget {
       ),
       body: child,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: 0,
+        selectedIndex: _currentIndex(context),
         onDestinationSelected: (index) {
-          // TODO: Implement teacher navigation routes
+          switch (index) {
+            case 0:
+              context.go('/teacher');
+            case 1:
+              context.go('/teacher/homework');
+            case 2:
+              context.go('/teacher/grades');
+            case 3:
+              context.go('/teacher/attendance');
+          }
         },
         destinations: const [
           NavigationDestination(

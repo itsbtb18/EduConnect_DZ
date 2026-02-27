@@ -4,6 +4,7 @@ EduConnect Algeria — Base Django Settings
 Settings common to all environments.
 """
 
+import os
 from datetime import timedelta
 from pathlib import Path
 
@@ -299,8 +300,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # ===========================================================================
 # Firebase (V1 API — Push Notifications)
 # ===========================================================================
-
-import os
 
 FIREBASE_SERVICE_ACCOUNT_PATH = os.path.join(
     BASE_DIR,

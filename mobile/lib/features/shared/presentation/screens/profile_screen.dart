@@ -94,7 +94,11 @@ class ProfileScreen extends StatelessWidget {
                     title: const Text('Changer le mot de passe'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
-                      // TODO: Navigate to change password screen
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Changement de mot de passe à venir'),
+                        ),
+                      );
                     },
                   ),
                   const Divider(),

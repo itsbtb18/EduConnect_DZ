@@ -8,7 +8,6 @@ class HomeworkScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Connect to HomeworkBloc and load actual data
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(

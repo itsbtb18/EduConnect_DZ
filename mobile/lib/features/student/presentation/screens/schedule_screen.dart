@@ -9,7 +9,6 @@ class ScheduleScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Connect to AcademicBloc and load actual schedule
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(

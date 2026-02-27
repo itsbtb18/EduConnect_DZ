@@ -9,6 +9,13 @@ class ParentHomeScreen extends StatelessWidget {
 
   const ParentHomeScreen({super.key, required this.child});
 
+  int _currentIndex(BuildContext context) {
+    final location = GoRouterState.of(context).uri.toString();
+    if (location.startsWith('/parent/grades')) return 1;
+    if (location.startsWith('/parent/attendance')) return 2;
+    return 0;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -35,9 +42,16 @@ class ParentHomeScreen extends StatelessWidget {
       ),
       body: child,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: 0,
+        selectedIndex: _currentIndex(context),
         onDestinationSelected: (index) {
-          // TODO: Implement parent navigation routes
+          switch (index) {
+            case 0:
+              context.go('/parent');
+            case 1:
+              context.go('/parent/grades');
+            case 2:
+              context.go('/parent/attendance');
+          }
         },
         destinations: const [
           NavigationDestination(

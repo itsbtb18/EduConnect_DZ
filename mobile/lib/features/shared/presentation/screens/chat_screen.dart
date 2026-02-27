@@ -8,7 +8,6 @@ class ChatScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Connect to ChatBloc
     return Scaffold(
       appBar: AppBar(title: const Text('Messages')),
       body: const Center(

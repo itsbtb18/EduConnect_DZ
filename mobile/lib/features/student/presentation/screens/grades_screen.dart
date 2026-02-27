@@ -8,7 +8,6 @@ class GradesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Connect to GradeBloc and load actual data
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(

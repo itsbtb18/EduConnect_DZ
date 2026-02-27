@@ -1,0 +1,74 @@
+# ============================================================
+# EduConnect Algeria — Docker Build Ignore
+# ============================================================
+# Keeps the build context small and fast.
+# ============================================================
+
+# Version control
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*.pyo
+*.egg-info
+dist/
+build/
+*.egg
+*.whl
+venv/
+.venv/
+env/
+.Python
+
+# Virtual environments
+backend/venv/
+backend/.venv/
+
+# IDE
+.vscode/
+.idea/
+*.iml
+*.swp
+*.swo
+*~
+
+# Testing & Coverage
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage/
+*.cover
+.tox/
+nosetests.xml
+coverage.xml
+
+# Docker (don't send compose files into build)
+docker-compose*.yml
+Dockerfile
+
+# Docs & misc
+*.md
+LICENSE
+docs/
+
+# Flutter (not needed for backend image)
+mobile/
+
+# Nginx (separate volume mount)
+nginx/
+
+# Admin panel
+admin_panel/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Large/sensitive files (mounted as volumes instead)
+media/
+staticfiles/
+*.log
+*.sqlite3

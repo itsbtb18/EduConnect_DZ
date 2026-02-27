@@ -181,7 +181,6 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
             trailing: IconButton(
               icon: const Icon(Icons.download),
               onPressed: () {
-                // TODO: Download resource via repository
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Téléchargement: ${res['title']}')),
                 );

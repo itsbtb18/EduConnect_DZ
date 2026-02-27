@@ -54,7 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 context.go('/parent');
               case 'admin':
               case 'superadmin':
-                context.go('/student'); // TODO: Admin panel
+                context.go('/teacher');
               default:
                 context.go('/student');
             }

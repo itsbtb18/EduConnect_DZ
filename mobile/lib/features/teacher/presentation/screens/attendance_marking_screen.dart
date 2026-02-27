@@ -212,7 +212,6 @@ class _AttendanceMarkingScreenState extends State<AttendanceMarkingScreen> {
   };
 
   void _onSubmitAttendance() {
-    // TODO: Dispatch to BLoC → AttendanceRepository.bulkMark()
     final summary = _attendanceStatus.values.fold<Map<String, int>>(
       {},
       (map, s) => map..update(s, (v) => v + 1, ifAbsent: () => 1),

@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -24,8 +25,8 @@ void main() async {
   // Initialize Hive cache storage
   await getIt<HiveStorageService>().init();
 
-  // TODO: Initialize Firebase
-  // await Firebase.initializeApp();
+  // Initialize Firebase for push notifications & analytics
+  await Firebase.initializeApp();
 
   runApp(const EduConnectApp());
 }

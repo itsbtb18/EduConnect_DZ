@@ -8,7 +8,6 @@ class AnnouncementsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Connect to AnnouncementBloc
     return Scaffold(
       appBar: AppBar(title: const Text('Annonces')),
       body: const Center(

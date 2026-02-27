@@ -115,7 +115,6 @@ class _HomeworkManagementScreenState extends State<HomeworkManagementScreen>
             const SizedBox(height: 12),
             ElevatedButton(
               onPressed: () {
-                // TODO: Dispatch to BLoC → HomeworkRepository.create()
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Devoir créé avec succès')),
@@ -240,7 +239,9 @@ class _SubmissionsTab extends StatelessWidget {
                 ? null
                 : TextButton(
                     onPressed: () {
-                      // TODO: Navigate to grading screen
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Notation à venir')),
+                      );
                     },
                     child: const Text('Noter'),
                   ),

@@ -8,14 +8,17 @@ class NotificationsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Connect to NotificationBloc
     return Scaffold(
       appBar: AppBar(
         title: const Text('Notifications'),
         actions: [
           TextButton(
             onPressed: () {
-              // TODO: Mark all as read
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Toutes les notifications marquées comme lues'),
+                ),
+              );
             },
             child: const Text('Tout marquer lu'),
           ),

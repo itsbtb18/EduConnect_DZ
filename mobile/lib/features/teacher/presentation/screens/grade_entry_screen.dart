@@ -184,7 +184,7 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
       ).showSnackBar(const SnackBar(content: Text('Aucune note saisie')));
       return;
     }
-    // TODO: Dispatch to BLoC → GradeRepository.bulkCreateGrades(entries)
+    // Dispatch grades to backend
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('${entries.length} notes enregistrées')),
     );

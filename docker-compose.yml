@@ -1,38 +1,88 @@
 # ============================================================
-# EduConnect Algeria — Docker Compose (Development)
+# EduConnect Algeria — Docker Compose (Production)
 # ============================================================
 # Usage:
-#   docker compose up -d          # Start all services
-#   docker compose logs -f api    # Follow API logs
+#   docker compose up -d                 # Start all services
+#   docker compose logs -f api           # Follow API logs
 #   docker compose exec api python manage.py migrate
 #   docker compose exec api python manage.py createsuperuser
+#   docker compose --profile monitoring up -d   # + monitoring
+#
+# Ports (external → internal):
+#   PostgreSQL  5433 → 5432
+#   Redis       6380 → 6379
+#   Nginx/HTTP  80   → 80
+#   Nginx/HTTPS 443  → 443
+#   (Django 8001 exposed only in dev override)
 # ============================================================
 
+x-backend-common: &backend-common
+  build:
+    context: ./backend
+    dockerfile: Dockerfile
+    network: host                   # Fix apt-get DNS on Windows Docker Desktop
+  env_file: .env
+  environment: &backend-env
+    DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-educonnect.settings.production}
+    DB_HOST: db
+    DB_PORT: "5432"
+    REDIS_URL: redis://redis:6379/0
+    CELERY_BROKER_URL: redis://redis:6379/1
+    CELERY_RESULT_BACKEND: redis://redis:6379/2
+    REDIS_HOST: redis
+    REDIS_PORT: "6379"
+    COLLECT_STATIC: "1"
+  volumes:
+    - static_files:/app/staticfiles
+    - media_files:/app/media
+    - ./backend/firebase-service-account.json:/app/firebase-service-account.json:ro
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  restart: unless-stopped
+  networks:
+    - educonnect
+
 services:
-  # ---- PostgreSQL Database ----
+  # ──────────────────────────────────────────────
+  # PostgreSQL 16
+  # ──────────────────────────────────────────────
   db:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DB_NAME:-educonnect}
-      POSTGRES_USER: ${DB_USER:-educonnect}
+      POSTGRES_DB: ${DB_NAME:-educonnect_db}
+      POSTGRES_USER: ${DB_USER:-educonnect_user}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-10082007}
+      PGDATA: /var/lib/postgresql/data/pgdata
     ports:
-      - "5433:5432"
+      - "${DB_PORT_EXTERNAL:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-educonnect}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-educonnect_user} -d ${DB_NAME:-educonnect_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
+    networks:
+      - educonnect
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
-  # ---- Redis (Cache + Celery Broker + Channels) ----
+  # ──────────────────────────────────────────────
+  # Redis 7 (Cache + Celery Broker + Channels)
+  # ──────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     ports:
-      - "6380:6379"
+      - "${REDIS_PORT_EXTERNAL:-6380}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -40,78 +90,85 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 5s
+    networks:
+      - educonnect
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
-  # ---- Django API (Daphne ASGI) ----
+  # ──────────────────────────────────────────────
+  # Django API (Daphne ASGI — HTTP + WebSocket)
+  # ──────────────────────────────────────────────
   api:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    env_file: .env
+    <<: *backend-common
+    container_name: educonnect-api
     environment:
-      - DJANGO_SETTINGS_MODULE=educonnect.settings.development
-      - DB_HOST=db
-      - REDIS_URL=redis://redis:6379/0
-    ports:
-      - "8001:8000"
-    volumes:
-      - ./backend:/app
-      - static_files:/app/staticfiles
-      - media_files:/app/media
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    command: >
-      sh -c "
-        python manage.py migrate --noinput &&
-        daphne -b 0.0.0.0 -p 8000 educonnect.asgi:application
-      "
+      <<: *backend-env
+      COLLECT_STATIC: "1"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
 
-  # ---- Celery Worker ----
+  # ──────────────────────────────────────────────
+  # Celery Worker (async tasks)
+  # ──────────────────────────────────────────────
   celery_worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    env_file: .env
+    <<: *backend-common
+    container_name: educonnect-celery-worker
     environment:
-      - DJANGO_SETTINGS_MODULE=educonnect.settings.development
-      - DB_HOST=db
-      - REDIS_URL=redis://redis:6379/0
-    volumes:
-      - ./backend:/app
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    command: celery -A educonnect worker -l info --concurrency=2
+      <<: *backend-env
+      COLLECT_STATIC: "0"
+    command: >
+      celery -A educonnect worker
+        -l info
+        --concurrency=4
+        -E
+        -Q default,notifications,reports
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A educonnect inspect ping --timeout 10 || exit 1"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
-  # ---- Celery Beat (Scheduled Tasks) ----
+  # ──────────────────────────────────────────────
+  # Celery Beat (scheduled tasks)
+  # ──────────────────────────────────────────────
   celery_beat:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    env_file: .env
+    <<: *backend-common
+    container_name: educonnect-celery-beat
     environment:
-      - DJANGO_SETTINGS_MODULE=educonnect.settings.development
-      - DB_HOST=db
-      - REDIS_URL=redis://redis:6379/0
-    volumes:
-      - ./backend:/app
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    command: celery -A educonnect beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+      <<: *backend-env
+      COLLECT_STATIC: "0"
+    command: >
+      celery -A educonnect beat
+        -l info
+        --scheduler django_celery_beat.schedulers:DatabaseScheduler
+        --pidfile /tmp/celerybeat.pid
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
-  # ---- Nginx (Production reverse proxy) ----
+  # ──────────────────────────────────────────────
+  # Nginx (reverse proxy + static files)
+  # ──────────────────────────────────────────────
   nginx:
-    image: nginx:alpine
+    image: nginx:1.27-alpine
+    container_name: educonnect-nginx
     restart: unless-stopped
     ports:
       - "80:80"
@@ -122,12 +179,37 @@ services:
       - static_files:/var/www/static:ro
       - media_files:/var/www/media:ro
     depends_on:
-      - api
-    profiles:
-      - production
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - educonnect
+    deploy:
+      resources:
+        limits:
+          memory: 128M
 
+# ──────────────────────────────────────────────
+# Volumes (persistent data)
+# ──────────────────────────────────────────────
 volumes:
   postgres_data:
+    driver: local
   redis_data:
+    driver: local
   static_files:
+    driver: local
   media_files:
+    driver: local
+
+# ──────────────────────────────────────────────
+# Network
+# ──────────────────────────────────────────────
+networks:
+  educonnect:
+    driver: bridge
