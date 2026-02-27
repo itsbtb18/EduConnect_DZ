@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import 'app.dart';
 import 'core/di/injection.dart';
+import 'core/storage/hive_storage_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,6 +20,9 @@ void main() async {
 
   // Initialize dependency injection
   await configureDependencies();
+
+  // Initialize Hive cache storage
+  await getIt<HiveStorageService>().init();
 
   // TODO: Initialize Firebase
   // await Firebase.initializeApp();

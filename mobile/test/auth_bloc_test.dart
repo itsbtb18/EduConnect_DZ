@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-import 'package:educonnect_mobile/features/auth/bloc/auth_bloc.dart';
-import 'package:educonnect_mobile/data/models/user_model.dart';
-import 'package:educonnect_mobile/data/repositories/auth_repository.dart';
+import 'package:educonnect_mobile/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:educonnect_mobile/features/auth/data/models/user_model.dart';
+import 'package:educonnect_mobile/features/auth/data/repositories/auth_repository.dart';
 
 // --- Mocks ---
 
@@ -81,15 +81,25 @@ void main() {
         expect(AuthCheckRequested(), equals(AuthCheckRequested()));
       });
 
-      test('AuthLoginRequested compares by email and password', () {
+      test('AuthLoginRequested compares by phoneNumber and password', () {
         expect(
-          const AuthLoginRequested(email: 'a@b.com', password: '123'),
-          equals(const AuthLoginRequested(email: 'a@b.com', password: '123')),
+          const AuthLoginRequested(phoneNumber: '0551234567', password: '123'),
+          equals(
+            const AuthLoginRequested(
+              phoneNumber: '0551234567',
+              password: '123',
+            ),
+          ),
         );
         expect(
-          const AuthLoginRequested(email: 'a@b.com', password: '123'),
+          const AuthLoginRequested(phoneNumber: '0551234567', password: '123'),
           isNot(
-            equals(const AuthLoginRequested(email: 'a@b.com', password: '456')),
+            equals(
+              const AuthLoginRequested(
+                phoneNumber: '0551234567',
+                password: '456',
+              ),
+            ),
           ),
         );
       });
@@ -110,13 +120,13 @@ void main() {
       test('login returns LoginResponse', () async {
         when(
           () => mockAuthRepository.login(
-            email: any(named: 'email'),
+            phoneNumber: any(named: 'phoneNumber'),
             password: any(named: 'password'),
           ),
         ).thenAnswer((_) async => _loginResponse);
 
         final result = await mockAuthRepository.login(
-          email: 'teacher@school.dz',
+          phoneNumber: '0551234567',
           password: 'password123',
         );
 
@@ -124,7 +134,7 @@ void main() {
         expect(result.accessToken, 'fake-access-token');
         verify(
           () => mockAuthRepository.login(
-            email: 'teacher@school.dz',
+            phoneNumber: '0551234567',
             password: 'password123',
           ),
         ).called(1);
@@ -158,14 +168,14 @@ void main() {
       test('login failure throws', () async {
         when(
           () => mockAuthRepository.login(
-            email: any(named: 'email'),
+            phoneNumber: any(named: 'phoneNumber'),
             password: any(named: 'password'),
           ),
         ).thenThrow(Exception('Invalid credentials'));
 
         expect(
           () => mockAuthRepository.login(
-            email: 'bad@email.com',
+            phoneNumber: '0000000000',
             password: 'wrong',
           ),
           throwsException,

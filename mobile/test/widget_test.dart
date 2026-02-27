@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:educonnect_mobile/features/shared/widgets/grade_card.dart';
-import 'package:educonnect_mobile/features/shared/widgets/attendance_calendar.dart';
-import 'package:educonnect_mobile/features/shared/widgets/child_switcher.dart';
+import 'package:educonnect_mobile/features/shared/presentation/widgets/grade_card.dart';
+import 'package:educonnect_mobile/features/shared/presentation/widgets/attendance_calendar.dart';
+import 'package:educonnect_mobile/features/shared/presentation/widgets/child_switcher.dart';
 import 'package:educonnect_mobile/core/utils/validators.dart';
 
 void main() {

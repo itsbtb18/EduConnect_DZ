@@ -16,9 +16,9 @@ services:
     environment:
       POSTGRES_DB: ${DB_NAME:-educonnect}
       POSTGRES_USER: ${DB_USER:-educonnect}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-educonnect_dev_2024}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-10082007}
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -32,7 +32,7 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -53,7 +53,7 @@ services:
       - DB_HOST=db
       - REDIS_URL=redis://redis:6379/0
     ports:
-      - "8000:8000"
+      - "8001:8000"
     volumes:
       - ./backend:/app
       - static_files:/app/staticfiles
