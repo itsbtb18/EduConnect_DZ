@@ -16,8 +16,7 @@ def send_payment_reminders():
     Send payment reminders to parents whose children have unpaid fees.
     Meant to be run as a weekly Celery Beat task.
     """
-    from django.db.models import Q, Sum
-    from django.utils import timezone
+    from django.db.models import Sum
 
     from apps.accounts.models import StudentProfile
     from apps.finance.models import FeeStructure, Payment

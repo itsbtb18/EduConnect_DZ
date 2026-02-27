@@ -7,7 +7,7 @@ All averages are computed server-side — NEVER on the client.
 
 from decimal import ROUND_HALF_UP, Decimal
 
-from django.db.models import Avg, F, Sum
+from django.db.models import Avg, F
 
 from apps.academics.models import Subject
 

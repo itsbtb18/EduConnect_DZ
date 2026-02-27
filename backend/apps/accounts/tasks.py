@@ -33,7 +33,7 @@ def bulk_import_students(self, school_id: str, file_path: str, admin_user_id: st
         import openpyxl
 
         school = School.objects.get(id=school_id)
-        admin_user = User.objects.get(id=admin_user_id)
+        User.objects.get(id=admin_user_id)  # Validate admin exists
 
         wb = openpyxl.load_workbook(file_path)
         ws = wb.active
@@ -54,7 +54,7 @@ def bulk_import_students(self, school_id: str, file_path: str, admin_user_id: st
                 student_first = str(row[0]).strip()
                 student_last = str(row[1]).strip()
                 dob = row[2]
-                class_name = str(row[3]).strip() if row[3] else ""
+                class_name = str(row[3]).strip() if row[3] else ""  # noqa: F841
                 parent_first = str(row[5]).strip() if len(row) > 5 and row[5] else ""
                 parent_last = str(row[6]).strip() if len(row) > 6 and row[6] else ""
                 parent_phone = str(row[7]).strip() if len(row) > 7 and row[7] else ""

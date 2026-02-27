@@ -116,7 +116,7 @@ void main() {
           id: '1',
           firstName: 'Ahmed',
           lastName: 'Benali',
-          classroom: '3AM-A',
+          classroomName: '3AM-A',
         ),
       ];
 
@@ -142,13 +142,13 @@ void main() {
           id: '1',
           firstName: 'Ahmed',
           lastName: 'B',
-          classroom: '3AM-A',
+          classroomName: '3AM-A',
         ),
         ChildInfo(
           id: '2',
           firstName: 'Fatima',
           lastName: 'B',
-          classroom: '1AM-B',
+          classroomName: '1AM-B',
         ),
       ];
 

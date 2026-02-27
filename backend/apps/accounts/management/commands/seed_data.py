@@ -123,7 +123,6 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
-        from apps.accounts.models import User
         from apps.schools.models import School
 
         school_id = options["school_id"]
@@ -143,6 +142,7 @@ class Command(BaseCommand):
 
         # 1. Create academic year and semesters
         academic_year = self._create_academic_year(school)
+        self.stdout.write(f"  Academic year: {academic_year}")
 
         # 2. Create levels and classrooms
         levels, classrooms = self._create_levels_and_classrooms(school)

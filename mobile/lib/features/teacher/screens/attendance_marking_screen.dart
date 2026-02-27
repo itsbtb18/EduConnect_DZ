@@ -78,7 +78,7 @@ class _AttendanceMarkingScreenState extends State<AttendanceMarkingScreen> {
         children: [
           Expanded(
             child: DropdownButtonFormField<String>(
-              value: _selectedClassroom,
+              initialValue: _selectedClassroom,
               decoration: const InputDecoration(
                 labelText: 'Classe',
                 border: OutlineInputBorder(),

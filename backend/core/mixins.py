@@ -4,8 +4,6 @@ Reusable mixins for EduConnect views and viewsets.
 
 from rest_framework import viewsets
 
-from core.permissions import BelongsToSameSchool
-
 
 class TenantAwareViewSetMixin:
     """

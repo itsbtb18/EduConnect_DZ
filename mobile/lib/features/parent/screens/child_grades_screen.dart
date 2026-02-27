@@ -103,7 +103,7 @@ class _ChildGradesScreenState extends State<ChildGradesScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: DropdownButtonFormField<String>(
-        value: _selectedChildId,
+        initialValue: _selectedChildId,
         decoration: const InputDecoration(
           labelText: 'Enfant',
           border: OutlineInputBorder(),

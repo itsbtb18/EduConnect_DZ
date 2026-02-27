@@ -1,4 +1,3 @@
-import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -22,8 +21,8 @@ final _testUser = User(
 );
 
 final _loginResponse = LoginResponse(
-  access: 'fake-access-token',
-  refresh: 'fake-refresh-token',
+  accessToken: 'fake-access-token',
+  refreshToken: 'fake-refresh-token',
   user: _testUser,
 );
 
@@ -122,7 +121,7 @@ void main() {
         );
 
         expect(result.user.email, 'teacher@school.dz');
-        expect(result.access, 'fake-access-token');
+        expect(result.accessToken, 'fake-access-token');
         verify(
           () => mockAuthRepository.login(
             email: 'teacher@school.dz',

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Teacher screen for entering and managing student grades.
 class GradeEntryScreen extends StatefulWidget {
@@ -102,7 +101,7 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
     return SizedBox(
       width: 180,
       child: DropdownButtonFormField<String>(
-        value: value,
+        initialValue: value,
         decoration: InputDecoration(
           labelText: label,
           border: const OutlineInputBorder(),

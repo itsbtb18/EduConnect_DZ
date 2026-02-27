@@ -1,6 +1,6 @@
-/// Finance models matching the Django finance app.
-
-/// Fee structure defined by the school
+/// Fee structure defined by the school.
+///
+/// Matches the Django finance app models.
 class FeeStructure {
   final String id;
   final String name;
