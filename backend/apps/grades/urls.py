@@ -1,10 +1,28 @@
-from django.urls import include, path
-from rest_framework.routers import DefaultRouter
+from django.urls import path
+
 from . import views
 
 app_name = "grades"
-router = DefaultRouter()
-router.register("exam-types", views.ExamTypeViewSet, basename="exam-type")
-router.register("marks", views.GradeViewSet, basename="grade")
-router.register("report-cards", views.ReportCardViewSet, basename="report-card")
-urlpatterns = [path("", include(router.urls))]
+
+urlpatterns = [
+    # Teacher: bulk submit grades
+    path("submit/", views.GradeSubmitView.as_view(), name="grade-submit"),
+    # Teacher: advance to submitted
+    path(
+        "<uuid:pk>/submit-to-admin/",
+        views.GradeSubmitToAdminView.as_view(),
+        name="grade-submit-to-admin",
+    ),
+    # Admin: publish
+    path(
+        "<uuid:pk>/publish/",
+        views.GradePublishView.as_view(),
+        name="grade-publish",
+    ),
+    # Admin: return with comment
+    path(
+        "<uuid:pk>/return/",
+        views.GradeReturnView.as_view(),
+        name="grade-return",
+    ),
+]

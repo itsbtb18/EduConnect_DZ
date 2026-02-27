@@ -1,42 +1,55 @@
 """
-Attendance models: daily records and absence excuses.
+Attendance models: daily attendance records and absence excuses.
 """
 
+import uuid
+
 from django.db import models
-from core.models import TenantModel
 
 
-class AttendanceRecord(TenantModel):
-    """Daily attendance record for a student."""
+# ---------------------------------------------------------------------------
+# AttendanceRecord
+# ---------------------------------------------------------------------------
+
+
+class AttendanceRecord(models.Model):
+    """Daily attendance record for a student in a class."""
 
     class Status(models.TextChoices):
-        PRESENT = "present", "Present"
-        ABSENT = "absent", "Absent"
-        LATE = "late", "Late"
-        EXCUSED = "excused", "Excused"
+        PRESENT = "PRESENT", "Present"
+        ABSENT = "ABSENT", "Absent"
+        LATE = "LATE", "Late"
 
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     student = models.ForeignKey(
-        "accounts.User",
+        "academics.StudentProfile",
         on_delete=models.CASCADE,
         related_name="attendance_records",
-        limit_choices_to={"role": "student"},
     )
-    classroom = models.ForeignKey(
-        "academics.Classroom",
+    class_obj = models.ForeignKey(
+        "academics.Class",
         on_delete=models.CASCADE,
         related_name="attendance_records",
+        db_column="class_id",
     )
     date = models.DateField()
     status = models.CharField(
         max_length=10, choices=Status.choices, default=Status.PRESENT
     )
+    note = models.TextField(blank=True)
     marked_by = models.ForeignKey(
         "accounts.User",
         on_delete=models.SET_NULL,
         null=True,
         related_name="marked_attendance",
     )
-    note = models.TextField(blank=True)
+    school = models.ForeignKey(
+        "schools.School",
+        on_delete=models.CASCADE,
+        related_name="attendance_records",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "attendance_records"
@@ -44,31 +57,35 @@ class AttendanceRecord(TenantModel):
         ordering = ["-date"]
 
     def __str__(self):
-        return f"{self.student.full_name} — {self.date} — {self.status}"
+        return f"{self.student.user.full_name} — {self.date} — {self.status}"
 
 
-class AbsenceExcuse(TenantModel):
-    """Parent-submitted excuse for student absence."""
+# ---------------------------------------------------------------------------
+# AbsenceExcuse
+# ---------------------------------------------------------------------------
+
+
+class AbsenceExcuse(models.Model):
+    """Parent-submitted excuse for a student absence."""
 
     class Status(models.TextChoices):
-        PENDING = "pending", "Pending Review"
-        APPROVED = "approved", "Approved"
-        REJECTED = "rejected", "Rejected"
+        PENDING = "PENDING", "Pending"
+        APPROVED = "APPROVED", "Approved"
+        REJECTED = "REJECTED", "Rejected"
 
-    student = models.ForeignKey(
-        "accounts.User",
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    attendance_record = models.ForeignKey(
+        AttendanceRecord,
         on_delete=models.CASCADE,
-        related_name="absence_excuses",
-        limit_choices_to={"role": "student"},
+        related_name="excuses",
     )
     submitted_by = models.ForeignKey(
         "accounts.User",
         on_delete=models.CASCADE,
         related_name="submitted_excuses",
-        limit_choices_to={"role": "parent"},
+        limit_choices_to={"role": "PARENT"},
     )
-    date = models.DateField()
-    reason = models.TextField()
+    justification_text = models.TextField()
     attachment = models.FileField(upload_to="excuses/", blank=True, null=True)
     status = models.CharField(
         max_length=10, choices=Status.choices, default=Status.PENDING
@@ -80,10 +97,14 @@ class AbsenceExcuse(TenantModel):
         blank=True,
         related_name="reviewed_excuses",
     )
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = "absence_excuses"
-        ordering = ["-date"]
+        ordering = ["-created_at"]
 
     def __str__(self):
-        return f"Excuse: {self.student.full_name} — {self.date}"
+        return (
+            f"Excuse: {self.attendance_record.student.user.full_name} "
+            f"— {self.attendance_record.date}"
+        )

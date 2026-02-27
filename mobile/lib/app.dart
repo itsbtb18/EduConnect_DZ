@@ -10,6 +10,11 @@ import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/student/presentation/bloc/student_bloc.dart';
 import 'features/teacher/presentation/bloc/teacher_bloc.dart';
 import 'features/parent/presentation/bloc/parent_bloc.dart';
+import 'core/router/app_router.dart';
+import 'features/auth/presentation/bloc/auth_bloc.dart';
+import 'features/student/presentation/bloc/student_bloc.dart';
+import 'features/teacher/presentation/bloc/teacher_bloc.dart';
+import 'features/parent/presentation/bloc/parent_bloc.dart';
 
 class EduConnectApp extends StatelessWidget {
   const EduConnectApp({super.key});
@@ -23,7 +28,15 @@ class EduConnectApp extends StatelessWidget {
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
+        final authBloc = AuthBloc();
+
         return MultiBlocProvider(
+          providers: [
+            BlocProvider(create: (_) => authBloc),
+            BlocProvider(create: (_) => StudentBloc()),
+            BlocProvider(create: (_) => TeacherBloc()),
+            BlocProvider(create: (_) => ParentBloc()),
+          ],
           providers: [
             BlocProvider(create: (_) => authBloc),
             BlocProvider(create: (_) => StudentBloc()),

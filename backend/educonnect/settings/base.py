@@ -211,18 +211,27 @@ REST_FRAMEWORK = {
 # ===========================================================================
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(
-        minutes=config("JWT_ACCESS_TOKEN_LIFETIME_MINUTES", default=30, cast=int)
-    ),
-    "REFRESH_TOKEN_LIFETIME": timedelta(
-        days=config("JWT_REFRESH_TOKEN_LIFETIME_DAYS", default=7, cast=int)
-    ),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
     "AUTH_HEADER_TYPES": ("Bearer",),
     "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
+    "TOKEN_OBTAIN_SERIALIZER": "apps.accounts.serializers.CustomTokenObtainPairSerializer",
+}
+
+
+# ===========================================================================
+# Cache (used for PIN login rate-limiting, among other things)
+# ===========================================================================
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": config("REDIS_URL", default="redis://localhost:6379/0"),
+    }
 }
 
 
@@ -282,11 +291,49 @@ MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50 MB for homework files
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "EduConnect Algeria API",
-    "DESCRIPTION": "Complete E-Learning & School Management API for Private Schools in Algeria",
+    "DESCRIPTION": (
+        "Complete E-Learning & School Management API for Private Schools in Algeria.\n\n"
+        "## Authentication\n"
+        "All endpoints (except login) require a **Bearer JWT** token in the "
+        "`Authorization` header.\n\n"
+        "## Tenant Isolation\n"
+        "Every authenticated request is scoped to the user's school. "
+        "Cross-school access returns **404 Not Found**."
+    ),
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "SCHEMA_PATH_PREFIX": "/api/v[0-9]",
     "COMPONENT_SPLIT_REQUEST": True,
+    # Security
+    "SECURITY": [{"BearerAuth": []}],
+    "APPEND_COMPONENTS": {
+        "securitySchemes": {
+            "BearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+            }
+        }
+    },
+    # Tag ordering in docs
+    "TAGS": [
+        {"name": "auth", "description": "Authentication & user management"},
+        {"name": "grades", "description": "Grade submission, review & publishing"},
+        {"name": "homework", "description": "Homework CRUD & correction"},
+        {"name": "attendance", "description": "Attendance marking & excuses"},
+        {"name": "announcements", "description": "School announcements"},
+        {"name": "chat", "description": "Chat rooms & messaging"},
+        {"name": "notifications", "description": "Push notifications & device tokens"},
+    ],
+    # Enum naming
+    "ENUM_NAME_OVERRIDES": {
+        "UserRoleEnum": "apps.accounts.models.User.Role",
+    },
+    # Misc
+    "SORT_OPERATIONS": True,
+    "POSTPROCESSING_HOOKS": [
+        "drf_spectacular.hooks.postprocess_schema_enums",
+    ],
 }
 
 

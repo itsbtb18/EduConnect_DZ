@@ -8,7 +8,7 @@ app_name = "schools"
 router = DefaultRouter()
 router.register("", views.SchoolViewSet, basename="school")
 router.register("academic-years", views.AcademicYearViewSet, basename="academic-year")
-router.register("semesters", views.SemesterViewSet, basename="semester")
+router.register("sections", views.SectionViewSet, basename="section")
 
 urlpatterns = [
     path("", include(router.urls)),

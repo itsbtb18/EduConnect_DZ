@@ -5,8 +5,7 @@ from . import views
 app_name = "academics"
 
 router = DefaultRouter()
-router.register("levels", views.LevelViewSet, basename="level")
-router.register("classrooms", views.ClassroomViewSet, basename="classroom")
+router.register("classes", views.ClassViewSet, basename="class")
 router.register("subjects", views.SubjectViewSet, basename="subject")
 router.register(
     "assignments", views.TeacherAssignmentViewSet, basename="teacher-assignment"

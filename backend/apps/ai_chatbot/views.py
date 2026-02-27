@@ -2,7 +2,7 @@ from rest_framework import permissions, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.permissions import IsAdmin
+from core.permissions import IsSchoolAdmin
 
 from .models import ChatMessage, ChatSession, KnowledgeBase
 from .serializers import (
@@ -16,7 +16,7 @@ class KnowledgeBaseViewSet(viewsets.ModelViewSet):
     """Manage school knowledge base entries (admin only)."""
 
     serializer_class = KnowledgeBaseSerializer
-    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+    permission_classes = [permissions.IsAuthenticated, IsSchoolAdmin]
 
     def get_queryset(self):
         return KnowledgeBase.objects.filter(school=self.request.user.school)

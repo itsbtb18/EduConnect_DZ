@@ -4,7 +4,7 @@ from .models import FeeStructure, Payment
 
 @admin.register(FeeStructure)
 class FeeStructureAdmin(admin.ModelAdmin):
-    list_display = ("name", "level", "amount", "academic_year", "due_date")
+    list_display = ("name", "target_class", "amount", "academic_year", "due_date")
 
 
 @admin.register(Payment)

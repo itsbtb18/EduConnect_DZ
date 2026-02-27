@@ -16,7 +16,7 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Initialize Hive for local storage
+  // Initialize Hive for local storage & offline caching
   await Hive.initFlutter();
 
   // Initialize dependency injection

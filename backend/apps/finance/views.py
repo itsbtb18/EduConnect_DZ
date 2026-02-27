@@ -1,12 +1,12 @@
 from rest_framework import permissions, viewsets
-from core.permissions import IsAdmin
+from core.permissions import IsSchoolAdmin
 from .models import FeeStructure, Payment
 from .serializers import FeeStructureSerializer, PaymentSerializer
 
 
 class FeeStructureViewSet(viewsets.ModelViewSet):
     serializer_class = FeeStructureSerializer
-    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+    permission_classes = [permissions.IsAuthenticated, IsSchoolAdmin]
 
     def get_queryset(self):
         return FeeStructure.objects.filter(school=self.request.user.school)

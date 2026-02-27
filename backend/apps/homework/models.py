@@ -1,77 +1,125 @@
 """
-Homework models: tasks, submissions, and grading.
+Homework models: posts, attachments, and view tracking.
 """
 
+import uuid
+
 from django.db import models
-from core.models import TenantModel
 
 
-class HomeworkTask(TenantModel):
+# ---------------------------------------------------------------------------
+# HomeworkPost
+# ---------------------------------------------------------------------------
+
+
+class HomeworkPost(models.Model):
     """A homework task assigned by a teacher to a class."""
 
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    school = models.ForeignKey(
+        "schools.School",
+        on_delete=models.CASCADE,
+        related_name="homework_posts",
+    )
+    class_obj = models.ForeignKey(
+        "academics.Class",
+        on_delete=models.CASCADE,
+        related_name="homework_posts",
+        db_column="class_id",
+    )
+    subject = models.ForeignKey(
+        "grades.Subject",
+        on_delete=models.CASCADE,
+        related_name="homework_posts",
+    )
     teacher = models.ForeignKey(
         "accounts.User",
         on_delete=models.CASCADE,
-        related_name="created_tasks",
-        limit_choices_to={"role": "teacher"},
+        related_name="homework_posts",
+        limit_choices_to={"role": "TEACHER"},
     )
-    subject = models.ForeignKey(
-        "academics.Subject", on_delete=models.CASCADE, related_name="homework_tasks"
-    )
-    classroom = models.ForeignKey(
-        "academics.Classroom", on_delete=models.CASCADE, related_name="homework_tasks"
-    )
-
     title = models.CharField(max_length=255)
     description = models.TextField()
     due_date = models.DateTimeField()
-    attachment = models.FileField(upload_to="homework/tasks/", blank=True, null=True)
+    is_corrected = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
-    max_score = models.DecimalField(max_digits=5, decimal_places=2, default=20.0)
-    is_published = models.BooleanField(default=True)
+    # Soft delete
+    is_deleted = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        db_table = "homework_tasks"
+        db_table = "homework_posts"
         ordering = ["-due_date"]
 
     def __str__(self):
-        return f"{self.title} — {self.classroom}"
+        return f"{self.title} — {self.class_obj.name}"
+
+    def soft_delete(self):
+        from django.utils import timezone
+
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.save(update_fields=["is_deleted", "deleted_at", "updated_at"])
 
 
-class HomeworkSubmission(TenantModel):
-    """A student's submission for a homework task."""
+# ---------------------------------------------------------------------------
+# HomeworkAttachment
+# ---------------------------------------------------------------------------
 
-    class Status(models.TextChoices):
-        PENDING = "pending", "Pending"
-        SUBMITTED = "submitted", "Submitted"
-        LATE = "late", "Late Submission"
-        GRADED = "graded", "Graded"
 
-    task = models.ForeignKey(
-        HomeworkTask, on_delete=models.CASCADE, related_name="submissions"
-    )
-    student = models.ForeignKey(
-        "accounts.User",
+class HomeworkAttachment(models.Model):
+    """File attachment for a homework post."""
+
+    class FileType(models.TextChoices):
+        PDF = "PDF", "PDF"
+        IMAGE = "IMAGE", "Image"
+        DOCUMENT = "DOCUMENT", "Document"
+        VIDEO_LINK = "VIDEO_LINK", "Video Link"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    homework = models.ForeignKey(
+        HomeworkPost,
         on_delete=models.CASCADE,
-        related_name="homework_submissions",
-        limit_choices_to={"role": "student"},
+        related_name="attachments",
     )
-    file = models.FileField(upload_to="homework/submissions/", blank=True, null=True)
-    text_response = models.TextField(blank=True)
-    status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.PENDING
-    )
-    submitted_at = models.DateTimeField(null=True, blank=True)
-
-    # Grading
-    score = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    feedback = models.TextField(blank=True)
-    graded_at = models.DateTimeField(null=True, blank=True)
+    file = models.FileField(upload_to="homework/attachments/")
+    file_type = models.CharField(max_length=12, choices=FileType.choices)
+    file_name = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = "homework_submissions"
-        unique_together = ("task", "student")
-        ordering = ["-submitted_at"]
+        db_table = "homework_attachments"
 
     def __str__(self):
-        return f"{self.student.full_name} — {self.task.title}"
+        return self.file_name
+
+
+# ---------------------------------------------------------------------------
+# HomeworkView (tracks which students viewed the homework)
+# ---------------------------------------------------------------------------
+
+
+class HomeworkView(models.Model):
+    """Tracks which students have viewed a homework post."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    student = models.ForeignKey(
+        "academics.StudentProfile",
+        on_delete=models.CASCADE,
+        related_name="homework_views",
+    )
+    homework = models.ForeignKey(
+        HomeworkPost,
+        on_delete=models.CASCADE,
+        related_name="views",
+    )
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "homework_views"
+        unique_together = ("student", "homework")
+
+    def __str__(self):
+        return f"{self.student.user.full_name} viewed {self.homework.title}"

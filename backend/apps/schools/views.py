@@ -1,9 +1,9 @@
 from rest_framework import permissions, viewsets
 
-from core.permissions import IsAdmin, IsSuperAdmin
+from core.permissions import IsSchoolAdmin, IsSuperAdmin
 
-from .models import AcademicYear, School, Semester
-from .serializers import AcademicYearSerializer, SchoolSerializer, SemesterSerializer
+from .models import AcademicYear, School, Section
+from .serializers import AcademicYearSerializer, SchoolSerializer, SectionSerializer
 
 
 class SchoolViewSet(viewsets.ModelViewSet):
@@ -18,7 +18,7 @@ class AcademicYearViewSet(viewsets.ModelViewSet):
     """CRUD for academic years — school admin only."""
 
     serializer_class = AcademicYearSerializer
-    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+    permission_classes = [permissions.IsAuthenticated, IsSchoolAdmin]
 
     def get_queryset(self):
         return AcademicYear.objects.filter(school=self.request.user.school)
@@ -27,11 +27,11 @@ class AcademicYearViewSet(viewsets.ModelViewSet):
         serializer.save(school=self.request.user.school)
 
 
-class SemesterViewSet(viewsets.ModelViewSet):
-    """CRUD for semesters — school admin only."""
+class SectionViewSet(viewsets.ModelViewSet):
+    """CRUD for sections — school admin only."""
 
-    serializer_class = SemesterSerializer
-    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+    serializer_class = SectionSerializer
+    permission_classes = [permissions.IsAuthenticated, IsSchoolAdmin]
 
     def get_queryset(self):
-        return Semester.objects.filter(academic_year__school=self.request.user.school)
+        return Section.objects.filter(school=self.request.user.school)

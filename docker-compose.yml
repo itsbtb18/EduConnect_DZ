@@ -17,6 +17,7 @@
 # ============================================================
 
 x-backend-common: &backend-common
+  image: ecole-api:latest
   build:
     context: ./backend
     dockerfile: Dockerfile

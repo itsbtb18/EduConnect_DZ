@@ -1,29 +1,28 @@
 from django.contrib import admin
-from .models import AcademicYear, School, Semester
+from .models import AcademicYear, School, Section
 
 
 @admin.register(School)
 class SchoolAdmin(admin.ModelAdmin):
     list_display = (
         "name",
-        "code",
-        "city",
-        "wilaya",
-        "school_type",
+        "address",
+        "phone",
+        "subdomain",
         "subscription_plan",
-        "is_active",
+        "subscription_active",
     )
-    list_filter = ("school_type", "subscription_plan", "is_active", "wilaya")
-    search_fields = ("name", "code", "city")
+    list_filter = ("subscription_plan", "subscription_active")
+    search_fields = ("name", "address", "subdomain")
+
+
+@admin.register(Section)
+class SectionAdmin(admin.ModelAdmin):
+    list_display = ("name", "school", "section_type", "is_active")
+    list_filter = ("section_type", "school", "is_active")
 
 
 @admin.register(AcademicYear)
 class AcademicYearAdmin(admin.ModelAdmin):
     list_display = ("school", "name", "start_date", "end_date", "is_current")
     list_filter = ("is_current", "school")
-
-
-@admin.register(Semester)
-class SemesterAdmin(admin.ModelAdmin):
-    list_display = ("name", "academic_year", "start_date", "end_date", "is_current")
-    list_filter = ("is_current",)

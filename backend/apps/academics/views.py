@@ -1,20 +1,18 @@
 from rest_framework import permissions, viewsets
 
-from core.permissions import IsAdmin, IsAdminOrTeacher
+from core.permissions import IsSchoolAdmin, IsAdminOrTeacher
 
 from .models import (
-    Classroom,
+    Class,
     Lesson,
-    Level,
     Resource,
     ScheduleSlot,
     Subject,
     TeacherAssignment,
 )
 from .serializers import (
-    ClassroomSerializer,
+    ClassSerializer,
     LessonSerializer,
-    LevelSerializer,
     ResourceSerializer,
     ScheduleSlotSerializer,
     SubjectSerializer,
@@ -22,31 +20,20 @@ from .serializers import (
 )
 
 
-class LevelViewSet(viewsets.ModelViewSet):
-    serializer_class = LevelSerializer
-    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+class ClassViewSet(viewsets.ModelViewSet):
+    serializer_class = ClassSerializer
+    permission_classes = [permissions.IsAuthenticated, IsSchoolAdmin]
 
     def get_queryset(self):
-        return Level.objects.filter(school=self.request.user.school)
+        return Class.objects.filter(section__school=self.request.user.school)
 
     def perform_create(self, serializer):
-        serializer.save(school=self.request.user.school)
-
-
-class ClassroomViewSet(viewsets.ModelViewSet):
-    serializer_class = ClassroomSerializer
-    permission_classes = [permissions.IsAuthenticated, IsAdmin]
-
-    def get_queryset(self):
-        return Classroom.objects.filter(school=self.request.user.school)
-
-    def perform_create(self, serializer):
-        serializer.save(school=self.request.user.school)
+        serializer.save()
 
 
 class SubjectViewSet(viewsets.ModelViewSet):
     serializer_class = SubjectSerializer
-    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+    permission_classes = [permissions.IsAuthenticated, IsSchoolAdmin]
 
     def get_queryset(self):
         return Subject.objects.filter(school=self.request.user.school)
@@ -57,7 +44,7 @@ class SubjectViewSet(viewsets.ModelViewSet):
 
 class TeacherAssignmentViewSet(viewsets.ModelViewSet):
     serializer_class = TeacherAssignmentSerializer
-    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+    permission_classes = [permissions.IsAuthenticated, IsSchoolAdmin]
 
     def get_queryset(self):
         return TeacherAssignment.objects.filter(school=self.request.user.school)
@@ -68,7 +55,7 @@ class TeacherAssignmentViewSet(viewsets.ModelViewSet):
 
 class ScheduleSlotViewSet(viewsets.ModelViewSet):
     serializer_class = ScheduleSlotSerializer
-    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+    permission_classes = [permissions.IsAuthenticated, IsSchoolAdmin]
 
     def get_queryset(self):
         return ScheduleSlot.objects.filter(school=self.request.user.school)

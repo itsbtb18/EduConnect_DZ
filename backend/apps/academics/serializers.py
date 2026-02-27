@@ -1,8 +1,7 @@
 from rest_framework import serializers
 from .models import (
-    Classroom,
+    Class,
     Lesson,
-    Level,
     Resource,
     ScheduleSlot,
     Subject,
@@ -10,20 +9,13 @@ from .models import (
 )
 
 
-class LevelSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Level
-        fields = "__all__"
-        read_only_fields = ["id", "school", "created_at", "updated_at"]
-
-
-class ClassroomSerializer(serializers.ModelSerializer):
-    level_name = serializers.CharField(source="level.name", read_only=True)
+class ClassSerializer(serializers.ModelSerializer):
+    section_name = serializers.CharField(source="section.name", read_only=True)
 
     class Meta:
-        model = Classroom
+        model = Class
         fields = "__all__"
-        read_only_fields = ["id", "school", "created_at", "updated_at"]
+        read_only_fields = ["id", "created_at", "updated_at"]
 
 
 class SubjectSerializer(serializers.ModelSerializer):
@@ -36,7 +28,7 @@ class SubjectSerializer(serializers.ModelSerializer):
 class TeacherAssignmentSerializer(serializers.ModelSerializer):
     teacher_name = serializers.CharField(source="teacher.full_name", read_only=True)
     subject_name = serializers.CharField(source="subject.name", read_only=True)
-    classroom_name = serializers.CharField(source="classroom.name", read_only=True)
+    class_name = serializers.CharField(source="assigned_class.name", read_only=True)
 
     class Meta:
         model = TeacherAssignment

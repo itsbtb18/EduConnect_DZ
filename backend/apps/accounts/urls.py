@@ -11,7 +11,7 @@ app_name = "accounts"
 urlpatterns = [
     # Authentication
     path("login/", views.LoginView.as_view(), name="login"),
-    path("login/pin/", views.PhonePinLoginView.as_view(), name="login-pin"),
+    path("login/pin/", views.PINLoginView.as_view(), name="login-pin"),
     path("refresh/", views.TokenRefreshAPIView.as_view(), name="token-refresh"),
     # User management (admin)
     path("users/", views.UserListCreateView.as_view(), name="user-list-create"),
@@ -21,5 +21,4 @@ urlpatterns = [
     path(
         "change-password/", views.ChangePasswordView.as_view(), name="change-password"
     ),
-    path("fcm-token/", views.UpdateFCMTokenView.as_view(), name="update-fcm-token"),
 ]

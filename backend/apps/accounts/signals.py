@@ -6,7 +6,8 @@ Handles automatic profile creation when users are created.
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from .models import ParentProfile, StudentProfile, TeacherProfile, User
+from apps.academics.models import ParentProfile, StudentProfile, TeacherProfile
+from .models import User
 
 
 @receiver(post_save, sender=User)

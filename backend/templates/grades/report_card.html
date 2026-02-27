@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>كشف النقاط — {{ student_user.full_name }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Noto Sans Arabic", "Arial", sans-serif;
+            font-size: 11pt;
+            line-height: 1.4;
+            color: #333;
+            direction: rtl;
+        }
+
+        /* ----- Header ----- */
+        .republic-header {
+            text-align: center;
+            font-size: 9pt;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 3px double #1a5276;
+            padding-bottom: 15px;
+        }
+
+        .header img.logo {
+            max-height: 70px;
+            margin-bottom: 5px;
+        }
+
+        .header h1 {
+            font-size: 16pt;
+            color: #1a5276;
+            margin-bottom: 5px;
+        }
+
+        .header h2 {
+            font-size: 13pt;
+            color: #2c3e50;
+            margin-bottom: 3px;
+        }
+
+        .header .subtitle {
+            font-size: 10pt;
+            color: #666;
+        }
+
+        /* ----- Student info ----- */
+        .student-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .student-info .photo {
+            width: 80px;
+            height: 100px;
+            object-fit: cover;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-left: 15px;
+        }
+
+        .student-info .info-group {
+            flex: 1;
+        }
+
+        .student-info .label {
+            font-weight: bold;
+            color: #1a5276;
+            display: inline-block;
+            min-width: 80px;
+        }
+
+        /* ----- Grades table ----- */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+
+        th {
+            background-color: #1a5276;
+            color: white;
+            padding: 8px 6px;
+            text-align: center;
+            font-size: 10pt;
+        }
+
+        td {
+            padding: 6px;
+            text-align: center;
+            border: 1px solid #ddd;
+            font-size: 10pt;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f6fa;
+        }
+
+        .subject-name {
+            text-align: right;
+            font-weight: 500;
+        }
+
+        .score-cell { font-weight: bold; }
+        .score-high { color: #27ae60; }
+        .score-medium { color: #f39c12; }
+        .score-low { color: #e74c3c; }
+
+        /* ----- Summary ----- */
+        .summary-section {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .summary-box {
+            flex: 1;
+            margin: 0 5px;
+            padding: 10px;
+            border: 2px solid #1a5276;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .summary-box .value {
+            font-size: 18pt;
+            font-weight: bold;
+            color: #1a5276;
+        }
+
+        .summary-box .lbl {
+            font-size: 9pt;
+            color: #666;
+        }
+
+        /* ----- Comments & signatures ----- */
+        .comment-section {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .comment-section h3 {
+            color: #1a5276;
+            margin-bottom: 5px;
+            font-size: 11pt;
+        }
+
+        .signatures {
+            margin-top: 30px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .signature-box {
+            text-align: center;
+            width: 30%;
+        }
+
+        .signature-box .title {
+            font-weight: bold;
+            margin-bottom: 40px;
+        }
+
+        .signature-box .line {
+            border-top: 1px solid #333;
+            margin-top: 5px;
+        }
+
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 8pt;
+            color: #999;
+            border-top: 1px solid #ddd;
+            padding-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Republic header -->
+    <div class="republic-header">
+        الجمهورية الجزائرية الديمقراطية الشعبية<br>
+        وزارة التربية الوطنية
+    </div>
+
+    <!-- School header with logo -->
+    <div class="header">
+        {% if school.logo %}
+        <img class="logo" src="{{ school.logo.url }}" alt="Logo">
+        {% endif %}
+        <h1>{{ school.name }}</h1>
+        <h2>كشف النقاط — الفصل {{ trimester }}</h2>
+        <div class="subtitle">السنة الدراسية: {{ academic_year.name }}</div>
+    </div>
+
+    <!-- Student information + photo -->
+    <div class="student-info">
+        {% if student_user.photo %}
+        <img class="photo" src="{{ student_user.photo.url }}" alt="Photo">
+        {% endif %}
+        <div class="info-group">
+            <div><span class="label">الاسم الكامل:</span> {{ student_user.last_name }} {{ student_user.first_name }}</div>
+            <div><span class="label">القسم:</span> {{ class_obj.name }}</div>
+            <div><span class="label">المستوى:</span> {{ class_obj.level }}</div>
+            {% if class_obj.stream %}
+            <div><span class="label">الشعبة:</span> {{ class_obj.stream }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Grades table -->
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 22%;">المادة</th>
+                <th style="width: 8%;">المعامل</th>
+                <th style="width: 12%;">فرض م.</th>
+                <th style="width: 12%;">اختبار 1</th>
+                <th style="width: 12%;">اختبار 2</th>
+                <th style="width: 12%;">الامتحان</th>
+                <th style="width: 12%;">المعدل</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in subject_rows %}
+            <tr>
+                <td class="subject-name">{{ row.name }}</td>
+                <td>{{ row.coefficient }}</td>
+                <td>{% if row.continuous is not None %}{{ row.continuous }}{% else %}—{% endif %}</td>
+                <td>{% if row.test1 is not None %}{{ row.test1 }}{% else %}—{% endif %}</td>
+                <td>{% if row.test2 is not None %}{{ row.test2 }}{% else %}—{% endif %}</td>
+                <td>{% if row.final is not None %}{{ row.final }}{% else %}—{% endif %}</td>
+                <td class="score-cell {% if row.average >= 14 %}score-high{% elif row.average >= 10 %}score-medium{% elif row.average is not None %}score-low{% endif %}">
+                    {% if row.average is not None %}{{ row.average }}{% else %}—{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Summary boxes -->
+    <div class="summary-section">
+        <div class="summary-box">
+            <div class="value {% if overall_average >= 14 %}score-high{% elif overall_average >= 10 %}score-medium{% elif overall_average is not None %}score-low{% endif %}">
+                {% if overall_average is not None %}{{ overall_average }} / 20{% else %}—{% endif %}
+            </div>
+            <div class="lbl">المعدل العام</div>
+        </div>
+        <div class="summary-box">
+            <div class="value">
+                {% if rank %}{{ rank }} / {{ total_students }}{% else %}—{% endif %}
+            </div>
+            <div class="lbl">الترتيب</div>
+        </div>
+    </div>
+
+    <!-- Admin / teacher comments -->
+    {% if admin_comment %}
+    <div class="comment-section">
+        <h3>ملاحظات الإدارة:</h3>
+        <p>{{ admin_comment }}</p>
+    </div>
+    {% endif %}
+
+    {% if teacher_comment %}
+    <div class="comment-section">
+        <h3>ملاحظات الأستاذ الرئيسي:</h3>
+        <p>{{ teacher_comment }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Signatures -->
+    <div class="signatures">
+        <div class="signature-box">
+            <div class="title">ولي التلميذ</div>
+            <div class="line"></div>
+        </div>
+        <div class="signature-box">
+            <div class="title">الأستاذ الرئيسي</div>
+            <div class="line"></div>
+        </div>
+        <div class="signature-box">
+            <div class="title">مدير المؤسسة</div>
+            <div class="line"></div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        تم إنشاء هذا الكشف بواسطة منصة EduConnect Algeria
+    </div>
+</body>
+</html>

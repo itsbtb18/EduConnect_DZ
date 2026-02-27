@@ -12,8 +12,9 @@ class FeeStructure(TenantModel):
     name = models.CharField(
         max_length=100, help_text="e.g., Annual Tuition, Registration Fee"
     )
-    level = models.ForeignKey(
-        "academics.Level", on_delete=models.CASCADE, related_name="fee_structures"
+    target_class = models.ForeignKey(
+        "academics.Class", on_delete=models.CASCADE, related_name="fee_structures",
+        null=True, blank=True,
     )
     academic_year = models.ForeignKey(
         "schools.AcademicYear", on_delete=models.CASCADE, related_name="fee_structures"

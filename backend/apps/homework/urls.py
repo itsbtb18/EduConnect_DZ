@@ -1,11 +1,18 @@
-from django.urls import include, path
-from rest_framework.routers import DefaultRouter
+from django.urls import path
+
 from . import views
 
 app_name = "homework"
-router = DefaultRouter()
-router.register("tasks", views.HomeworkTaskViewSet, basename="homework-task")
-router.register(
-    "submissions", views.HomeworkSubmissionViewSet, basename="homework-submission"
-)
-urlpatterns = [path("", include(router.urls))]
+
+urlpatterns = [
+    # List + create
+    path("", views.HomeworkListCreateView.as_view(), name="homework-list-create"),
+    # Detail: retrieve, update, delete
+    path("<uuid:pk>/", views.HomeworkDetailView.as_view(), name="homework-detail"),
+    # Teacher: mark as corrected
+    path(
+        "<uuid:pk>/corrected/",
+        views.HomeworkMarkCorrectedView.as_view(),
+        name="homework-corrected",
+    ),
+]
