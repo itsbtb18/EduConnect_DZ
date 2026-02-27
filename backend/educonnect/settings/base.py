@@ -241,7 +241,7 @@ CACHES = {
 
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
-    default="http://localhost:3000,http://localhost:8080",
+    default="http://localhost:3000,http://localhost:5173,http://localhost:8080",
     cast=Csv(),
 )
 CORS_ALLOW_CREDENTIALS = True
