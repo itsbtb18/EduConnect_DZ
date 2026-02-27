@@ -1,0 +1,90 @@
+# ========================
+# EduConnect Algeria
+# ========================
+
+# ---- Python / Django ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+*.whl
+.Python
+env/
+venv/
+.venv/
+backend/venv/
+backend/.venv/
+*.sqlite3
+db.sqlite3
+*.log
+local_settings.py
+media/
+staticfiles/
+*.pot
+*.pyc
+
+# ---- Flutter / Dart ----
+mobile/.dart_tool/
+mobile/.packages
+mobile/.pub-cache/
+mobile/.pub/
+mobile/build/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/android/**/GeneratedPluginRegistrant.java
+mobile/ios/Flutter/Generated.xcconfig
+mobile/ios/Flutter/flutter_export_environment.sh
+mobile/ios/Runner/GeneratedPluginRegistrant.*
+mobile/ios/Pods/
+mobile/ios/.symlinks/
+mobile/.fvm/
+
+# ---- React Admin Panel ----
+admin_panel/node_modules/
+admin_panel/build/
+admin_panel/.next/
+admin_panel/dist/
+
+# ---- Environment & Secrets ----
+.env
+.env.local
+.env.production
+.env.staging
+*.pem
+*.key
+*.crt
+
+# ---- Docker ----
+docker-compose.override.yml
+
+# ---- IDE ----
+.idea/
+.vscode/settings.json
+*.iml
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ---- Coverage & Testing ----
+htmlcov/
+.coverage
+.coverage.*
+coverage/
+*.cover
+.pytest_cache/
+.tox/
+nosetests.xml
+coverage.xml
+
+# ---- Misc ----
+*.bak
+*.tmp
+*.temp
