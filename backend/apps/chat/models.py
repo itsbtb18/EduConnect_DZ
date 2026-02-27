@@ -1,75 +1,109 @@
 """
-Chat models: conversations and messages.
-Supports teacher-student and teacher-parent messaging.
+Chat models: rooms, messages, and read tracking.
 """
 
+import uuid
+
 from django.db import models
-from core.models import TenantModel
 
 
-class Conversation(TenantModel):
-    """A chat conversation between two users."""
+# ---------------------------------------------------------------------------
+# ChatRoom
+# ---------------------------------------------------------------------------
 
-    class ConversationType(models.TextChoices):
-        TEACHER_STUDENT = "teacher_student", "Teacher-Student"
-        TEACHER_PARENT = "teacher_parent", "Teacher-Parent"
-        BROADCAST = "broadcast", "Class Broadcast"
 
-    conversation_type = models.CharField(
-        max_length=20, choices=ConversationType.choices
+class ChatRoom(models.Model):
+    """A chat room with typed context."""
+
+    class RoomType(models.TextChoices):
+        TEACHER_PARENT = "TEACHER_PARENT", "Teacher-Parent"
+        TEACHER_STUDENT = "TEACHER_STUDENT", "Teacher-Student"
+        CLASS_BROADCAST = "CLASS_BROADCAST", "Class Broadcast"
+        ADMIN_PARENT = "ADMIN_PARENT", "Admin-Parent"
+        ADMIN_BROADCAST = "ADMIN_BROADCAST", "Admin Broadcast"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    school = models.ForeignKey(
+        "schools.School",
+        on_delete=models.CASCADE,
+        related_name="chat_rooms",
     )
-    participants = models.ManyToManyField("accounts.User", related_name="conversations")
-    classroom = models.ForeignKey(
-        "academics.Classroom",
+    room_type = models.CharField(max_length=20, choices=RoomType.choices)
+    related_student = models.ForeignKey(
+        "academics.StudentProfile",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="conversations",
-        help_text="For broadcast conversations",
+        related_name="chat_rooms",
     )
-    last_message_at = models.DateTimeField(null=True, blank=True)
+    related_class = models.ForeignKey(
+        "academics.Class",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="chat_rooms",
+        db_column="related_class_id",
+    )
+    participants = models.ManyToManyField(
+        "accounts.User", related_name="chat_rooms", blank=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = "conversations"
-        ordering = ["-last_message_at"]
+        db_table = "chat_rooms"
+        ordering = ["-created_at"]
 
     def __str__(self):
-        return f"Conversation {self.id} ({self.conversation_type})"
+        return f"ChatRoom {self.id} ({self.room_type})"
 
 
-class Message(TenantModel):
-    """A single message in a conversation."""
+# ---------------------------------------------------------------------------
+# Message
+# ---------------------------------------------------------------------------
 
-    conversation = models.ForeignKey(
-        Conversation, on_delete=models.CASCADE, related_name="messages"
+
+class Message(models.Model):
+    """A single message in a chat room."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    room = models.ForeignKey(
+        ChatRoom, on_delete=models.CASCADE, related_name="messages"
     )
     sender = models.ForeignKey(
         "accounts.User", on_delete=models.CASCADE, related_name="sent_messages"
     )
-    content = models.TextField()
+    content = models.TextField(blank=True)
     attachment = models.FileField(upload_to="chat/attachments/", blank=True, null=True)
-    is_read = models.BooleanField(default=False)
-    read_at = models.DateTimeField(null=True, blank=True)
+    attachment_type = models.CharField(max_length=50, blank=True, null=True)
+    sent_at = models.DateTimeField(auto_now_add=True)
+    is_deleted = models.BooleanField(default=False)
 
     class Meta:
         db_table = "messages"
-        ordering = ["created_at"]
+        ordering = ["sent_at"]
 
     def __str__(self):
         return f"{self.sender.full_name}: {self.content[:50]}"
 
 
-class MessageTemplate(TenantModel):
-    """Pre-written message templates for teachers."""
+# ---------------------------------------------------------------------------
+# MessageRead
+# ---------------------------------------------------------------------------
 
-    title = models.CharField(max_length=100)
-    content = models.TextField()
-    category = models.CharField(
-        max_length=50, blank=True, help_text="e.g., behavior, homework, meeting"
+
+class MessageRead(models.Model):
+    """Tracks which users have read a message."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name="reads")
+    user = models.ForeignKey(
+        "accounts.User", on_delete=models.CASCADE, related_name="message_reads"
     )
+    read_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = "message_templates"
+        db_table = "message_reads"
+        unique_together = ("message", "user")
 
     def __str__(self):
-        return self.title
+        return f"{self.user.full_name} read message {self.message_id}"

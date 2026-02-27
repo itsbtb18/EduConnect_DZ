@@ -1,60 +1,51 @@
 """
-Models for the Schools app — each school is a tenant.
+Models for the Schools app.
+All models include soft delete (is_deleted, deleted_at) and audit fields (created_by, created_at, updated_at).
 """
+
+import uuid
 
 from django.db import models
 
-from core.models import TimeStampedModel
 
+class School(models.Model):
+    """Represents a school (tenant) in the multi-tenant system."""
 
-class School(TimeStampedModel):
-    """
-    Represents a school (tenant) in the multi-tenant system.
-    Each school has its own isolated data.
-    """
+    class SubscriptionPlan(models.TextChoices):
+        STARTER = "STARTER", "Starter"
+        PRO = "PRO", "Pro"
+        PRO_AI = "PRO_AI", "Pro + AI"
 
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
-    arabic_name = models.CharField(max_length=255, blank=True)
-    code = models.CharField(
-        max_length=20, unique=True, help_text="Unique school code (e.g., SCH-001)"
-    )
     logo = models.ImageField(upload_to="schools/logos/", blank=True, null=True)
-
-    # Contact
-    email = models.EmailField(blank=True)
-    phone = models.CharField(max_length=20, blank=True)
     address = models.TextField(blank=True)
-    city = models.CharField(max_length=100, blank=True)
-    wilaya = models.CharField(max_length=100, blank=True, help_text="Algerian province")
-
-    # Details
-    school_type = models.CharField(
-        max_length=20,
-        choices=[
-            ("primary", "Primary School"),
-            ("middle", "Middle School"),
-            ("secondary", "Secondary School"),
-            ("combined", "Combined Levels"),
-        ],
-        default="combined",
-    )
-    motto = models.CharField(max_length=255, blank=True)
-    website = models.URLField(blank=True)
+    phone = models.CharField(max_length=20, blank=True)
+    email = models.EmailField(blank=True)
+    subdomain = models.CharField(max_length=63, unique=True)
 
     # Subscription
     subscription_plan = models.CharField(
         max_length=20,
-        choices=[
-            ("free", "Free Trial"),
-            ("basic", "Basic"),
-            ("premium", "Premium"),
-            ("enterprise", "Enterprise"),
-        ],
-        default="free",
+        choices=SubscriptionPlan.choices,
+        default=SubscriptionPlan.STARTER,
     )
-    subscription_expires = models.DateField(blank=True, null=True)
-    is_active = models.BooleanField(default=True)
-    max_students = models.PositiveIntegerField(default=100)
+    subscription_active = models.BooleanField(default=True)
+
+    # Soft delete
+    is_deleted = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(blank=True, null=True)
+
+    # Audit
+    created_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_schools",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "schools"
@@ -63,41 +54,102 @@ class School(TimeStampedModel):
     def __str__(self):
         return self.name
 
+    def soft_delete(self):
+        from django.utils import timezone
 
-class AcademicYear(TimeStampedModel):
-    """Represents an academic year for a school."""
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.save(update_fields=["is_deleted", "deleted_at", "updated_at"])
 
+
+class Section(models.Model):
+    """Represents a section (Primary / Middle / High) within a school."""
+
+    class SectionType(models.TextChoices):
+        PRIMARY = "PRIMARY", "Primary"
+        MIDDLE = "MIDDLE", "Middle"
+        HIGH = "HIGH", "High"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     school = models.ForeignKey(
-        School, on_delete=models.CASCADE, related_name="academic_years"
+        School, on_delete=models.CASCADE, related_name="sections"
     )
-    name = models.CharField(max_length=20, help_text="e.g., 2025-2026")
-    start_date = models.DateField()
-    end_date = models.DateField()
-    is_current = models.BooleanField(default=False)
+    section_type = models.CharField(max_length=10, choices=SectionType.choices)
+    name = models.CharField(max_length=100)
+    is_active = models.BooleanField(default=True)
+
+    # Soft delete
+    is_deleted = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(blank=True, null=True)
+
+    # Audit
+    created_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_sections",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = "academic_years"
-        unique_together = ("school", "name")
-        ordering = ["-start_date"]
+        db_table = "sections"
+        unique_together = ["school", "section_type"]
+        ordering = ["school", "section_type"]
 
     def __str__(self):
         return f"{self.school.name} — {self.name}"
 
+    def soft_delete(self):
+        from django.utils import timezone
 
-class Semester(TimeStampedModel):
-    """Semesters (trimesters) within an academic year."""
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.save(update_fields=["is_deleted", "deleted_at", "updated_at"])
 
-    academic_year = models.ForeignKey(
-        AcademicYear, on_delete=models.CASCADE, related_name="semesters"
+
+class AcademicYear(models.Model):
+    """Represents an academic year for a school section."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    school = models.ForeignKey(
+        School, on_delete=models.CASCADE, related_name="academic_years"
     )
-    name = models.CharField(max_length=50, help_text="e.g., Trimester 1")
+    section = models.ForeignKey(
+        Section, on_delete=models.CASCADE, related_name="academic_years"
+    )
+    name = models.CharField(max_length=20, help_text="e.g. 2025-2026")
     start_date = models.DateField()
     end_date = models.DateField()
-    is_current = models.BooleanField(default=False)
+    is_current = models.BooleanField(default=True)
+
+    # Soft delete
+    is_deleted = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(blank=True, null=True)
+
+    # Audit
+    created_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_academic_years",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = "semesters"
-        ordering = ["start_date"]
+        db_table = "academic_years"
+        unique_together = ("school", "section", "name")
+        ordering = ["-start_date"]
 
     def __str__(self):
-        return f"{self.name} — {self.academic_year.name}"
+        return f"{self.school.name} — {self.section.name} — {self.name}"
+
+    def soft_delete(self):
+        from django.utils import timezone
+
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.save(update_fields=["is_deleted", "deleted_at", "updated_at"])

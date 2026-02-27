@@ -1,55 +1,157 @@
 """
-Models for Academics: Levels, Classrooms, Subjects, Schedules.
+Models for Academics: Classes, Profiles, Subjects, Schedules, Resources.
 """
 
 from django.db import models
 
-from core.models import TenantModel
+from core.models import AuditModel, TenantModel
 
 
-class Level(TenantModel):
-    """School level/grade (e.g., 1st Year Primary, 3rd Year Middle)."""
+# ---------------------------------------------------------------------------
+# Class (replaces the old Level + Classroom pair)
+# ---------------------------------------------------------------------------
 
-    name = models.CharField(max_length=100)
-    arabic_name = models.CharField(max_length=100, blank=True)
-    order = models.PositiveIntegerField(default=0, help_text="Sort order")
-    school_stage = models.CharField(
-        max_length=20,
-        choices=[
-            ("primary", "Primary"),
-            ("middle", "Middle"),
-            ("secondary", "Secondary"),
-        ],
+
+class Class(AuditModel):
+    """
+    A class/group within a section and academic year.
+    Example names: '3AP-A', '1MS-B', '2AS-Sciences-A'.
+    """
+
+    section = models.ForeignKey(
+        "schools.Section",
+        on_delete=models.CASCADE,
+        related_name="classes",
     )
-
-    class Meta:
-        db_table = "levels"
-        ordering = ["order"]
-        unique_together = ("school", "name")
-
-    def __str__(self):
-        return f"{self.name} ({self.school.name})"
-
-
-class Classroom(TenantModel):
-    """A specific classroom/section (e.g., 3rd Year A, 3rd Year B)."""
-
-    level = models.ForeignKey(
-        Level, on_delete=models.CASCADE, related_name="classrooms"
-    )
-    name = models.CharField(max_length=100, help_text="e.g., 3A, 3B")
     academic_year = models.ForeignKey(
-        "schools.AcademicYear", on_delete=models.CASCADE, related_name="classrooms"
+        "schools.AcademicYear",
+        on_delete=models.CASCADE,
+        related_name="classes",
     )
-    capacity = models.PositiveIntegerField(default=30)
+    name = models.CharField(max_length=50, help_text="e.g. 3AP-A")
+    level = models.CharField(max_length=20, help_text="e.g. 3AP")
+    stream = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text="For high-school streams (e.g. Sciences, Letters)",
+    )
+    homeroom_teacher = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="homeroom_classes",
+    )
+    max_students = models.PositiveIntegerField(default=35)
 
     class Meta:
-        db_table = "classrooms"
-        ordering = ["level__order", "name"]
-        unique_together = ("school", "level", "name", "academic_year")
+        db_table = "classes"
+        ordering = ["level", "name"]
+        verbose_name_plural = "classes"
 
     def __str__(self):
-        return f"{self.level.name} - {self.name}"
+        return self.name
+
+
+# ---------------------------------------------------------------------------
+# Profiles
+# ---------------------------------------------------------------------------
+
+
+class StudentProfile(AuditModel):
+    """Extended profile for student users."""
+
+    user = models.OneToOneField(
+        "accounts.User",
+        on_delete=models.CASCADE,
+        related_name="student_profile",
+    )
+    current_class = models.ForeignKey(
+        Class,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="students",
+    )
+    student_id = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="School's internal student ID",
+    )
+    date_of_birth = models.DateField(blank=True, null=True)
+    enrollment_date = models.DateField(blank=True, null=True)
+    pin_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        help_text="SHA-256 hash of the student's 4-6 digit PIN",
+    )
+
+    class Meta:
+        db_table = "student_profiles"
+
+    def __str__(self):
+        return f"Student: {self.user.full_name}"
+
+
+class ParentProfile(AuditModel):
+    """Extended profile for parent users — supports multiple children."""
+
+    class Relationship(models.TextChoices):
+        FATHER = "FATHER", "Father"
+        MOTHER = "MOTHER", "Mother"
+        GUARDIAN = "GUARDIAN", "Guardian"
+
+    user = models.OneToOneField(
+        "accounts.User",
+        on_delete=models.CASCADE,
+        related_name="parent_profile",
+    )
+    children = models.ManyToManyField(
+        StudentProfile,
+        related_name="parents",
+        blank=True,
+    )
+    relationship = models.CharField(
+        max_length=10,
+        choices=Relationship.choices,
+        blank=True,
+    )
+
+    class Meta:
+        db_table = "parent_profiles"
+
+    def __str__(self):
+        return f"Parent: {self.user.full_name}"
+
+
+class TeacherProfile(AuditModel):
+    """Extended profile for teacher users."""
+
+    user = models.OneToOneField(
+        "accounts.User",
+        on_delete=models.CASCADE,
+        related_name="teacher_profile",
+    )
+    section = models.ForeignKey(
+        "schools.Section",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="teachers",
+    )
+    specialization = models.CharField(max_length=100, blank=True)
+
+    class Meta:
+        db_table = "teacher_profiles"
+
+    def __str__(self):
+        return f"Teacher: {self.user.full_name}"
+
+
+# ---------------------------------------------------------------------------
+# Subjects & Assignments
+# ---------------------------------------------------------------------------
 
 
 class Subject(TenantModel):
@@ -63,7 +165,6 @@ class Subject(TenantModel):
         max_length=7, default="#2196F3", help_text="Hex color for UI"
     )
     icon = models.CharField(max_length=50, blank=True, help_text="Icon identifier")
-    levels = models.ManyToManyField(Level, related_name="subjects", blank=True)
 
     class Meta:
         db_table = "subjects"
@@ -74,19 +175,19 @@ class Subject(TenantModel):
 
 
 class TeacherAssignment(TenantModel):
-    """Assigns a teacher to a subject in a classroom."""
+    """Assigns a teacher to a subject in a class."""
 
     teacher = models.ForeignKey(
         "accounts.User",
         on_delete=models.CASCADE,
         related_name="teaching_assignments",
-        limit_choices_to={"role": "teacher"},
+        limit_choices_to={"role": "TEACHER"},
     )
     subject = models.ForeignKey(
         Subject, on_delete=models.CASCADE, related_name="assignments"
     )
-    classroom = models.ForeignKey(
-        Classroom, on_delete=models.CASCADE, related_name="teacher_assignments"
+    assigned_class = models.ForeignKey(
+        Class, on_delete=models.CASCADE, related_name="teacher_assignments"
     )
     academic_year = models.ForeignKey(
         "schools.AcademicYear",
@@ -96,10 +197,18 @@ class TeacherAssignment(TenantModel):
 
     class Meta:
         db_table = "teacher_assignments"
-        unique_together = ("teacher", "subject", "classroom", "academic_year")
+        unique_together = ("teacher", "subject", "assigned_class", "academic_year")
 
     def __str__(self):
-        return f"{self.teacher.full_name} → {self.subject.name} ({self.classroom.name})"
+        return (
+            f"{self.teacher.full_name} → {self.subject.name} "
+            f"({self.assigned_class.name})"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Schedule
+# ---------------------------------------------------------------------------
 
 
 class ScheduleSlot(TenantModel):
@@ -113,8 +222,8 @@ class ScheduleSlot(TenantModel):
         (4, "Thursday"),
     ]
 
-    classroom = models.ForeignKey(
-        Classroom, on_delete=models.CASCADE, related_name="schedule_slots"
+    assigned_class = models.ForeignKey(
+        Class, on_delete=models.CASCADE, related_name="schedule_slots"
     )
     subject = models.ForeignKey(
         Subject, on_delete=models.CASCADE, related_name="schedule_slots"
@@ -123,7 +232,7 @@ class ScheduleSlot(TenantModel):
         "accounts.User",
         on_delete=models.CASCADE,
         related_name="schedule_slots",
-        limit_choices_to={"role": "teacher"},
+        limit_choices_to={"role": "TEACHER"},
     )
     day_of_week = models.IntegerField(choices=DAY_CHOICES)
     start_time = models.TimeField()
@@ -137,23 +246,31 @@ class ScheduleSlot(TenantModel):
         ordering = ["day_of_week", "start_time"]
 
     def __str__(self):
-        return f"{self.get_day_of_week_display()} {self.start_time}-{self.end_time}: {self.subject.name}"
+        return (
+            f"{self.get_day_of_week_display()} "
+            f"{self.start_time}-{self.end_time}: {self.subject.name}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Lessons & Resources
+# ---------------------------------------------------------------------------
 
 
 class Lesson(TenantModel):
-    """A lesson/chapter in a subject for a specific classroom."""
+    """A lesson/chapter in a subject for a specific class."""
 
     subject = models.ForeignKey(
         Subject, on_delete=models.CASCADE, related_name="lessons"
     )
-    classroom = models.ForeignKey(
-        Classroom, on_delete=models.CASCADE, related_name="lessons"
+    assigned_class = models.ForeignKey(
+        Class, on_delete=models.CASCADE, related_name="lessons"
     )
     teacher = models.ForeignKey(
         "accounts.User",
         on_delete=models.CASCADE,
         related_name="lessons",
-        limit_choices_to={"role": "teacher"},
+        limit_choices_to={"role": "TEACHER"},
     )
     title = models.CharField(max_length=255)
     content = models.TextField(blank=True)
@@ -168,7 +285,7 @@ class Lesson(TenantModel):
 
 
 class Resource(TenantModel):
-    """Educational resource (PDF, video link, document) attached to a lesson or subject."""
+    """Educational resource (PDF, video link, document) attached to a lesson."""
 
     class ResourceType(models.TextChoices):
         PDF = "pdf", "PDF Document"
@@ -186,14 +303,14 @@ class Resource(TenantModel):
     subject = models.ForeignKey(
         Subject, on_delete=models.CASCADE, related_name="resources"
     )
-    classroom = models.ForeignKey(
-        Classroom, on_delete=models.CASCADE, related_name="resources"
+    assigned_class = models.ForeignKey(
+        Class, on_delete=models.CASCADE, related_name="resources"
     )
     teacher = models.ForeignKey(
         "accounts.User",
         on_delete=models.CASCADE,
         related_name="uploaded_resources",
-        limit_choices_to={"role": "teacher"},
+        limit_choices_to={"role": "TEACHER"},
     )
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)

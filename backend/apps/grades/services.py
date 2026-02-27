@@ -1,241 +1,168 @@
 """
 Grade calculation services for EduConnect.
-Contains all business logic for computing averages, rankings, and report cards.
-
 All averages are computed server-side — NEVER on the client.
 """
 
 from decimal import ROUND_HALF_UP, Decimal
 
-from django.db.models import Avg, F
-
-from apps.academics.models import Subject
+from apps.grades.models import Grade, Subject, TrimesterConfig
 
 
-def calculate_subject_trimester_average(student, subject, semester):
+# ---------------------------------------------------------------------------
+# 1. Subject trimester average
+# ---------------------------------------------------------------------------
+
+
+def calculate_subject_trimester_average(
+    student_profile, subject, trimester, academic_year
+):
     """
-    Calculate a student's trimester average for a specific subject.
+    Weighted average of all PUBLISHED grades for *one* subject in a trimester.
 
-    Uses the school's configured grading weights:
-        - Continuous Assessment weight
-        - First Test weight
-        - Second Test weight
-        - Final Exam weight
-
-    Returns:
-        Decimal or None if no grades exist.
+    Uses ``TrimesterConfig`` to look up the weight for each exam type.
+    Returns ``None`` if any of the four exam types is missing.
     """
-    from apps.grades.models import Grade
-
-    grades = Grade.objects.filter(
-        student=student,
-        subject=subject,
-        semester=semester,
-        status="published",
-    )
-
-    if not grades.exists():
+    config = _get_trimester_config(student_profile, subject)
+    if config is None:
         return None
 
-    # Get the trimester weighting configuration
-    config = _get_trimester_config(student.school, subject)
-
-    weighted_sum = Decimal("0")
-    total_weight = Decimal("0")
-
-    # Map exam types to their configured weights
-    weight_mapping = {
-        "continuous": config.get("continuous_weight", Decimal("0.20")),
-        "test_1": config.get("test1_weight", Decimal("0.20")),
-        "test_2": config.get("test2_weight", Decimal("0.20")),
-        "final": config.get("final_weight", Decimal("0.40")),
+    weight_map = {
+        Grade.ExamType.CONTINUOUS: config.continuous_weight,
+        Grade.ExamType.TEST_1: config.test1_weight,
+        Grade.ExamType.TEST_2: config.test2_weight,
+        Grade.ExamType.FINAL: config.final_weight,
     }
 
-    for exam_type_key, weight in weight_mapping.items():
-        type_grades = grades.filter(exam_type__name__icontains=exam_type_key)
-        if type_grades.exists():
-            # Normalize scores to the same scale
-            avg = type_grades.aggregate(
-                avg_score=Avg(F("score") * Decimal("20") / F("max_score"))
-            )["avg_score"]
+    weighted_sum = Decimal("0")
+    for exam_type, weight in weight_map.items():
+        grade = (
+            Grade.objects.filter(
+                student=student_profile,
+                subject=subject,
+                trimester=trimester,
+                academic_year=academic_year,
+                exam_type=exam_type,
+                status=Grade.Status.PUBLISHED,
+                is_deleted=False,
+            )
+            .order_by("-created_at")
+            .first()
+        )
+        if grade is None:
+            return None  # incomplete — can't compute average
+        # Normalise to /20 then apply weight
+        normalised = grade.value * Decimal("20") / grade.max_value
+        weighted_sum += normalised * weight
 
-            if avg is not None:
-                weighted_sum += Decimal(str(avg)) * weight
-                total_weight += weight
-
-    if total_weight > 0:
-        result = weighted_sum / total_weight
-        return result.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-
-    return None
+    return weighted_sum.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
-def calculate_trimester_overall_average(student, semester):
+# ---------------------------------------------------------------------------
+# 2. Overall trimester average (coefficient-weighted across all subjects)
+# ---------------------------------------------------------------------------
+
+
+def calculate_overall_trimester_average(student_profile, trimester, academic_year):
     """
-    Calculate a student's overall trimester average across all subjects,
-    weighted by each subject's coefficient.
+    Coefficient-weighted average across every subject in the student's
+    current class for the given trimester.
 
-    Formula: Σ(Subject Average × Coefficient) ÷ Σ(Coefficients)
-
-    Returns:
-        Decimal or None
+    Formula: Σ(subject_avg × coefficient) / Σ(coefficient)
+    Returns ``None`` if no valid subject averages exist.
     """
-    from apps.accounts.models import StudentProfile
-
-    try:
-        profile = student.student_profile
-        classroom = profile.classroom
-    except StudentProfile.DoesNotExist:
-        return None
-
-    if not classroom:
+    current_class = student_profile.current_class
+    if current_class is None:
         return None
 
     subjects = Subject.objects.filter(
-        school=student.school,
-        levels=classroom.level,
+        class_obj=current_class,
+        is_deleted=False,
     )
 
     numerator = Decimal("0")
     denominator = Decimal("0")
 
-    for subject in subjects:
-        avg = calculate_subject_trimester_average(student, subject, semester)
+    for subj in subjects:
+        avg = calculate_subject_trimester_average(
+            student_profile, subj, trimester, academic_year
+        )
         if avg is not None:
-            coeff = Decimal(str(subject.coefficient))
+            coeff = subj.coefficient
             numerator += avg * coeff
             denominator += coeff
 
-    if denominator > 0:
-        result = numerator / denominator
-        return result.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    if denominator == 0:
+        return None
 
-    return None
+    return (numerator / denominator).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
-def calculate_yearly_average(student, academic_year):
+# ---------------------------------------------------------------------------
+# 3. Class rank
+# ---------------------------------------------------------------------------
+
+
+def calculate_class_rank(student_profile, trimester, academic_year):
     """
-    Calculate yearly average: (T1 + T2 + T3) / 3
-
-    Returns:
-        Decimal or None
+    Rank the student within their class.  1 = best.
+    Returns ``int`` or ``None`` if the student has no average.
     """
-    from apps.schools.models import Semester
+    from apps.academics.models import StudentProfile
 
-    semesters = Semester.objects.filter(
-        academic_year=academic_year,
-    ).order_by("start_date")
+    current_class = student_profile.current_class
+    if current_class is None:
+        return None
 
-    trimester_averages = []
-    for semester in semesters:
-        avg = calculate_trimester_overall_average(student, semester)
-        if avg is not None:
-            trimester_averages.append(avg)
-
-    if trimester_averages:
-        result = sum(trimester_averages) / len(trimester_averages)
-        return Decimal(str(result)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-
-    return None
-
-
-def calculate_class_rankings(classroom, semester):
-    """
-    Calculate rankings for all students in a classroom for a given semester.
-
-    Returns:
-        list of dicts: [{"student": user, "average": Decimal, "rank": int}, ...]
-    """
-    from apps.accounts.models import StudentProfile
-
-    students = StudentProfile.objects.filter(
-        classroom=classroom,
-        user__is_active=True,
+    classmates = StudentProfile.objects.filter(
+        current_class=current_class,
+        is_deleted=False,
     ).select_related("user")
 
-    rankings = []
-    for profile in students:
-        avg = calculate_trimester_overall_average(profile.user, semester)
+    averages = []
+    for mate in classmates:
+        avg = calculate_overall_trimester_average(mate, trimester, academic_year)
         if avg is not None:
-            rankings.append(
-                {
-                    "student": profile.user,
-                    "average": avg,
-                }
-            )
+            averages.append((mate.pk, avg))
 
-    # Sort by average descending
-    rankings.sort(key=lambda x: x["average"], reverse=True)
+    if not averages:
+        return None
 
-    # Assign ranks (handle ties)
-    current_rank = 1
-    for i, entry in enumerate(rankings):
-        if i > 0 and entry["average"] == rankings[i - 1]["average"]:
-            entry["rank"] = rankings[i - 1]["rank"]
-        else:
-            entry["rank"] = current_rank
-        current_rank += 1
+    # Sort descending by average
+    averages.sort(key=lambda x: x[1], reverse=True)
 
-    return rankings
+    # Assign ranks with tie handling
+    rank = 1
+    for i, (pk, avg) in enumerate(averages):
+        if i > 0 and avg < averages[i - 1][1]:
+            rank = i + 1
+        if pk == student_profile.pk:
+            return rank
+
+    return None
 
 
-def get_student_at_risk(school, semester, threshold=None):
+# ---------------------------------------------------------------------------
+# Private helpers
+# ---------------------------------------------------------------------------
+
+
+def _get_trimester_config(student_profile, subject):
     """
-    Identify students at risk of failing.
-
-    Args:
-        school: School instance
-        semester: Current semester
-        threshold: Passing threshold (auto-detected from school level if None)
-
-    Returns:
-        list of at-risk student dicts
+    Resolve the ``TrimesterConfig`` for the student's school & subject's section.
+    Falls back to sensible defaults if no row exists.
     """
-    from apps.accounts.models import StudentProfile
+    school_id = subject.school_id
+    section_id = subject.section_id
 
-    students = StudentProfile.objects.filter(
-        user__school=school,
-        user__is_active=True,
-        classroom__isnull=False,
-    ).select_related("user", "classroom", "classroom__level")
-
-    at_risk = []
-    for profile in students:
-        # Auto-detect threshold based on school level
-        if threshold is None:
-            if profile.classroom.level.school_stage == "primary":
-                level_threshold = Decimal("5.00")  # /10
-            else:
-                level_threshold = Decimal("10.00")  # /20
-        else:
-            level_threshold = Decimal(str(threshold))
-
-        avg = calculate_trimester_overall_average(profile.user, semester)
-        if avg is not None and avg < level_threshold:
-            at_risk.append(
-                {
-                    "student": profile.user,
-                    "classroom": profile.classroom,
-                    "average": avg,
-                    "threshold": level_threshold,
-                    "gap": level_threshold - avg,
-                }
-            )
-
-    # Sort by gap descending (worst first)
-    at_risk.sort(key=lambda x: x["gap"], reverse=True)
-    return at_risk
-
-
-def _get_trimester_config(school, subject):
-    """
-    Get the grading weight configuration for a school/section.
-    Returns default weights if no custom config exists.
-    """
-    # Default weights as per report
-    return {
-        "continuous_weight": Decimal("0.20"),
-        "test1_weight": Decimal("0.20"),
-        "test2_weight": Decimal("0.20"),
-        "final_weight": Decimal("0.40"),
-    }
+    try:
+        return TrimesterConfig.objects.get(school_id=school_id, section_id=section_id)
+    except TrimesterConfig.DoesNotExist:
+        # Build an in-memory default so callers stay uniform
+        return TrimesterConfig(
+            school_id=school_id,
+            section_id=section_id,
+            continuous_weight=Decimal("0.20"),
+            test1_weight=Decimal("0.20"),
+            test2_weight=Decimal("0.20"),
+            final_weight=Decimal("0.40"),
+        )

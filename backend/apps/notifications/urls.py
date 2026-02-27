@@ -1,8 +1,34 @@
-from django.urls import include, path
-from rest_framework.routers import DefaultRouter
+from django.urls import path
+
 from . import views
 
 app_name = "notifications"
-router = DefaultRouter()
-router.register("", views.NotificationViewSet, basename="notification")
-urlpatterns = [path("", include(router.urls))]
+
+urlpatterns = [
+    # List notifications
+    path("", views.NotificationListView.as_view(), name="notification-list"),
+    # Mark single as read
+    path(
+        "<uuid:pk>/read/",
+        views.NotificationMarkReadView.as_view(),
+        name="notification-read",
+    ),
+    # Mark all as read
+    path(
+        "read-all/",
+        views.NotificationMarkAllReadView.as_view(),
+        name="notification-read-all",
+    ),
+    # Unread count
+    path(
+        "unread-count/",
+        views.UnreadCountView.as_view(),
+        name="notification-unread-count",
+    ),
+    # Device token registration
+    path(
+        "devices/",
+        views.DeviceTokenView.as_view(),
+        name="device-token",
+    ),
+]

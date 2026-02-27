@@ -9,44 +9,61 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 User = get_user_model()
 
 
+# ---------------------------------------------------------------------------
+# JWT Token
+# ---------------------------------------------------------------------------
+
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    """Custom JWT token serializer that includes user role and school in the token."""
+    """
+    Adds custom claims to the JWT payload:
+    user_id, role, school_id, is_first_login.
+
+    Also enriches the HTTP response body with the same fields so the
+    client doesn't have to decode the JWT to read them.
+    """
+
+    # simplejwt uses USERNAME_FIELD automatically, which is phone_number
 
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
+        # Custom payload claims
         token["role"] = user.role
         token["school_id"] = str(user.school_id) if user.school_id else None
-        token["full_name"] = user.full_name
+        token["is_first_login"] = user.is_first_login
         return token
 
     def validate(self, attrs):
         data = super().validate(attrs)
-        data["user"] = UserSerializer(self.user).data
+        # Extra fields returned alongside access/refresh
+        data["role"] = self.user.role
+        data["is_first_login"] = self.user.is_first_login
+        data["school_id"] = str(self.user.school_id) if self.user.school_id else None
         return data
 
 
+# ---------------------------------------------------------------------------
+# User CRUD
+# ---------------------------------------------------------------------------
+
+
 class UserSerializer(serializers.ModelSerializer):
-    """Serializer for user display."""
+    """Read serializer for user display."""
 
     class Meta:
         model = User
         fields = [
             "id",
-            "email",
-            "phone",
             "first_name",
             "last_name",
-            "arabic_first_name",
-            "arabic_last_name",
-            "date_of_birth",
-            "gender",
-            "avatar",
+            "phone_number",
+            "email",
+            "photo",
             "role",
             "school",
-            "language",
             "is_active",
-            "must_change_password",
+            "is_first_login",
             "created_at",
         ]
         read_only_fields = ["id", "role", "school", "created_at"]
@@ -60,18 +77,12 @@ class UserCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            "email",
+            "phone_number",
             "password",
-            "phone",
+            "email",
             "first_name",
             "last_name",
-            "arabic_first_name",
-            "arabic_last_name",
-            "date_of_birth",
-            "gender",
             "role",
-            "school",
-            "language",
         ]
 
     def create(self, validated_data):
@@ -95,8 +106,13 @@ class ChangePasswordSerializer(serializers.Serializer):
         return value
 
 
-class PhonePinLoginSerializer(serializers.Serializer):
-    """Serializer for student phone + PIN login."""
+# ---------------------------------------------------------------------------
+# PIN Login
+# ---------------------------------------------------------------------------
 
-    phone = serializers.CharField(required=True)
-    pin = serializers.CharField(required=True, max_length=6)
+
+class PINLoginSerializer(serializers.Serializer):
+    """Accepts phone_number + pin for student-only login."""
+
+    phone_number = serializers.CharField(required=True)
+    pin = serializers.IntegerField(required=True)

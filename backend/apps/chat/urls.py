@@ -1,14 +1,16 @@
-from django.urls import include, path
-from rest_framework.routers import DefaultRouter
+from django.urls import path
+
 from . import views
 
 app_name = "chat"
-router = DefaultRouter()
-router.register("conversations", views.ConversationViewSet, basename="conversation")
-router.register("templates", views.MessageTemplateViewSet, basename="message-template")
-router.register(
-    r"conversations/(?P<conversation_pk>[^/.]+)/messages",
-    views.MessageViewSet,
-    basename="message",
-)
-urlpatterns = [path("", include(router.urls))]
+
+urlpatterns = [
+    # List + create rooms
+    path("rooms/", views.ChatRoomListCreateView.as_view(), name="room-list-create"),
+    # Message history + REST message send
+    path(
+        "rooms/<uuid:room_id>/messages/",
+        views.MessageListCreateView.as_view(),
+        name="message-list-create",
+    ),
+]
