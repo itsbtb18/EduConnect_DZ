@@ -1,173 +1,187 @@
 import React, { useState } from 'react';
-import PageHeader from '../../components/ui/PageHeader';
-import StatCard from '../../components/ui/StatCard';
-import Badge from '../../components/ui/Badge';
-import SearchBar from '../../components/ui/SearchBar';
-import { payments } from '../../data/mockData';
-import type { BadgeColor } from '../../types';
-
-const statusMap: Record<string, { label: string; color: BadgeColor }> = {
-  paid: { label: 'Payé', color: 'green' },
-  partial: { label: 'Partiel', color: 'yellow' },
-  pending: { label: 'En attente', color: 'orange' },
-  overdue: { label: 'En retard', color: 'red' },
-};
+import { Table, Button, Tag, Modal, Form, Input, InputNumber, Select, Card, Statistic, Space } from 'antd';
+import {
+  DollarOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  WarningOutlined,
+} from '@ant-design/icons';
+import { usePayments, useCreatePayment } from '../../hooks/useApi';
 
 const FinancialPage: React.FC = () => {
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [page, setPage] = useState(1);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [form] = Form.useForm();
 
-  const filtered = payments.filter(
-    (p) =>
-      (statusFilter === 'all' || p.status === statusFilter) &&
-      p.studentName.toLowerCase().includes(search.toLowerCase()),
-  );
+  const { data, isLoading, refetch } = usePayments({ page, page_size: 20 });
+  const createPayment = useCreatePayment();
 
-  const collectionRates = [
-    { label: '1ère AS', rate: 82 },
-    { label: '2ème AS', rate: 76 },
-    { label: '3ème AS', rate: 90 },
-    { label: '4ème AM', rate: 65 },
+  const handleCreate = async () => {
+    try {
+      const values = await form.validateFields();
+      await createPayment.mutateAsync(values);
+      setModalOpen(false);
+      form.resetFields();
+    } catch {
+      // validation
+    }
+  };
+
+  const statusColors: Record<string, string> = {
+    paid: 'green',
+    partial: 'orange',
+    pending: 'blue',
+    overdue: 'red',
+    unpaid: 'default',
+  };
+
+  const statusLabels: Record<string, string> = {
+    paid: 'Paye',
+    partial: 'Partiel',
+    pending: 'En attente',
+    overdue: 'En retard',
+    unpaid: 'Non paye',
+  };
+
+  const results = data?.results || [];
+  const totalPaid = results.reduce((sum: number, p: any) => sum + ((p.amount as number) || 0), 0);
+  const paidCount = results.filter((p: any) => p.status === 'paid').length;
+  const pendingCount = results.filter((p: any) => p.status === 'pending' || p.status === 'unpaid').length;
+
+  const columns = [
+    {
+      title: 'Eleve',
+      dataIndex: 'student_name',
+      key: 'student_name',
+      render: (v: string, r: Record<string, unknown>) =>
+        <span style={{ fontWeight: 600 }}>{v || (r.student as string) || '—'}</span>,
+    },
+    {
+      title: 'Montant',
+      dataIndex: 'amount',
+      key: 'amount',
+      render: (v: number) => v != null ? <span className="font-mono" style={{ fontWeight: 700 }}>{v.toLocaleString()} DA</span> : '—',
+    },
+    {
+      title: 'Methode',
+      dataIndex: 'method',
+      key: 'method',
+      render: (v: string, r: Record<string, unknown>) =>
+        <Tag>{v || (r.payment_method as string) || '—'}</Tag>,
+    },
+    {
+      title: 'Date',
+      dataIndex: 'date',
+      key: 'date',
+      render: (v: string, r: Record<string, unknown>) => (v || (r.created_at as string) || '—')?.toString().slice(0, 10),
+    },
+    {
+      title: 'Statut',
+      dataIndex: 'status',
+      key: 'status',
+      render: (v: string) => (
+        <Tag color={statusColors[v] || 'default'}>{statusLabels[v] || v || '—'}</Tag>
+      ),
+    },
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <PageHeader
-        title="Gestion Financière"
-        subtitle="Suivi des paiements et inscriptions"
-        actions={
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button style={btn('outline')}>📤 Exporter</button>
-            <button style={btn('primary')}>+ Ajouter un paiement</button>
-          </div>
-        }
-      />
-
-      {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 16 }}>
-        <StatCard label="Total prévu" value="4.2M DZD" sub="année 2025–2026" borderColor="#1A6BFF" />
-        <StatCard label="Encaissé" value="3.1M DZD" sub="74% du total" borderColor="#00C48C" />
-        <StatCard label="En attente" value="1.1M DZD" sub="26% restant" subColor="#FFB800" borderColor="#FFB800" />
-        <StatCard label="Ce mois" value="280K DZD" sub="38 paiements" borderColor="#FF6B35" />
-      </div>
-
-      {/* Payment table */}
-      <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h2 style={h2}>Historique des paiements</h2>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <SearchBar value={search} onChange={setSearch} placeholder="Chercher un étudiant…" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              style={selectStyle}
-            >
-              <option value="all">Tous</option>
-              <option value="paid">Payé</option>
-              <option value="partial">Partiel</option>
-              <option value="pending">En attente</option>
-              <option value="overdue">En retard</option>
-            </select>
-          </div>
+    <div className="page animate-fade-in">
+      <div className="page-header">
+        <div className="page-header__info">
+          <h1>Gestion financiere</h1>
+          <p>{data?.count ?? 0} transactions</p>
         </div>
-
-        <table style={tableGlobal}>
-          <thead>
-            <tr>
-              {['Étudiant', 'Classe', 'Montant', 'Méthode', 'Date', 'Statut'].map((h) => (
-                <th key={h} style={thStyle}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((p) => {
-              const st = statusMap[p.status];
-              return (
-                <tr key={p.id}>
-                  <td style={tdStyle}>{p.studentName}</td>
-                  <td style={tdStyle}>{p.className}</td>
-                  <td style={{ ...tdStyle, fontWeight: 700 }}>{(p.amount / 1000).toFixed(0)}K DZD</td>
-                  <td style={tdStyle}>{p.method}</td>
-                  <td style={tdStyle}>{p.date}</td>
-                  <td style={tdStyle}><Badge label={st.label} color={st.color} /></td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-        {/* Collection rates */}
-        <div className="card">
-          <h2 style={{ ...h2, marginBottom: 14 }}>Taux de recouvrement par niveau</h2>
-          {collectionRates.map((c) => (
-            <div key={c.label} style={{ marginBottom: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: 13, color: '#374151' }}>{c.label}</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: c.rate >= 80 ? '#00C48C' : '#FFB800' }}>{c.rate}%</span>
-              </div>
-              <div className="progress-track">
-                <div className="progress-fill" style={{ width: `${c.rate}%`, background: c.rate >= 80 ? '#00C48C' : '#FFB800' }} />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Next deadline */}
-        <div
-          style={{
-            borderRadius: 16,
-            padding: 24,
-            background: 'linear-gradient(135deg, #FF6B35 0%, #FFB800 100%)',
-            color: '#fff',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-          }}
-        >
-          <div style={{ fontSize: 13, opacity: 0.9 }}>Prochaine échéance de paiement</div>
-          <div style={{ fontSize: 28, fontWeight: 800, margin: '8px 0' }}>15 Mars 2026</div>
-          <div style={{ fontSize: 13, opacity: 0.9 }}>2ème tranche — 38 élèves concernés</div>
-          <button
-            style={{
-              marginTop: 14,
-              padding: '8px 18px',
-              borderRadius: 10,
-              border: 'none',
-              background: 'rgba(255,255,255,0.25)',
-              color: '#fff',
-              fontWeight: 700,
-              cursor: 'pointer',
-              width: 'fit-content',
-              fontSize: 13,
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-            }}
+        <div className="page-header__actions">
+          <Button icon={<ReloadOutlined />} onClick={() => refetch()}>Actualiser</Button>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => { form.resetFields(); setModalOpen(true); }}
           >
-            Envoyer les rappels →
-          </button>
+            Nouveau paiement
+          </Button>
         </div>
       </div>
+
+      {/* Summary cards */}
+      <div className="stats-grid stagger-children" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+        <Card>
+          <Statistic
+            title="Total percu"
+            value={totalPaid}
+            suffix="DA"
+            prefix={<DollarOutlined style={{ color: 'var(--success)' }} />}
+            valueStyle={{ color: 'var(--success)', fontWeight: 700 }}
+          />
+        </Card>
+        <Card>
+          <Statistic
+            title="Paiements confirmes"
+            value={paidCount}
+            prefix={<CheckCircleOutlined style={{ color: 'var(--primary)' }} />}
+            valueStyle={{ fontWeight: 700 }}
+          />
+        </Card>
+        <Card>
+          <Statistic
+            title="En attente"
+            value={pendingCount}
+            prefix={<ClockCircleOutlined style={{ color: 'var(--warning)' }} />}
+            valueStyle={{ color: 'var(--warning)', fontWeight: 700 }}
+          />
+        </Card>
+      </div>
+
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <Table
+          columns={columns}
+          dataSource={results}
+          loading={isLoading}
+          rowKey={(r: Record<string, any>) => (r.id as string) || String(Math.random())}
+          pagination={{
+            current: page,
+            pageSize: 20,
+            total: data?.count || 0,
+            onChange: (p) => setPage(p),
+            showSizeChanger: false,
+          }}
+          locale={{ emptyText: 'Aucune transaction' }}
+        />
+      </div>
+
+      <Modal
+        title="Nouveau paiement"
+        open={modalOpen}
+        onOk={handleCreate}
+        onCancel={() => setModalOpen(false)}
+        confirmLoading={createPayment.isPending}
+        okText="Enregistrer"
+        cancelText="Annuler"
+      >
+        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item label="Eleve" name="student" rules={[{ required: true, message: 'Requis' }]}>
+            <Input placeholder="ID de l'eleve" />
+          </Form.Item>
+          <Form.Item label="Frais" name="fee" rules={[{ required: true, message: 'Requis' }]}>
+            <Input placeholder="ID du frais" />
+          </Form.Item>
+          <Form.Item label="Montant (DA)" name="amount" rules={[{ required: true, message: 'Requis' }]}>
+            <InputNumber min={0} style={{ width: '100%' }} placeholder="Montant" />
+          </Form.Item>
+          <Form.Item label="Methode" name="payment_method" initialValue="cash">
+            <Select>
+              <Select.Option value="cash">Especes</Select.Option>
+              <Select.Option value="bank_transfer">Virement bancaire</Select.Option>
+              <Select.Option value="check">Cheque</Select.Option>
+            </Select>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };
-
-const h2: React.CSSProperties = { fontSize: 16, fontWeight: 700, color: '#1F2937', margin: 0 };
-const tableGlobal: React.CSSProperties = { width: '100%', borderCollapse: 'collapse' };
-const thStyle: React.CSSProperties = { textAlign: 'left', padding: '10px 12px', fontSize: 11, color: '#6B7280', fontWeight: 700, textTransform: 'uppercase', borderBottom: '1px solid #E5E7EB' };
-const tdStyle: React.CSSProperties = { padding: '10px 12px', fontSize: 13, borderBottom: '1px solid #F3F4F6' };
-const selectStyle: React.CSSProperties = { padding: '6px 10px', borderRadius: 8, border: '1.5px solid #E5E7EB', fontSize: 13, fontFamily: "'Plus Jakarta Sans', sans-serif", background: '#fff' };
-
-function btn(variant: string): React.CSSProperties {
-  const base: React.CSSProperties = {
-    padding: '6px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600,
-    display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: "'Plus Jakarta Sans', sans-serif",
-  };
-  switch (variant) {
-    case 'primary': return { ...base, background: '#1A6BFF', color: '#fff' };
-    case 'outline': return { ...base, background: '#fff', color: '#1A6BFF', border: '1.5px solid #1A6BFF' };
-    default: return base;
-  }
-}
 
 export default FinancialPage;

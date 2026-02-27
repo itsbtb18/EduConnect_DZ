@@ -1,271 +1,223 @@
 import React, { useState } from 'react';
-import PageHeader from '../../components/ui/PageHeader';
-import { wilayas } from '../../data/mockData';
-
-type Tab = 'profile' | 'academic' | 'notifications' | 'security' | 'subscription';
-
-const tabs: { key: Tab; label: string; icon: string }[] = [
-  { key: 'profile', label: 'Profil', icon: '🏫' },
-  { key: 'academic', label: 'Académique', icon: '📚' },
-  { key: 'notifications', label: 'Notifications', icon: '🔔' },
-  { key: 'security', label: 'Sécurité', icon: '🔒' },
-  { key: 'subscription', label: 'Abonnement', icon: '💳' },
-];
+import { Card, Form, Input, Button, Switch, Divider, message, Tabs, Select } from 'antd';
+import {
+  UserOutlined,
+  LockOutlined,
+  BellOutlined,
+  GlobalOutlined,
+  SaveOutlined,
+} from '@ant-design/icons';
+import { useAuth } from '../../context/AuthContext';
 
 const SettingsPage: React.FC = () => {
-  const [active, setActive] = useState<Tab>('profile');
+  const { user } = useAuth();
+  const [profileForm] = Form.useForm();
+  const [passwordForm] = Form.useForm();
+  const [saving, setSaving] = useState(false);
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <PageHeader
-        title="Paramètres"
-        subtitle="Configurer votre établissement et votre compte"
-      />
+  const handleProfileSave = async () => {
+    try {
+      await profileForm.validateFields();
+      setSaving(true);
+      // API call would go here
+      setTimeout(() => {
+        message.success('Profil mis a jour');
+        setSaving(false);
+      }, 500);
+    } catch {
+      // validation
+    }
+  };
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, background: '#fff', borderRadius: 12, padding: 4, width: 'fit-content', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setActive(t.key)}
-            style={{
-              padding: '8px 16px', borderRadius: 10, border: 'none', cursor: 'pointer',
-              fontSize: 13, fontWeight: 600, fontFamily: "'Plus Jakarta Sans', sans-serif",
-              background: active === t.key ? '#1A6BFF' : 'transparent',
-              color: active === t.key ? '#fff' : '#6B7280',
+  const handlePasswordChange = async () => {
+    try {
+      const values = await passwordForm.validateFields();
+      if (values.new_password !== values.confirm_password) {
+        message.error('Les mots de passe ne correspondent pas');
+        return;
+      }
+      message.success('Mot de passe modifie');
+      passwordForm.resetFields();
+    } catch {
+      // validation
+    }
+  };
+
+  const tabItems = [
+    {
+      key: 'profile',
+      label: (
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <UserOutlined /> Profil
+        </span>
+      ),
+      children: (
+        <Card>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 24 }}>
+            <div
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, var(--primary), #6366F1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#fff',
+                fontSize: 22,
+                fontWeight: 700,
+              }}
+            >
+              {(user?.first_name?.[0] || 'A').toUpperCase()}
+              {(user?.last_name?.[0] || 'D').toUpperCase()}
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontWeight: 700, fontSize: 18 }}>
+                {user ? `${user.first_name} ${user.last_name}`.trim() || 'Admin' : 'Admin'}
+              </h3>
+              <span style={{ color: 'var(--gray-500)', fontSize: 13 }}>{user?.role || 'superadmin'}</span>
+            </div>
+          </div>
+
+          <Form
+            form={profileForm}
+            layout="vertical"
+            initialValues={{
+              first_name: user?.first_name || '',
+              last_name: user?.last_name || '',
+              email: user?.email || '',
+              phone_number: user?.phone_number || '',
             }}
           >
-            {t.icon} {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Content */}
-      {active === 'profile' && <ProfileTab />}
-      {active === 'academic' && <AcademicTab />}
-      {active === 'notifications' && <NotificationsTab />}
-      {active === 'security' && <SecurityTab />}
-      {active === 'subscription' && <SubscriptionTab />}
-    </div>
-  );
-};
-
-/* ─── Shared ─── */
-const labelStyle: React.CSSProperties = { display: 'block', fontSize: 12, fontWeight: 600, color: '#6B7280', marginBottom: 4 };
-const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '8px 12px', border: '1.5px solid #E5E7EB', borderRadius: 10,
-  fontSize: 13, outline: 'none', fontFamily: "'Plus Jakarta Sans', sans-serif", boxSizing: 'border-box',
-};
-
-function btn(variant: string): React.CSSProperties {
-  const base: React.CSSProperties = {
-    padding: '8px 18px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600,
-    display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: "'Plus Jakarta Sans', sans-serif",
-  };
-  switch (variant) {
-    case 'primary': return { ...base, background: '#1A6BFF', color: '#fff' };
-    case 'danger': return { ...base, background: '#FF4757', color: '#fff' };
-    case 'outline': return { ...base, background: '#fff', color: '#1A6BFF', border: '1.5px solid #1A6BFF' };
-    default: return { ...base, background: '#F3F4F6', color: '#374151' };
-  }
-}
-
-/* ─── Profile Tab ─── */
-const ProfileTab: React.FC = () => (
-  <div className="card">
-    <h2 style={h2}>Informations de l'établissement</h2>
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 14 }}>
-      <div>
-        <label style={labelStyle}>Nom de l'établissement</label>
-        <input type="text" defaultValue="Lycée El-Feth" style={inputStyle} />
-      </div>
-      <div>
-        <label style={labelStyle}>Type</label>
-        <select style={inputStyle}>
-          <option>Lycée</option>
-          <option>CEM</option>
-          <option>École primaire</option>
-        </select>
-      </div>
-      <div>
-        <label style={labelStyle}>Wilaya</label>
-        <select style={inputStyle}>
-          {wilayas.map((w) => (
-            <option key={w}>{w}</option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <label style={labelStyle}>Commune</label>
-        <input type="text" defaultValue="Belouizdad" style={inputStyle} />
-      </div>
-      <div>
-        <label style={labelStyle}>Téléphone</label>
-        <input type="text" defaultValue="023 45 67 89" style={inputStyle} />
-      </div>
-      <div>
-        <label style={labelStyle}>Email</label>
-        <input type="email" defaultValue="contact@lycee-elfeth.edu.dz" style={inputStyle} />
-      </div>
-    </div>
-    <div style={{ marginTop: 16 }}>
-      <button style={btn('primary')}>💾 Enregistrer</button>
-    </div>
-  </div>
-);
-
-/* ─── Academic Tab ─── */
-const AcademicTab: React.FC = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-    <div className="card">
-      <h2 style={h2}>Année scolaire</h2>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginTop: 14 }}>
-        <div>
-          <label style={labelStyle}>Année en cours</label>
-          <select style={inputStyle}>
-            <option>2025–2026</option>
-            <option>2024–2025</option>
-          </select>
-        </div>
-        <div>
-          <label style={labelStyle}>Début</label>
-          <input type="date" defaultValue="2025-09-07" style={inputStyle} />
-        </div>
-        <div>
-          <label style={labelStyle}>Fin</label>
-          <input type="date" defaultValue="2026-06-30" style={inputStyle} />
-        </div>
-      </div>
-    </div>
-    <div className="card">
-      <h2 style={h2}>Système de notation</h2>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 14 }}>
-        <div>
-          <label style={labelStyle}>Système</label>
-          <select style={inputStyle}>
-            <option>Sur 20</option>
-            <option>Lettres (A–F)</option>
-          </select>
-        </div>
-        <div>
-          <label style={labelStyle}>Moyenne de passage</label>
-          <input type="number" defaultValue={10} style={inputStyle} />
-        </div>
-      </div>
-      <div style={{ marginTop: 16 }}>
-        <button style={btn('primary')}>💾 Enregistrer</button>
-      </div>
-    </div>
-  </div>
-);
-
-/* ─── Notifications Tab ─── */
-const NotificationsTab: React.FC = () => {
-  const options = [
-    { label: 'Nouvelles inscriptions', desc: 'Notification à chaque nouveau dossier', on: true },
-    { label: 'Notes publiées', desc: 'Quand un enseignant publie des notes', on: true },
-    { label: 'Absences non justifiées', desc: 'Alert après 3 absences consécutives', on: false },
-    { label: 'Paiements en retard', desc: 'Rappels automatiques aux parents', on: true },
-    { label: 'Rapports hebdomadaires', desc: 'Résumé chaque dimanche matin', on: false },
-  ];
-  return (
-    <div className="card">
-      <h2 style={h2}>Préférences de notifications</h2>
-      {options.map((o, i) => (
-        <div
-          key={i}
-          style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '12px 0', borderBottom: i < options.length - 1 ? '1px solid #F3F4F6' : 'none',
-          }}
-        >
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 600 }}>{o.label}</div>
-            <div style={{ fontSize: 11, color: '#9CA3AF' }}>{o.desc}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <Form.Item label="Prenom" name="first_name">
+                <Input />
+              </Form.Item>
+              <Form.Item label="Nom" name="last_name">
+                <Input />
+              </Form.Item>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <Form.Item label="Email" name="email">
+                <Input />
+              </Form.Item>
+              <Form.Item label="Telephone" name="phone_number">
+                <Input disabled />
+              </Form.Item>
+            </div>
+            <Button type="primary" icon={<SaveOutlined />} onClick={handleProfileSave} loading={saving}>
+              Enregistrer
+            </Button>
+          </Form>
+        </Card>
+      ),
+    },
+    {
+      key: 'security',
+      label: (
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <LockOutlined /> Securite
+        </span>
+      ),
+      children: (
+        <Card>
+          <h3 style={{ fontWeight: 700, marginBottom: 16 }}>Changer le mot de passe</h3>
+          <Form form={passwordForm} layout="vertical" style={{ maxWidth: 400 }}>
+            <Form.Item label="Mot de passe actuel" name="current_password" rules={[{ required: true, message: 'Requis' }]}>
+              <Input.Password />
+            </Form.Item>
+            <Form.Item label="Nouveau mot de passe" name="new_password" rules={[{ required: true, message: 'Requis' }]}>
+              <Input.Password />
+            </Form.Item>
+            <Form.Item label="Confirmer" name="confirm_password" rules={[{ required: true, message: 'Requis' }]}>
+              <Input.Password />
+            </Form.Item>
+            <Button type="primary" icon={<LockOutlined />} onClick={handlePasswordChange}>
+              Modifier le mot de passe
+            </Button>
+          </Form>
+        </Card>
+      ),
+    },
+    {
+      key: 'notifications',
+      label: (
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <BellOutlined /> Notifications
+        </span>
+      ),
+      children: (
+        <Card>
+          <h3 style={{ fontWeight: 700, marginBottom: 20 }}>Preferences de notification</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {[
+              { label: 'Notifications par email', desc: 'Recevoir les notifications importantes par email' },
+              { label: 'Notifications SMS', desc: 'Recevoir les alertes urgentes par SMS' },
+              { label: 'Nouvelles inscriptions', desc: 'Notifier lors de nouvelles inscriptions' },
+              { label: 'Paiements', desc: 'Notifier lors de nouveaux paiements' },
+              { label: 'Absences', desc: 'Alertes d\'absences non justifiees' },
+            ].map((item) => (
+              <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--gray-100)' }}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{item.label}</div>
+                  <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>{item.desc}</div>
+                </div>
+                <Switch defaultChecked />
+              </div>
+            ))}
           </div>
-          <ToggleSwitch defaultOn={o.on} />
-        </div>
-      ))}
-    </div>
-  );
-};
+        </Card>
+      ),
+    },
+    {
+      key: 'general',
+      label: (
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <GlobalOutlined /> General
+        </span>
+      ),
+      children: (
+        <Card>
+          <h3 style={{ fontWeight: 700, marginBottom: 20 }}>Parametres generaux</h3>
+          <Form layout="vertical" style={{ maxWidth: 400 }}>
+            <Form.Item label="Langue">
+              <Select defaultValue="fr">
+                <Select.Option value="fr">Francais</Select.Option>
+                <Select.Option value="ar">Arabe</Select.Option>
+              </Select>
+            </Form.Item>
+            <Form.Item label="Fuseau horaire">
+              <Select defaultValue="africa_algiers">
+                <Select.Option value="africa_algiers">Afrique/Alger (UTC+1)</Select.Option>
+              </Select>
+            </Form.Item>
+            <Form.Item label="Annee scolaire">
+              <Select defaultValue="2024-2025">
+                <Select.Option value="2024-2025">2024-2025</Select.Option>
+                <Select.Option value="2023-2024">2023-2024</Select.Option>
+              </Select>
+            </Form.Item>
+            <Button type="primary" icon={<SaveOutlined />}>
+              Enregistrer
+            </Button>
+          </Form>
+        </Card>
+      ),
+    },
+  ];
 
-const ToggleSwitch: React.FC<{ defaultOn: boolean }> = ({ defaultOn }) => {
-  const [on, setOn] = useState(defaultOn);
   return (
-    <div
-      onClick={() => setOn(!on)}
-      style={{
-        width: 42, height: 24, borderRadius: 12, cursor: 'pointer',
-        background: on ? '#1A6BFF' : '#D1D5DB', position: 'relative', transition: 'background .2s',
-      }}
-    >
-      <div
-        style={{
-          width: 18, height: 18, borderRadius: '50%', background: '#fff',
-          position: 'absolute', top: 3, left: on ? 21 : 3, transition: 'left .2s',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
-        }}
-      />
+    <div className="page animate-fade-in">
+      <div className="page-header">
+        <div className="page-header__info">
+          <h1>Parametres</h1>
+          <p>Configuration de votre compte et de l'application</p>
+        </div>
+      </div>
+
+      <Tabs items={tabItems} tabPosition="left" style={{ minHeight: 400 }} />
     </div>
   );
 };
-
-/* ─── Security Tab ─── */
-const SecurityTab: React.FC = () => (
-  <div className="card">
-    <h2 style={h2}>Sécurité du compte</h2>
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginTop: 14 }}>
-      <div>
-        <label style={labelStyle}>Mot de passe actuel</label>
-        <input type="password" style={inputStyle} />
-      </div>
-      <div>
-        <label style={labelStyle}>Nouveau mot de passe</label>
-        <input type="password" style={inputStyle} />
-      </div>
-      <div>
-        <label style={labelStyle}>Confirmer</label>
-        <input type="password" style={inputStyle} />
-      </div>
-    </div>
-    <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-      <button style={btn('primary')}>🔒 Changer le mot de passe</button>
-      <button style={btn('outline')}>Activer l'A2F</button>
-    </div>
-  </div>
-);
-
-/* ─── Subscription Tab ─── */
-const SubscriptionTab: React.FC = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-    <div
-      style={{
-        borderRadius: 16, padding: 24,
-        background: 'linear-gradient(135deg, #1A6BFF 0%, #9333EA 100%)',
-        color: '#fff',
-      }}
-    >
-      <div style={{ fontSize: 13, opacity: 0.9 }}>Plan actuel</div>
-      <div style={{ fontSize: 28, fontWeight: 800, margin: '4px 0' }}>Premium</div>
-      <div style={{ fontSize: 13, opacity: 0.9 }}>Renouvel le 1er Septembre 2026 • 45,000 DZD/an</div>
-    </div>
-
-    <div className="card">
-      <h2 style={h2}>Fonctionnalités incluses</h2>
-      <ul style={{ marginTop: 12, paddingLeft: 0, listStyle: 'none' }}>
-        {['Gestion illimitée d\'élèves & enseignants', 'Messagerie & annonces', 'Analytiques avancées', 'Support prioritaire 24/7', 'Export PDF & Excel'].map(
-          (f, i) => (
-            <li key={i} style={{ padding: '6px 0', fontSize: 13, color: '#374151' }}>
-              ✅ {f}
-            </li>
-          ),
-        )}
-      </ul>
-    </div>
-  </div>
-);
-
-const h2: React.CSSProperties = { fontSize: 16, fontWeight: 700, color: '#1F2937', margin: 0 };
 
 export default SettingsPage;

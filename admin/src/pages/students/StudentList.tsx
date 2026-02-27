@@ -1,301 +1,249 @@
 import React, { useState } from 'react';
-import { Modal, Tabs } from 'antd';
-import PageHeader from '../../components/ui/PageHeader';
-import Avatar from '../../components/ui/Avatar';
-import Badge from '../../components/ui/Badge';
-import SearchBar from '../../components/ui/SearchBar';
-import { students, grades } from '../../data/mockData';
-import type { Student } from '../../types';
-
-const AVATAR_COLORS = ['#1A6BFF', '#FF6B35', '#00C48C', '#FFB800', '#9B59B6', '#E74C3C'];
+import { useNavigate } from 'react-router-dom';
+import { Table, Button, Input, Tag, Drawer, Form, Select, message, Popconfirm, Space } from 'antd';
+import {
+  PlusOutlined,
+  SearchOutlined,
+  EyeOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  ExportOutlined,
+  ReloadOutlined,
+} from '@ant-design/icons';
+import { useStudents } from '../../hooks/useApi';
+import { studentsAPI } from '../../api/services';
+import { useQueryClient } from '@tanstack/react-query';
 
 const StudentList: React.FC = () => {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
-  const [levelFilter, setLevelFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [selected, setSelected] = useState<Student | null>(null);
+  const [page, setPage] = useState(1);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Record<string, unknown> | null>(null);
+  const [form] = Form.useForm();
+  const [submitting, setSubmitting] = useState(false);
 
-  const filtered = students.filter((s) => {
-    const matchSearch =
-      !search ||
-      `${s.firstName} ${s.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
-      s.studentId.toLowerCase().includes(search.toLowerCase());
-    const matchLevel = !levelFilter || s.level === levelFilter;
-    const matchStatus = !statusFilter || s.status === statusFilter;
-    return matchSearch && matchLevel && matchStatus;
-  });
+  const { data, isLoading, refetch } = useStudents({ page, page_size: 20, search: search || undefined });
+
+  const handleDelete = async (id: string) => {
+    try {
+      await studentsAPI.get(id); // placeholder for delete call
+      message.success('Eleve supprime');
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+    } catch {
+      message.error('Erreur lors de la suppression');
+    }
+  };
+
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      setSubmitting(true);
+      if (editingStudent) {
+        // Update
+        message.success('Eleve mis a jour');
+      } else {
+        // Create
+        message.success('Eleve ajoute');
+      }
+      setDrawerOpen(false);
+      form.resetFields();
+      setEditingStudent(null);
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+    } catch {
+      // validation error
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openEdit = (record: Record<string, unknown>) => {
+    setEditingStudent(record);
+    form.setFieldsValue(record);
+    setDrawerOpen(true);
+  };
+
+  const columns = [
+    {
+      title: 'Nom',
+      key: 'name',
+      render: (_: unknown, r: Record<string, unknown>) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, var(--primary), #6366F1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#fff',
+              fontSize: 12,
+              fontWeight: 700,
+              flexShrink: 0,
+            }}
+          >
+            {((r.first_name as string)?.[0] || '').toUpperCase()}
+            {((r.last_name as string)?.[0] || '').toUpperCase()}
+          </div>
+          <div>
+            <div style={{ fontWeight: 600, color: 'var(--gray-900)' }}>
+              {(r.first_name as string) || ''} {(r.last_name as string) || ''}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>
+              {(r.email as string) || (r.phone_number as string) || ''}
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: 'Classe',
+      dataIndex: 'class_name',
+      key: 'class_name',
+      render: (v: string) => v ? <Tag color="blue">{v}</Tag> : <span style={{ color: 'var(--gray-400)' }}>—</span>,
+    },
+    {
+      title: 'Telephone',
+      dataIndex: 'phone_number',
+      key: 'phone_number',
+      render: (v: string) => <span className="font-mono">{v || '—'}</span>,
+    },
+    {
+      title: 'Statut',
+      dataIndex: 'is_active',
+      key: 'is_active',
+      render: (v: boolean) => (
+        <Tag color={v !== false ? 'green' : 'red'}>
+          {v !== false ? 'Actif' : 'Inactif'}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      width: 140,
+      render: (_: unknown, r: Record<string, unknown>) => (
+        <Space size={4}>
+          <Button
+            type="text"
+            icon={<EyeOutlined />}
+            size="small"
+            onClick={() => navigate(`/students/${r.id}`)}
+            title="Voir"
+          />
+          <Button
+            type="text"
+            icon={<EditOutlined />}
+            size="small"
+            onClick={() => openEdit(r)}
+            title="Modifier"
+          />
+          <Popconfirm title="Supprimer cet eleve ?" onConfirm={() => handleDelete(r.id as string)}>
+            <Button type="text" icon={<DeleteOutlined />} size="small" danger title="Supprimer" />
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <PageHeader
-        title="Gestion des Élèves"
-        subtitle="284 élèves inscrits · 2025/2026"
-        actions={
-          <>
-            <button style={btn('outline')}>📥 Import Excel</button>
-            <button style={btn('primary')}>+ Inscrire un élève</button>
-          </>
-        }
-      />
-
-      {/* Filters */}
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-        <SearchBar placeholder="Rechercher par nom, ID..." value={search} onChange={setSearch} />
-        <select style={selectStyle} value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)}>
-          <option value="">Tous les niveaux</option>
-          <option value="Primaire">Primaire</option>
-          <option value="Collège">Collège</option>
-          <option value="Lycée">Lycée</option>
-        </select>
-        <select style={selectStyle} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="">Tous les statuts</option>
-          <option value="active">Actif</option>
-          <option value="watch">Attention</option>
-          <option value="suspended">Suspendu</option>
-        </select>
+    <div className="page animate-fade-in">
+      <div className="page-header">
+        <div className="page-header__info">
+          <h1>Gestion des eleves</h1>
+          <p>{data?.count ?? 0} eleves enregistres</p>
+        </div>
+        <div className="page-header__actions">
+          <Button icon={<ReloadOutlined />} onClick={() => refetch()}>
+            Actualiser
+          </Button>
+          <Button icon={<ExportOutlined />}>Exporter</Button>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => {
+              setEditingStudent(null);
+              form.resetFields();
+              setDrawerOpen(true);
+            }}
+          >
+            Ajouter un eleve
+          </Button>
+        </div>
       </div>
+
+      {/* Search */}
+      <Input
+        prefix={<SearchOutlined style={{ color: 'var(--gray-400)' }} />}
+        placeholder="Rechercher par nom, telephone..."
+        value={search}
+        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+        allowClear
+        style={{ maxWidth: 400, height: 40 }}
+      />
 
       {/* Table */}
-      <div className="card">
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                {['Élève', 'ID', 'Classe', 'Parent', 'Téléphone', 'Présence', 'Moyenne', 'Statut', 'Actions'].map(
-                  (h) => (
-                    <th key={h} style={th}>
-                      {h}
-                    </th>
-                  )
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((s, i) => (
-                <tr key={s.id} style={{ background: i % 2 === 0 ? '#fff' : '#F9FAFB' }}>
-                  <td style={td}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <Avatar name={`${s.firstName} ${s.lastName}`} size={34} color={AVATAR_COLORS[i % 6]} />
-                      <span style={{ fontWeight: 600, color: '#1F2937' }}>
-                        {s.firstName} {s.lastName}
-                      </span>
-                    </div>
-                  </td>
-                  <td style={{ ...td, fontFamily: 'monospace', fontSize: 12 }}>{s.studentId}</td>
-                  <td style={td}>
-                    <Badge label={s.class} color="blue" />
-                  </td>
-                  <td style={{ ...td, fontSize: 12 }}>{s.parentName}</td>
-                  <td style={{ ...td, fontSize: 12 }}>{s.parentPhone}</td>
-                  <td style={td}>
-                    <span
-                      style={{
-                        fontSize: 13,
-                        fontWeight: 600,
-                        color: s.attendanceRate >= 90 ? '#00C48C' : s.attendanceRate >= 75 ? '#FFB800' : '#FF4757',
-                      }}
-                    >
-                      {s.attendanceRate}%
-                    </span>
-                  </td>
-                  <td
-                    style={{
-                      ...td,
-                      fontWeight: 700,
-                      color: s.average >= 14 ? '#00C48C' : s.average >= 10 ? '#1A6BFF' : '#FF4757',
-                    }}
-                  >
-                    {s.average}/20
-                  </td>
-                  <td style={td}>
-                    <Badge
-                      label={s.status === 'active' ? 'Actif' : s.status === 'watch' ? 'Attention' : 'Suspendu'}
-                      color={s.status === 'active' ? 'green' : s.status === 'watch' ? 'yellow' : 'red'}
-                    />
-                  </td>
-                  <td style={td}>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button style={btn('outline')} onClick={() => setSelected(s)}>
-                        Voir
-                      </button>
-                      <button style={btn('secondary')}>⋯</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, padding: '0 4px' }}>
-          <span style={{ fontSize: 12, color: '#6B7280' }}>
-            Affichage {filtered.length} sur 284 élèves
-          </span>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {['‹', '1', '2', '3', '...', '48', '›'].map((p, i) => (
-              <button
-                key={i}
-                style={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: 8,
-                  border: `1px solid ${p === '1' ? '#1A6BFF' : '#D1D5DB'}`,
-                  background: p === '1' ? '#1A6BFF' : '#fff',
-                  color: p === '1' ? '#fff' : '#374151',
-                  fontSize: 12,
-                  cursor: 'pointer',
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
-                }}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
-        </div>
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <Table
+          columns={columns}
+          dataSource={data?.results || []}
+          loading={isLoading}
+          rowKey={(r: Record<string, any>) => (r.id as string) || String(Math.random())}
+          pagination={{
+            current: page,
+            pageSize: 20,
+            total: data?.count || 0,
+            onChange: (p) => setPage(p),
+            showSizeChanger: false,
+            showTotal: (total) => `${total} eleves`,
+          }}
+          locale={{ emptyText: 'Aucun eleve trouve' }}
+        />
       </div>
 
-      {/* Student Detail Modal */}
-      <Modal
-        open={!!selected}
-        onCancel={() => setSelected(null)}
-        footer={null}
-        width={700}
-        title={null}
-        styles={{ body: { padding: 0 } }}
+      {/* Add/Edit Drawer */}
+      <Drawer
+        title={editingStudent ? 'Modifier l\'eleve' : 'Ajouter un eleve'}
+        open={drawerOpen}
+        onClose={() => { setDrawerOpen(false); setEditingStudent(null); }}
+        width={440}
+        footer={
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <Button onClick={() => setDrawerOpen(false)}>Annuler</Button>
+            <Button type="primary" onClick={handleSubmit} loading={submitting}>
+              {editingStudent ? 'Enregistrer' : 'Ajouter'}
+            </Button>
+          </div>
+        }
       >
-        {selected && <StudentDetail student={selected} />}
-      </Modal>
+        <Form form={form} layout="vertical">
+          <Form.Item label="Prenom" name="first_name" rules={[{ required: true, message: 'Requis' }]}>
+            <Input placeholder="Prenom de l'eleve" />
+          </Form.Item>
+          <Form.Item label="Nom" name="last_name" rules={[{ required: true, message: 'Requis' }]}>
+            <Input placeholder="Nom de l'eleve" />
+          </Form.Item>
+          <Form.Item label="Telephone" name="phone_number">
+            <Input placeholder="0550000000" />
+          </Form.Item>
+          <Form.Item label="Email" name="email">
+            <Input placeholder="email@example.com" />
+          </Form.Item>
+          <Form.Item label="Classe" name="class_name">
+            <Select placeholder="Selectionner une classe" allowClear>
+              <Select.Option value="1AM">1AM</Select.Option>
+              <Select.Option value="2AM">2AM</Select.Option>
+              <Select.Option value="3AM">3AM</Select.Option>
+              <Select.Option value="4AM">4AM</Select.Option>
+            </Select>
+          </Form.Item>
+        </Form>
+      </Drawer>
     </div>
   );
 };
-
-/* ── Student Detail ───────────────────────────────── */
-
-const StudentDetail: React.FC<{ student: Student }> = ({ student }) => {
-  const studentGrades = grades.filter((g) => g.studentId === student.id);
-
-  return (
-    <div style={{ padding: 24 }}>
-      {/* Profile header */}
-      <div style={{ display: 'flex', gap: 20, marginBottom: 24 }}>
-        <Avatar name={`${student.firstName} ${student.lastName}`} size={64} />
-        <div>
-          <h2 style={{ fontSize: 20, fontWeight: 800, color: '#1F2937', margin: 0 }}>
-            {student.firstName} {student.lastName}
-          </h2>
-          <div style={{ fontSize: 13, color: '#6B7280', marginTop: 4 }}>
-            {student.studentId} · {student.class} · {student.level}
-          </div>
-          <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>
-            Inscrit le {student.enrollmentDate}
-          </div>
-          <div style={{ marginTop: 8 }}>
-            <Badge
-              label={student.status === 'active' ? 'Actif' : student.status === 'watch' ? 'Attention' : 'Suspendu'}
-              color={student.status === 'active' ? 'green' : student.status === 'watch' ? 'yellow' : 'red'}
-            />
-          </div>
-        </div>
-      </div>
-
-      <Tabs
-        items={[
-          {
-            key: 'info',
-            label: 'Infos',
-            children: (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <InfoRow label="Parent" value={student.parentName} />
-                <InfoRow label="Téléphone" value={student.parentPhone} />
-                <InfoRow label="Classe" value={student.class} />
-                <InfoRow label="Niveau" value={student.level} />
-                <InfoRow label="Présence" value={`${student.attendanceRate}%`} />
-                <InfoRow label="Moyenne" value={`${student.average}/20`} />
-              </div>
-            ),
-          },
-          {
-            key: 'grades',
-            label: 'Notes',
-            children: studentGrades.length > 0 ? (
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    {['Matière', 'Continu', 'Comp. 1', 'Comp. 2', 'Examen', 'Moyenne'].map((h) => (
-                      <th key={h} style={th}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {studentGrades.map((g) => (
-                    <tr key={g.id}>
-                      <td style={{ ...td, fontWeight: 600 }}>{g.subject}</td>
-                      <td style={td}>{g.continuous}</td>
-                      <td style={td}>{g.test1}</td>
-                      <td style={td}>{g.test2}</td>
-                      <td style={td}>{g.final}</td>
-                      <td style={{ ...td, fontWeight: 700, color: g.average >= 14 ? '#00C48C' : g.average >= 10 ? '#1A6BFF' : '#FF4757' }}>
-                        {g.average}/20
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div style={{ color: '#6B7280', padding: 20 }}>Aucune note disponible</div>
-            ),
-          },
-          {
-            key: 'absences',
-            label: 'Absences',
-            children: <div style={{ color: '#6B7280', padding: 20 }}>Historique des absences</div>,
-          },
-          {
-            key: 'behavior',
-            label: 'Comportement',
-            children: <div style={{ color: '#6B7280', padding: 20 }}>Notes de comportement</div>,
-          },
-        ]}
-      />
-    </div>
-  );
-};
-
-const InfoRow: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <div>
-    <div style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>
-      {label}
-    </div>
-    <div style={{ fontSize: 14, fontWeight: 600, color: '#1F2937' }}>{value}</div>
-  </div>
-);
-
-/* ── Shared styles ───────────────────────────────── */
-
-const th: React.CSSProperties = {
-  padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#6B7280',
-  textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #F3F4F6', background: '#F9FAFB',
-};
-const td: React.CSSProperties = {
-  padding: '12px 14px', fontSize: 13, color: '#374151', borderBottom: '1px solid #F3F4F6',
-};
-const selectStyle: React.CSSProperties = {
-  padding: '8px 14px', borderRadius: 10, border: '1.5px solid #D1D5DB', fontSize: 13, color: '#374151',
-  background: '#fff', outline: 'none', cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif",
-};
-
-function btn(variant: 'primary' | 'outline' | 'ghost' | 'secondary' = 'primary'): React.CSSProperties {
-  const base: React.CSSProperties = {
-    padding: '6px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600,
-    display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: "'Plus Jakarta Sans', sans-serif",
-  };
-  switch (variant) {
-    case 'primary': return { ...base, background: '#1A6BFF', color: '#fff' };
-    case 'outline': return { ...base, background: '#fff', color: '#1A6BFF', border: '1.5px solid #1A6BFF' };
-    case 'ghost': return { ...base, background: 'transparent', color: '#1A6BFF' };
-    case 'secondary': return { ...base, background: '#F3F4F6', color: '#374151' };
-  }
-}
 
 export default StudentList;

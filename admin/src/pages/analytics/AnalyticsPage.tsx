@@ -1,117 +1,135 @@
 import React from 'react';
-import PageHeader from '../../components/ui/PageHeader';
-import StatCard from '../../components/ui/StatCard';
-import Badge from '../../components/ui/Badge';
-import { classAveragesChart, trimesterEvolution, atRiskStudents } from '../../data/mockData';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, Legend } from 'recharts';
+import { Card, Spin, Empty } from 'antd';
+import {
+  TeamOutlined,
+  SolutionOutlined,
+  BookOutlined,
+  DollarOutlined,
+  RiseOutlined,
+  BarChartOutlined,
+} from '@ant-design/icons';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, LineChart, Line, Legend,
+} from 'recharts';
+import { useDashboardStats, useClasses, usePayments } from '../../hooks/useApi';
 
-const AnalyticsPage: React.FC = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-    <PageHeader
-      title="Analytiques & Rapports"
-      subtitle="Vue d'ensemble des performances de l'établissement"
-      actions={<button style={btn('primary')}>📤 Exporter le rapport</button>}
-    />
+const COLORS = ['#1A6BFF', '#10B981', '#F59E0B', '#EF4444', '#6366F1', '#EC4899'];
 
-    {/* Stats */}
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 16 }}>
-      <StatCard label="Moyenne générale" value="13.4/20" sub="+0.5 vs T1" borderColor="#1A6BFF" />
-      <StatCard label="Taux de réussite" value="78%" sub="au-dessus de 10/20" borderColor="#00C48C" />
-      <StatCard label="Taux d'assiduité" value="92%" sub="cette semaine" borderColor="#FFB800" />
-      <StatCard label="Élèves en difficulté" value="23" sub="moyenne < 10" subColor="#FF4757" borderColor="#FF4757" />
-    </div>
+const AnalyticsPage: React.FC = () => {
+  const { studentCount, teacherCount, classCount, paymentCount, isLoading } = useDashboardStats();
+  const { data: classData, isLoading: classesLoading } = useClasses();
+  const { data: paymentData } = usePayments({ page_size: 100 });
 
-    {/* Charts */}
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-      {/* Bar chart: Class averages */}
-      <div className="card">
-        <h2 style={h2}>Moyennes par classe</h2>
-        <div style={{ height: 260, marginTop: 14 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={classAveragesChart}>
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-              <YAxis domain={[0, 20]} tick={{ fontSize: 11 }} />
-              <Tooltip />
-              <Bar dataKey="average" fill="#1A6BFF" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+  const overviewData = [
+    { name: 'Eleves', value: studentCount, icon: <TeamOutlined />, color: '#1A6BFF' },
+    { name: 'Enseignants', value: teacherCount, icon: <SolutionOutlined />, color: '#10B981' },
+    { name: 'Classes', value: classCount, icon: <BookOutlined />, color: '#F59E0B' },
+    { name: 'Paiements', value: paymentCount, icon: <DollarOutlined />, color: '#6366F1' },
+  ];
+
+  // Build class distribution for charts
+  const classResults = classData?.results || [];
+  const classChartData = classResults.slice(0, 8).map((c: any) => ({
+    name: (c.name as string) || 'Classe',
+    effectif: (c.student_count as number) || 0,
+  }));
+
+  // Payment summary
+  const payments = paymentData?.results || [];
+  const paymentStatusData = [
+    { name: 'Payes', value: payments.filter((p: any) => p.status === 'paid').length },
+    { name: 'En attente', value: payments.filter((p: any) => p.status === 'pending' || p.status === 'unpaid').length },
+    { name: 'Partiels', value: payments.filter((p: any) => p.status === 'partial').length },
+    { name: 'En retard', value: payments.filter((p: any) => p.status === 'overdue').length },
+  ].filter((d) => d.value > 0);
+
+  if (isLoading) {
+    return (
+      <div className="page" style={{ display: 'flex', justifyContent: 'center', paddingTop: 100 }}>
+        <Spin size="large" />
       </div>
-
-      {/* Line chart: Trimester evolution */}
-      <div className="card">
-        <h2 style={h2}>Évolution trimestrielle</h2>
-        <div style={{ height: 260, marginTop: 14 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={trimesterEvolution}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="trimester" tick={{ fontSize: 11 }} />
-              <YAxis domain={[8, 18]} tick={{ fontSize: 11 }} />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="Maths" stroke="#1A6BFF" strokeWidth={2} />
-              <Line type="monotone" dataKey="Physique" stroke="#FF6B35" strokeWidth={2} />
-              <Line type="monotone" dataKey="SVT" stroke="#00C48C" strokeWidth={2} />
-              <Line type="monotone" dataKey="Arabe" stroke="#FFB800" strokeWidth={2} />
-              <Line type="monotone" dataKey="Français" stroke="#9333EA" strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-    </div>
-
-    {/* At-risk students */}
-    <div className="card">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-        <h2 style={h2}>🚨 Élèves en difficulté</h2>
-        <button style={btn('outline')}>Voir tout</button>
-      </div>
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr>
-            {['Élève', 'Classe', 'Moyenne', 'Absences', 'Tendance', 'Action'].map((h) => (
-              <th key={h} style={thStyle}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {atRiskStudents.map((s) => (
-            <tr key={s.name}>
-              <td style={tdStyle}><span style={{ fontWeight: 600 }}>{s.name}</span></td>
-              <td style={tdStyle}>{s.className}</td>
-              <td style={{ ...tdStyle, fontWeight: 700, color: s.average < 8 ? '#FF4757' : '#FFB800' }}>{s.average.toFixed(2)}/20</td>
-              <td style={tdStyle}>{s.absences} jours</td>
-              <td style={tdStyle}>
-                <Badge
-                  label={s.trend === 'down' ? '↓ Baisse' : s.trend === 'up' ? '↑ Hausse' : '→ Stable'}
-                  color={s.trend === 'down' ? 'red' : s.trend === 'up' ? 'green' : 'yellow'}
-                />
-              </td>
-              <td style={tdStyle}>
-                <button style={btn('outline')}>Contacter</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </div>
-);
-
-const h2: React.CSSProperties = { fontSize: 16, fontWeight: 700, color: '#1F2937', margin: 0 };
-const thStyle: React.CSSProperties = { textAlign: 'left', padding: '10px 12px', fontSize: 11, color: '#6B7280', fontWeight: 700, textTransform: 'uppercase', borderBottom: '1px solid #E5E7EB' };
-const tdStyle: React.CSSProperties = { padding: '10px 12px', fontSize: 13, borderBottom: '1px solid #F3F4F6' };
-
-function btn(variant: string): React.CSSProperties {
-  const base: React.CSSProperties = {
-    padding: '6px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600,
-    display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: "'Plus Jakarta Sans', sans-serif",
-  };
-  switch (variant) {
-    case 'primary': return { ...base, background: '#1A6BFF', color: '#fff' };
-    case 'outline': return { ...base, background: '#fff', color: '#1A6BFF', border: '1.5px solid #1A6BFF' };
-    default: return base;
+    );
   }
-}
+
+  return (
+    <div className="page animate-fade-in">
+      <div className="page-header">
+        <div className="page-header__info">
+          <h1>Analytiques</h1>
+          <p>Statistiques et indicateurs de performance</p>
+        </div>
+      </div>
+
+      {/* Overview numbers */}
+      <div className="stats-grid stagger-children">
+        {overviewData.map((item) => (
+          <div key={item.name} className="stat-card">
+            <div className="stat-card__icon" style={{ background: `${item.color}15`, color: item.color }}>
+              {item.icon}
+            </div>
+            <div className="stat-card__content">
+              <div className="stat-card__label">{item.name}</div>
+              <div className="stat-card__value">{item.value}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid-2">
+        {/* Effectif par classe */}
+        <Card title={<span className="section-title"><BarChartOutlined /> Effectif par classe</span>}>
+          {classChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={classChartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#6B7280' }} />
+                <YAxis tick={{ fontSize: 12, fill: '#6B7280' }} />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: 10,
+                    border: '1px solid #E5E7EB',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                  }}
+                />
+                <Bar dataKey="effectif" fill="#1A6BFF" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <Empty description="Aucune donnee de classe" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          )}
+        </Card>
+
+        {/* Payment distribution */}
+        <Card title={<span className="section-title"><DollarOutlined /> Repartition des paiements</span>}>
+          {paymentStatusData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <PieChart>
+                <Pie
+                  data={paymentStatusData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={4}
+                  dataKey="value"
+                  label={({ name, value }) => `${name}: ${value}`}
+                >
+                  {paymentStatusData.map((_, i) => (
+                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <Empty description="Aucune donnee de paiement" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+};
 
 export default AnalyticsPage;

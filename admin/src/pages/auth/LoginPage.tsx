@@ -1,31 +1,32 @@
-/**
- * Login page — phone number + password authentication against Django backend.
- */
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
+import { Form, Input, Button } from 'antd';
+import {
+  SafetyCertificateOutlined,
+  TeamOutlined,
+  BarChartOutlined,
+  MessageOutlined,
+} from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext';
 import './LoginPage.css';
 
 const LoginPage: React.FC = () => {
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+  if (authLoading) return null;
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+
+  const onFinish = async (values: { phone_number: string; password: string }) => {
     setLoading(true);
+    setError('');
     try {
-      await login(phoneNumber, password);
-      navigate('/dashboard');
-    } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { detail?: string } } })?.response?.data
-          ?.detail || 'Identifiants invalides. Veuillez réessayer.';
-      setError(msg);
+      await login(values.phone_number, values.password);
+      navigate('/dashboard', { replace: true });
+    } catch {
+      setError('Numero de telephone ou mot de passe incorrect');
     } finally {
       setLoading(false);
     }
@@ -33,43 +34,76 @@ const LoginPage: React.FC = () => {
 
   return (
     <div className="login-page">
-      <div className="login-card">
-        <div className="login-header">
-          <h1 className="login-title">EduConnect</h1>
-          <p className="login-subtitle">Panneau d&apos;administration</p>
+      {/* Left branding */}
+      <div className="login-brand">
+        <div className="login-brand__logo">
+          <div className="login-brand__mark">EC</div>
+          <div className="login-brand__name">
+            Edu<span>Connect</span>
+          </div>
         </div>
 
-        {error && <div className="login-error">{error}</div>}
+        <h1 className="login-brand__headline">
+          Gestion scolaire<br />
+          <span>intelligente</span>
+        </h1>
+        <p className="login-brand__sub">
+          Plateforme complete de gestion pour les etablissements scolaires algeriens.
+          Simplifiez vos processus administratifs et pedagogiques.
+        </p>
 
-        <form onSubmit={handleSubmit}>
-          <div className="login-field">
-            <label className="login-label">Numéro de téléphone</label>
-            <input
-              type="text"
-              className="login-input"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              placeholder="0555123456"
-              required
-            />
+        <div className="login-brand__features">
+          <div className="login-brand__feature">
+            <div className="login-brand__feature-icon"><TeamOutlined /></div>
+            Gestion des eleves et enseignants
           </div>
-
-          <div className="login-field login-field--last">
-            <label className="login-label">Mot de passe</label>
-            <input
-              type="password"
-              className="login-input"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-            />
+          <div className="login-brand__feature">
+            <div className="login-brand__feature-icon"><BarChartOutlined /></div>
+            Suivi des notes et absences en temps reel
           </div>
+          <div className="login-brand__feature">
+            <div className="login-brand__feature-icon"><MessageOutlined /></div>
+            Communication parents-ecole integree
+          </div>
+          <div className="login-brand__feature">
+            <div className="login-brand__feature-icon"><SafetyCertificateOutlined /></div>
+            Securite et confidentialite des donnees
+          </div>
+        </div>
+      </div>
 
-          <button type="submit" disabled={loading} className="login-button">
-            {loading ? 'Connexion…' : 'Se connecter'}
-          </button>
-        </form>
+      {/* Right form */}
+      <div className="login-form-panel">
+        <div className="login-card">
+          <h2 className="login-card__title">Connexion</h2>
+          <p className="login-card__sub">Connectez-vous a votre espace administrateur</p>
+
+          {error && <div className="login-error">{error}</div>}
+
+          <Form layout="vertical" onFinish={onFinish} autoComplete="off" size="large">
+            <Form.Item
+              label="Numero de telephone"
+              name="phone_number"
+              rules={[{ required: true, message: 'Veuillez entrer votre numero' }]}
+            >
+              <Input placeholder="0550000000" />
+            </Form.Item>
+
+            <Form.Item
+              label="Mot de passe"
+              name="password"
+              rules={[{ required: true, message: 'Veuillez entrer votre mot de passe' }]}
+            >
+              <Input.Password placeholder="Votre mot de passe" />
+            </Form.Item>
+
+            <Form.Item>
+              <Button type="primary" htmlType="submit" loading={loading}>
+                Se connecter
+              </Button>
+            </Form.Item>
+          </Form>
+        </div>
       </div>
     </div>
   );

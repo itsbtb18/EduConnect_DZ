@@ -1,0 +1,162 @@
+.sidebar {
+  width: 260px;
+  background: linear-gradient(180deg, #0F172A 0%, #0B1022 100%);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 12px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  height: 100%;
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* Logo */
+.sidebar__logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 14px 28px;
+}
+
+.sidebar__logo-mark {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #1A6BFF 0%, #6366F1 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #fff;
+  font-weight: 900;
+  letter-spacing: -1px;
+  box-shadow: 0 4px 12px rgba(26, 107, 255, 0.3);
+}
+
+.sidebar__logo-text {
+  color: #fff;
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -0.5px;
+}
+
+.sidebar__logo-text span {
+  color: #6366F1;
+}
+
+/* Section */
+.sidebar__section-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.2);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  padding: 20px 14px 8px;
+}
+
+/* Nav item */
+.sidebar__nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.45);
+  text-decoration: none;
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  margin: 1px 0;
+  position: relative;
+  cursor: pointer;
+}
+
+.sidebar__nav-item:hover {
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.sidebar__nav-item--active {
+  color: #fff !important;
+  background: linear-gradient(135deg, #1A6BFF 0%, #4F8CFF 100%) !important;
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(26, 107, 255, 0.35);
+}
+
+.sidebar__nav-item--active:hover {
+  background: linear-gradient(135deg, #1A6BFF 0%, #4F8CFF 100%) !important;
+}
+
+/* Icon */
+.sidebar__nav-icon {
+  font-size: 18px;
+  width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 200ms ease;
+}
+
+.sidebar__nav-item:hover .sidebar__nav-icon {
+  transform: scale(1.1);
+}
+
+/* Spacer */
+.sidebar__spacer {
+  flex: 1;
+}
+
+/* School card */
+.sidebar__school-card {
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  margin-top: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: background 200ms ease;
+}
+
+.sidebar__school-card:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.sidebar__school-info {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.sidebar__school-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #1A6BFF, #6366F1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 800;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.sidebar__school-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.3;
+}
+
+.sidebar__school-plan {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.35);
+  margin-top: 1px;
+}
+
+/* Version */
+.sidebar__version {
+  text-align: center;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.15);
+  padding: 12px 0 4px;
+}

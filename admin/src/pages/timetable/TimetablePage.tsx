@@ -1,149 +1,166 @@
 import React, { useState } from 'react';
-import PageHeader from '../../components/ui/PageHeader';
-import { timetableSlots } from '../../data/mockData';
+import { Table, Tag, Select, Button, Card, Empty } from 'antd';
+import { CalendarOutlined, ReloadOutlined } from '@ant-design/icons';
+import { useScheduleSlots } from '../../hooks/useApi';
 
 const days = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi'];
-const hours = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'];
-const subjectColors: Record<string, { bg: string; fg: string }> = {
-  Mathématiques: { bg: '#DBEAFE', fg: '#1E40AF' },
-  Physique: { bg: '#FCE7F3', fg: '#9D174D' },
-  'Sciences Naturelles': { bg: '#D1FAE5', fg: '#065F46' },
-  SVT: { bg: '#D1FAE5', fg: '#065F46' },
-  'Langue Arabe': { bg: '#FEF3C7', fg: '#92400E' },
-  Arabe: { bg: '#FEF3C7', fg: '#92400E' },
-  Français: { bg: '#E0E7FF', fg: '#3730A3' },
-  Anglais: { bg: '#CFFAFE', fg: '#155E75' },
-  Histoire: { bg: '#FDE68A', fg: '#78350F' },
-  'Histoire-Géo': { bg: '#FDE68A', fg: '#78350F' },
-  Informatique: { bg: '#EDE9FE', fg: '#5B21B6' },
-  'Éducation Physique': { bg: '#FFE4E6', fg: '#9F1239' },
-  'Éd. physique': { bg: '#FFE4E6', fg: '#9F1239' },
-  'Éducation Islamique': { bg: '#ECFDF5', fg: '#047857' },
-  'Éd. islamique': { bg: '#ECFDF5', fg: '#047857' },
+const timeSlots = [
+  '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00',
+];
+
+const dayColors: Record<string, string> = {
+  Dimanche: '#1A6BFF',
+  Lundi: '#10B981',
+  Mardi: '#F59E0B',
+  Mercredi: '#EF4444',
+  Jeudi: '#6366F1',
 };
 
 const TimetablePage: React.FC = () => {
-  const [selectedClass, setSelectedClass] = useState('1ère AS A');
+  const { data, isLoading, refetch } = useScheduleSlots();
+
+  const slots = data?.results || [];
+
+  const columns = [
+    {
+      title: 'Jour',
+      dataIndex: 'day',
+      key: 'day',
+      render: (v: string, r: Record<string, unknown>) => {
+        const day = v || (r.day_of_week as string) || '—';
+        return <Tag color={dayColors[day] ? 'blue' : 'default'} style={{ fontWeight: 600 }}>{day}</Tag>;
+      },
+    },
+    {
+      title: 'Debut',
+      dataIndex: 'start_time',
+      key: 'start_time',
+      render: (v: string) => <span className="font-mono">{v || '—'}</span>,
+    },
+    {
+      title: 'Fin',
+      dataIndex: 'end_time',
+      key: 'end_time',
+      render: (v: string) => <span className="font-mono">{v || '—'}</span>,
+    },
+    {
+      title: 'Matiere',
+      dataIndex: 'subject',
+      key: 'subject',
+      render: (v: string, r: Record<string, unknown>) => (
+        <span style={{ fontWeight: 600 }}>{v || (r.subject_name as string) || '—'}</span>
+      ),
+    },
+    {
+      title: 'Enseignant',
+      dataIndex: 'teacher',
+      key: 'teacher',
+      render: (v: string, r: Record<string, unknown>) => v || (r.teacher_name as string) || '—',
+    },
+    {
+      title: 'Salle',
+      dataIndex: 'room',
+      key: 'room',
+      render: (v: string) => v ? <Tag>{v}</Tag> : '—',
+    },
+  ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <PageHeader
-        title="Emploi du temps"
-        subtitle={`Classe : ${selectedClass}`}
-        actions={
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <select
-              value={selectedClass}
-              onChange={(e) => setSelectedClass(e.target.value)}
-              style={selectStyle}
-            >
-              <option>1ère AS A</option>
-              <option>1ère AS B</option>
-              <option>2ème AS A</option>
-              <option>3ème AS A</option>
-            </select>
-            <button style={btn('outline')}>📤 Exporter PDF</button>
-            <button style={btn('primary')}>+ Modifier</button>
-          </div>
-        }
-      />
-
-      <div className="card" style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-          <thead>
-            <tr>
-              <th style={{ ...thStyle, width: 80 }}>Horaire</th>
-              {days.map((d) => (
-                <th key={d} style={thStyle}>{d}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {hours.map((hour) => (
-              <tr key={hour}>
-                <td style={{ ...cellStyle, fontWeight: 700, color: '#6B7280', fontSize: 12, textAlign: 'center' }}>
-                  {hour}
-                </td>
-                {days.map((day) => {
-                  const slot = timetableSlots.find(
-                    (s) => s.day === day && s.startTime === hour,
-                  );
-                  if (!slot) {
-                    return <td key={day} style={cellStyle} />;
-                  }
-                  const colors = subjectColors[slot.subject] || { bg: '#F3F4F6', fg: '#374151' };
-                  return (
-                    <td key={day} style={cellStyle}>
-                      <div
-                        style={{
-                          background: colors.bg,
-                          color: colors.fg,
-                          borderRadius: 10,
-                          padding: '8px 10px',
-                          minHeight: 52,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: 'center',
-                          cursor: 'pointer',
-                          borderLeft: `3px solid ${colors.fg}`,
-                        }}
-                      >
-                        <div style={{ fontWeight: 700, fontSize: 12 }}>{slot.subject}</div>
-                        <div style={{ fontSize: 10, opacity: 0.8, marginTop: 2 }}>{slot.teacher}</div>
-                        <div style={{ fontSize: 10, opacity: 0.6, marginTop: 1 }}>Salle {slot.room}</div>
-                      </div>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div className="page animate-fade-in">
+      <div className="page-header">
+        <div className="page-header__info">
+          <h1>Emploi du temps</h1>
+          <p>{data?.count ?? 0} creneaux</p>
+        </div>
+        <div className="page-header__actions">
+          <Button icon={<ReloadOutlined />} onClick={() => refetch()}>Actualiser</Button>
+        </div>
       </div>
 
-      {/* Legend */}
-      <div className="card">
-        <h3 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 10px', color: '#1F2937' }}>Légende des matières</h3>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {Object.entries(subjectColors).map(([subject, c]) => (
-            <span
-              key={subject}
-              style={{
-                padding: '4px 10px', borderRadius: 8, background: c.bg, color: c.fg,
-                fontSize: 11, fontWeight: 600,
-              }}
-            >
-              {subject}
-            </span>
-          ))}
+      {/* Schedule grid view */}
+      {slots.length > 0 && (
+        <div className="card" style={{ overflowX: 'auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '100px repeat(5, 1fr)', gap: 2, minWidth: 700 }}>
+            {/* Header */}
+            <div style={{ padding: 8 }} />
+            {days.map((d) => (
+              <div
+                key={d}
+                style={{
+                  padding: '10px 8px',
+                  fontWeight: 700,
+                  fontSize: 12,
+                  textAlign: 'center',
+                  color: 'var(--gray-700)',
+                  background: 'var(--gray-50)',
+                  borderRadius: 'var(--radius-sm)',
+                }}
+              >
+                {d}
+              </div>
+            ))}
+
+            {/* Time rows */}
+            {timeSlots.map((time) => (
+              <React.Fragment key={time}>
+                <div style={{
+                  padding: '8px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: 'var(--gray-500)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  fontFamily: 'var(--font-mono)',
+                }}>
+                  {time}
+                </div>
+                {days.map((day) => {
+                  const slot = slots.find((s: Record<string, unknown>) =>
+                    ((s.day as string) === day || (s.day_of_week as string) === day) &&
+                    ((s.start_time as string) || '').startsWith(time)
+                  );
+                  if (slot) {
+                    return (
+                      <div
+                        key={day}
+                        style={{
+                          padding: '8px',
+                          background: `${dayColors[day] || '#1A6BFF'}10`,
+                          borderLeft: `3px solid ${dayColors[day] || '#1A6BFF'}`,
+                          borderRadius: 'var(--radius-sm)',
+                          fontSize: 12,
+                        }}
+                      >
+                        <div style={{ fontWeight: 700, color: 'var(--gray-900)' }}>
+                          {(slot as Record<string, unknown>).subject_name as string || (slot as Record<string, unknown>).subject as string || '—'}
+                        </div>
+                        <div style={{ color: 'var(--gray-500)', fontSize: 11 }}>
+                          {(slot as Record<string, unknown>).room as string || ''}
+                        </div>
+                      </div>
+                    );
+                  }
+                  return <div key={day} style={{ padding: 8 }} />;
+                })}
+              </React.Fragment>
+            ))}
+          </div>
         </div>
+      )}
+
+      {/* List view */}
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <Table
+          columns={columns}
+          dataSource={slots}
+          loading={isLoading}
+          rowKey={(r) => r.id || `${r.day}-${r.start_time}-${Math.random()}`}
+          pagination={false}
+          locale={{ emptyText: 'Aucun creneau' }}
+        />
       </div>
     </div>
   );
 };
-
-const thStyle: React.CSSProperties = {
-  textAlign: 'center', padding: '10px 8px', fontSize: 12, fontWeight: 700, color: '#6B7280',
-  borderBottom: '1px solid #E5E7EB', textTransform: 'uppercase',
-};
-const cellStyle: React.CSSProperties = {
-  padding: 4, verticalAlign: 'top', borderBottom: '1px solid #F3F4F6',
-};
-const selectStyle: React.CSSProperties = {
-  padding: '6px 10px', borderRadius: 8, border: '1.5px solid #E5E7EB', fontSize: 13,
-  fontFamily: "'Plus Jakarta Sans', sans-serif", background: '#fff',
-};
-
-function btn(variant: string): React.CSSProperties {
-  const base: React.CSSProperties = {
-    padding: '6px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600,
-    display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: "'Plus Jakarta Sans', sans-serif",
-  };
-  switch (variant) {
-    case 'primary': return { ...base, background: '#1A6BFF', color: '#fff' };
-    case 'outline': return { ...base, background: '#fff', color: '#1A6BFF', border: '1.5px solid #1A6BFF' };
-    default: return base;
-  }
-}
 
 export default TimetablePage;

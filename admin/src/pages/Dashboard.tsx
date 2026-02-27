@@ -1,236 +1,220 @@
 import React from 'react';
-import PageHeader from '../components/ui/PageHeader';
-import StatCard from '../components/ui/StatCard';
-import Avatar from '../components/ui/Avatar';
-import Badge from '../components/ui/Badge';
-import SearchBar from '../components/ui/SearchBar';
-import ColorBox from '../components/ui/ColorBox';
-import { classes, recentActivities } from '../data/mockData';
+import { useNavigate } from 'react-router-dom';
+import { Table, Button, Tag, Spin, Card } from 'antd';
+import {
+  TeamOutlined,
+  SolutionOutlined,
+  BookOutlined,
+  DollarOutlined,
+  ArrowRightOutlined,
+  RiseOutlined,
+  BellOutlined,
+  CalendarOutlined,
+} from '@ant-design/icons';
+import { useDashboardStats, useClasses, useNotifications, useAnnouncements } from '../hooks/useApi';
 
-const Dashboard: React.FC = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-    {/* Header */}
-    <PageHeader
-      title="Tableau de bord"
-      subtitle="École Privée Ibn Khaldoun — 2025/2026"
-      actions={
-        <>
-          <button style={btn('outline')}>📥 Exporter</button>
-          <button style={btn('primary')}>+ Nouvel élève</button>
-        </>
-      }
-    />
+const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
+  const { studentCount, teacherCount, classCount, paymentCount, isLoading } = useDashboardStats();
+  const { data: classData, isLoading: classesLoading } = useClasses({ page_size: 5 });
+  const { data: notifData } = useNotifications({ page_size: 5 });
+  const { data: announcementData } = useAnnouncements({ page_size: 3 });
 
-    {/* Stats */}
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 16 }}>
-      <StatCard label="TOTAL ÉLÈVES" value="284" sub="+12 ce mois" borderColor="#1A6BFF" />
-      <StatCard label="ENSEIGNANTS" value="28" sub="4 matières auj." subColor="#FF6B35" borderColor="#FF6B35" />
-      <StatCard label="PARENTS ACTIFS" value="231" sub="88% engagés" borderColor="#00C48C" />
-      <StatCard label="REVENUS MENSUEL" value="50K" sub="DZD 50,000" subColor="#FFB800" borderColor="#FFB800" />
-    </div>
+  const stats = [
+    {
+      label: 'Eleves',
+      value: studentCount,
+      icon: <TeamOutlined />,
+      color: '#1A6BFF',
+      bg: '#EBF2FF',
+      route: '/students',
+    },
+    {
+      label: 'Enseignants',
+      value: teacherCount,
+      icon: <SolutionOutlined />,
+      color: '#10B981',
+      bg: '#ECFDF5',
+      route: '/teachers',
+    },
+    {
+      label: 'Classes',
+      value: classCount,
+      icon: <BookOutlined />,
+      color: '#F59E0B',
+      bg: '#FFFBEB',
+      route: '/grades',
+    },
+    {
+      label: 'Paiements',
+      value: paymentCount,
+      icon: <DollarOutlined />,
+      color: '#6366F1',
+      bg: '#EEF2FF',
+      route: '/financial',
+    },
+  ];
 
-    {/* Main grid */}
-    <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 20 }}>
-      {/* Recent Activity */}
-      <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h2 style={h2}>Activité Récente</h2>
-          <button style={btn('ghost')}>Voir tout →</button>
+  const classColumns = [
+    {
+      title: 'Classe',
+      dataIndex: 'name',
+      key: 'name',
+      render: (v: string) => <span style={{ fontWeight: 600 }}>{v || '—'}</span>,
+    },
+    {
+      title: 'Niveau',
+      dataIndex: 'level',
+      key: 'level',
+      render: (v: string) => <Tag color="blue">{v || '—'}</Tag>,
+    },
+    {
+      title: 'Effectif',
+      dataIndex: 'student_count',
+      key: 'student_count',
+      render: (v: number) => v ?? '—',
+    },
+  ];
+
+  const quickActions = [
+    { label: 'Gerer les eleves', icon: <TeamOutlined />, route: '/students' },
+    { label: 'Voir les notes', icon: <BookOutlined />, route: '/grades' },
+    { label: 'Suivi absences', icon: <CalendarOutlined />, route: '/attendance' },
+    { label: 'Analytiques', icon: <RiseOutlined />, route: '/analytics' },
+  ];
+
+  return (
+    <div className="page animate-fade-in">
+      {/* Header */}
+      <div className="page-header">
+        <div className="page-header__info">
+          <h1>Tableau de bord</h1>
+          <p>Vue d'ensemble de votre etablissement</p>
         </div>
-        {recentActivities.map((a, i) => (
+      </div>
+
+      {/* Stats */}
+      <div className="stats-grid stagger-children">
+        {stats.map((s) => (
           <div
-            key={i}
-            style={{
-              display: 'flex',
-              gap: 12,
-              padding: '10px 0',
-              borderBottom: i < recentActivities.length - 1 ? '1px solid #F3F4F6' : 'none',
-            }}
+            key={s.label}
+            className="stat-card card-interactive"
+            style={{ '--accent-color': s.color } as React.CSSProperties}
+            onClick={() => navigate(s.route)}
           >
-            <div
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 10,
-                background: a.bgColor,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 16,
-                flexShrink: 0,
-              }}
-            >
-              {a.icon}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, color: '#374151' }}>{a.message}</div>
-              <div style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>{a.time}</div>
+            <div className="stat-card" style={{ border: 'none', boxShadow: 'none', padding: 0, cursor: 'pointer' }} onClick={() => navigate(s.route)}>
+              <div className="stat-card__icon" style={{ background: s.bg, color: s.color }}>
+                {s.icon}
+              </div>
+              <div className="stat-card__content">
+                <div className="stat-card__label">{s.label}</div>
+                <div className="stat-card__value">
+                  {isLoading ? <Spin size="small" /> : s.value}
+                </div>
+              </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Right column */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {/* Quick Actions */}
-        <div className="card">
-          <h2 style={{ ...h2, marginBottom: 14 }}>Actions rapides</h2>
-          {[
-            { icon: '📊', label: 'Publier les notes' },
-            { icon: '👥', label: 'Gérer les utilisateurs' },
-            { icon: '📢', label: 'Envoyer une annonce' },
-            { icon: '📄', label: 'Générer les bulletins' },
-          ].map((a, i) => (
-            <button
-              key={i}
-              style={{
-                ...btn('ghost'),
-                width: '100%',
-                justifyContent: 'flex-start',
-                padding: '10px 12px',
-                marginBottom: 6,
-                background: '#F9FAFB',
-                color: '#374151',
-                borderRadius: 10,
-              }}
-            >
-              <span style={{ fontSize: 16 }}>{a.icon}</span> {a.label}
-            </button>
-          ))}
-        </div>
+      {/* Main grid */}
+      <div className="grid-main">
+        {/* Classes table */}
+        <Card
+          title={<span className="section-title"><BookOutlined /> Apercu des classes</span>}
+          extra={<Button type="link" onClick={() => navigate('/grades')}>Voir tout <ArrowRightOutlined /></Button>}
+          styles={{ body: { padding: 0 } }}
+        >
+          <Table
+            columns={classColumns}
+            dataSource={classData?.results || []}
+            loading={classesLoading}
+            pagination={false}
+            rowKey={(r: Record<string, any>) => (r.id as string) || (r.name as string) || String(Math.random())}
+            size="small"
+            locale={{ emptyText: 'Aucune classe trouvee' }}
+          />
+        </Card>
 
-        {/* Alerts */}
-        <div className="card">
-          <h2 style={{ ...h2, marginBottom: 12 }}>⚠️ Alertes</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <ColorBox variant="warning">
-              <strong>14 notes en attente de validation</strong> de 3 enseignants
-            </ColorBox>
-            <ColorBox variant="danger">
-              <strong>8 élèves</strong> avec 3+ absences cette semaine
-            </ColorBox>
-          </div>
-        </div>
-      </div>
-    </div>
+        {/* Right column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {/* Quick actions */}
+          <Card title={<span className="section-title">Actions rapides</span>}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              {quickActions.map((a) => (
+                <Button
+                  key={a.label}
+                  icon={a.icon}
+                  onClick={() => navigate(a.route)}
+                  style={{ height: 42, fontWeight: 600, fontSize: 12 }}
+                  block
+                >
+                  {a.label}
+                </Button>
+              ))}
+            </div>
+          </Card>
 
-    {/* Class Overview */}
-    <div className="card">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h2 style={h2}>Aperçu des classes</h2>
-        <SearchBar placeholder="Rechercher une classe..." />
-      </div>
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr>
-            {['Classe', 'Niveau', 'Enseignant principal', 'Élèves', 'Moy. Générale', 'Présence', 'Statut'].map(
-              (h) => (
-                <th key={h} style={th}>
-                  {h}
-                </th>
-              )
-            )}
-          </tr>
-        </thead>
-        <tbody>
-          {classes.slice(0, 5).map((c, i) => (
-            <tr key={c.id} style={{ background: i % 2 === 0 ? '#fff' : '#F9FAFB' }}>
-              <td style={{ ...td, fontWeight: 600, color: '#1F2937' }}>{c.name}</td>
-              <td style={td}>
-                <Badge
-                  label={c.level}
-                  color={c.level === 'Lycée' ? 'blue' : c.level === 'Collège' ? 'orange' : 'green'}
-                />
-              </td>
-              <td style={td}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Avatar name={c.mainTeacher} size={28} />
-                  {c.mainTeacher}
-                </div>
-              </td>
-              <td style={td}>{c.studentCount}</td>
-              <td
-                style={{
-                  ...td,
-                  fontWeight: 700,
-                  color: c.average >= 14 ? '#00C48C' : c.average >= 12 ? '#1A6BFF' : '#FFB800',
-                }}
-              >
-                {c.average}/20
-              </td>
-              <td style={td}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div className="progress-track" style={{ flex: 1 }}>
-                    <div
-                      className="progress-fill"
-                      style={{
-                        width: `${c.attendanceRate}%`,
-                        background: c.attendanceRate >= 92 ? '#00C48C' : '#FFB800',
-                      }}
-                    />
+          {/* Recent announcements */}
+          <Card
+            title={<span className="section-title"><BellOutlined /> Annonces recentes</span>}
+            extra={<Button type="link" onClick={() => navigate('/announcements')}>Voir tout</Button>}
+          >
+            {announcementData?.results?.length ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {announcementData.results.slice(0, 3).map((a: any, i: number) => (
+                  <div
+                    key={(a.id as string) || i}
+                    style={{
+                      padding: '10px 14px',
+                      background: 'var(--gray-50)',
+                      borderRadius: 'var(--radius-md)',
+                      borderLeft: '3px solid var(--primary)',
+                    }}
+                  >
+                    <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--gray-900)', marginBottom: 2 }}>
+                      {(a.title as string) || 'Sans titre'}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>
+                      {(a.created_at as string)?.slice(0, 10) || (a.date as string) || ''}
+                    </div>
                   </div>
-                  <span style={{ fontSize: 12, fontWeight: 600 }}>{c.attendanceRate}%</span>
-                </div>
-              </td>
-              <td style={td}>
-                <Badge
-                  label={c.status === 'good' ? 'Bon' : 'Attention'}
-                  color={c.status === 'good' ? 'green' : 'yellow'}
-                />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                ))}
+              </div>
+            ) : (
+              <div className="empty-state" style={{ padding: 24 }}>
+                <div className="empty-state__icon"><BellOutlined /></div>
+                <div className="empty-state__title">Aucune annonce</div>
+                <div className="empty-state__desc">Les annonces apparaitront ici</div>
+              </div>
+            )}
+          </Card>
+
+          {/* Notifications */}
+          {notifData?.results && notifData.results.length > 0 && (
+            <Card title={<span className="section-title"><BellOutlined /> Notifications</span>}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {notifData.results.slice(0, 4).map((n: any, i: number) => (
+                  <div
+                    key={(n.id as string) || i}
+                    style={{
+                      padding: '8px 12px',
+                      background: (n.is_read as boolean) ? 'transparent' : 'var(--primary-50)',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: 13,
+                      color: 'var(--gray-700)',
+                    }}
+                  >
+                    {(n.message as string) || (n.title as string) || 'Notification'}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+        </div>
+      </div>
     </div>
-  </div>
-);
-
-/* ── Helper styles ────────────────────────────────────── */
-
-const h2: React.CSSProperties = { fontSize: 16, fontWeight: 700, color: '#1F2937', margin: 0 };
-const th: React.CSSProperties = {
-  padding: '10px 14px',
-  textAlign: 'left',
-  fontSize: 11,
-  fontWeight: 700,
-  color: '#6B7280',
-  textTransform: 'uppercase',
-  letterSpacing: '0.5px',
-  borderBottom: '1px solid #F3F4F6',
-  background: '#F9FAFB',
+  );
 };
-const td: React.CSSProperties = {
-  padding: '12px 14px',
-  fontSize: 13,
-  color: '#374151',
-  borderBottom: '1px solid #F3F4F6',
-};
-
-function btn(variant: 'primary' | 'outline' | 'ghost' | 'secondary' = 'primary'): React.CSSProperties {
-  const base: React.CSSProperties = {
-    padding: '6px 14px',
-    borderRadius: 10,
-    border: 'none',
-    cursor: 'pointer',
-    fontSize: 13,
-    fontWeight: 600,
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 6,
-    fontFamily: "'Plus Jakarta Sans', sans-serif",
-    transition: 'all 0.2s',
-  };
-  switch (variant) {
-    case 'primary':
-      return { ...base, background: '#1A6BFF', color: '#fff' };
-    case 'outline':
-      return { ...base, background: '#fff', color: '#1A6BFF', border: '1.5px solid #1A6BFF' };
-    case 'ghost':
-      return { ...base, background: 'transparent', color: '#1A6BFF' };
-    case 'secondary':
-      return { ...base, background: '#F3F4F6', color: '#374151' };
-  }
-}
 
 export default Dashboard;

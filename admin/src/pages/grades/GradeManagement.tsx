@@ -1,198 +1,189 @@
 import React, { useState } from 'react';
-import { Modal } from 'antd';
-import PageHeader from '../../components/ui/PageHeader';
-import Avatar from '../../components/ui/Avatar';
-import Badge from '../../components/ui/Badge';
-import { gradeSubmissions, classes, grades } from '../../data/mockData';
-import type { GradeSubmission } from '../../types';
-
-const AVATAR_COLORS = ['#1A6BFF', '#FF6B35', '#00C48C', '#9B59B6'];
+import { Table, Button, Tag, Select, Input, Modal, Form, InputNumber, Space, message } from 'antd';
+import {
+  PlusOutlined,
+  SearchOutlined,
+  EditOutlined,
+  ReloadOutlined,
+  FileTextOutlined,
+} from '@ant-design/icons';
+import { useGrades, useCreateGrade, useUpdateGrade } from '../../hooks/useApi';
 
 const GradeManagement: React.FC = () => {
-  const [reviewItem, setReviewItem] = useState<GradeSubmission | null>(null);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [form] = Form.useForm();
+
+  const { data, isLoading, refetch } = useGrades({ page, page_size: 20, search: search || undefined });
+  const createGrade = useCreateGrade();
+  const updateGrade = useUpdateGrade();
+
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      if (editId) {
+        await updateGrade.mutateAsync({ id: editId, data: values });
+      } else {
+        await createGrade.mutateAsync(values);
+      }
+      setModalOpen(false);
+      form.resetFields();
+      setEditId(null);
+    } catch {
+      // validation
+    }
+  };
+
+  const openEdit = (record: Record<string, unknown>) => {
+    setEditId(record.id as string);
+    form.setFieldsValue(record);
+    setModalOpen(true);
+  };
+
+  const statusColors: Record<string, string> = {
+    draft: 'default',
+    submitted: 'blue',
+    published: 'green',
+  };
+
+  const columns = [
+    {
+      title: 'Eleve',
+      dataIndex: 'student_name',
+      key: 'student_name',
+      render: (v: string, r: Record<string, unknown>) =>
+        <span style={{ fontWeight: 600 }}>{v || (r.student as string) || '—'}</span>,
+    },
+    {
+      title: 'Matiere',
+      dataIndex: 'subject',
+      key: 'subject',
+      render: (v: string, r: Record<string, unknown>) =>
+        <Tag color="blue">{v || (r.subject_name as string) || '—'}</Tag>,
+    },
+    {
+      title: 'Trimestre',
+      dataIndex: 'trimester',
+      key: 'trimester',
+      width: 100,
+      render: (v: number) => v ? `T${v}` : '—',
+    },
+    {
+      title: 'Note',
+      dataIndex: 'score',
+      key: 'score',
+      width: 100,
+      render: (v: number, r: Record<string, unknown>) => {
+        const score = v ?? (r.average as number) ?? (r.grade as number);
+        if (score == null) return '—';
+        const color = score >= 10 ? 'var(--success)' : 'var(--danger)';
+        return <span style={{ fontWeight: 700, color }}>{score}/20</span>;
+      },
+    },
+    {
+      title: 'Statut',
+      dataIndex: 'status',
+      key: 'status',
+      render: (v: string) => (
+        <Tag color={statusColors[v] || 'default'}>{v || '—'}</Tag>
+      ),
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      width: 80,
+      render: (_: unknown, r: Record<string, unknown>) => (
+        <Button type="text" icon={<EditOutlined />} size="small" onClick={() => openEdit(r)} />
+      ),
+    },
+  ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <PageHeader
-        title="Gestion des Notes"
-        subtitle="Révision et publication des notes trimestrielles"
-        actions={
-          <>
-            <button style={btn('accent')}>📄 Générer les bulletins</button>
-            <button style={btn('primary')}>✅ Tout publier</button>
-          </>
-        }
-      />
-
-      {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 16 }}>
-        {[
-          { label: 'En attente', value: '14', icon: '⏳', color: '#FFB800' },
-          { label: 'Publiées', value: '187', icon: '✅', color: '#00C48C' },
-          { label: 'Bulletins prêts', value: '58', icon: '📄', color: '#1A6BFF' },
-          { label: 'Classes complètes', value: '3/8', icon: '🏫', color: '#FF6B35' },
-        ].map((s, i) => (
-          <div
-            key={i}
-            style={{
-              background: '#fff',
-              borderRadius: 16,
-              padding: 18,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 14,
-              boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-            }}
+    <div className="page animate-fade-in">
+      <div className="page-header">
+        <div className="page-header__info">
+          <h1>Notes & Bulletins</h1>
+          <p>{data?.count ?? 0} notes enregistrees</p>
+        </div>
+        <div className="page-header__actions">
+          <Button icon={<ReloadOutlined />} onClick={() => refetch()}>Actualiser</Button>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => { setEditId(null); form.resetFields(); setModalOpen(true); }}
           >
-            <div
-              style={{
-                width: 46,
-                height: 46,
-                borderRadius: 14,
-                background: s.color + '18',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 20,
-              }}
-            >
-              {s.icon}
-            </div>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                {s.label}
-              </div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: s.color }}>{s.value}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Main grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 20 }}>
-        {/* Pending queue */}
-        <div className="card">
-          <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1F2937', margin: 0, marginBottom: 16 }}>
-            File d'attente — Notes à valider
-          </h2>
-          {gradeSubmissions.map((g, i) => (
-            <div
-              key={g.id}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 14,
-                padding: '12px 0',
-                borderBottom: i < gradeSubmissions.length - 1 ? '1px solid #F3F4F6' : 'none',
-              }}
-            >
-              <Avatar name={g.teacher} size={38} color={AVATAR_COLORS[i]} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#1F2937' }}>
-                  {g.subject} — {g.className}
-                </div>
-                <div style={{ fontSize: 12, color: '#6B7280' }}>
-                  {g.teacher} · {g.studentCount} élèves · {g.submittedAt}
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <button style={btn('outline')} onClick={() => setReviewItem(g)}>
-                  Réviser
-                </button>
-                <button style={btn('success')}>Publier</button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Class averages */}
-        <div className="card">
-          <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1F2937', margin: 0, marginBottom: 14 }}>
-            Moyennes par classe — Trimestre 1
-          </h2>
-          {classes.slice(0, 5).map((c, i) => {
-            const color = c.average >= 14 ? '#00C48C' : c.average >= 12 ? '#1A6BFF' : '#FFB800';
-            return (
-              <div key={i} style={{ marginBottom: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>{c.name}</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color }}>{c.average}/20</span>
-                </div>
-                <div className="progress-track">
-                  <div className="progress-fill" style={{ width: `${c.average * 5}%`, background: color }} />
-                </div>
-              </div>
-            );
-          })}
+            Ajouter une note
+          </Button>
         </div>
       </div>
 
-      {/* Review Modal */}
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        <Input
+          prefix={<SearchOutlined style={{ color: 'var(--gray-400)' }} />}
+          placeholder="Rechercher..."
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          allowClear
+          style={{ maxWidth: 300, height: 40 }}
+        />
+      </div>
+
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <Table
+          columns={columns}
+          dataSource={data?.results || []}
+          loading={isLoading}
+          rowKey={(r: Record<string, any>) => (r.id as string) || String(Math.random())}
+          pagination={{
+            current: page,
+            pageSize: 20,
+            total: data?.count || 0,
+            onChange: (p) => setPage(p),
+            showSizeChanger: false,
+          }}
+          locale={{ emptyText: 'Aucune note trouvee' }}
+        />
+      </div>
+
       <Modal
-        open={!!reviewItem}
-        onCancel={() => setReviewItem(null)}
-        title={reviewItem ? `Réviser — ${reviewItem.subject} · ${reviewItem.className}` : ''}
-        width={800}
-        footer={
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button style={btn('secondary')} onClick={() => setReviewItem(null)}>Enregistrer brouillon</button>
-            <button style={btn('primary')}>Soumettre à l'admin</button>
-          </div>
-        }
+        title={editId ? 'Modifier la note' : 'Ajouter une note'}
+        open={modalOpen}
+        onOk={handleSubmit}
+        onCancel={() => { setModalOpen(false); setEditId(null); }}
+        confirmLoading={createGrade.isPending || updateGrade.isPending}
+        okText={editId ? 'Enregistrer' : 'Ajouter'}
+        cancelText="Annuler"
       >
-        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
-          <thead>
-            <tr>
-              {['Nom', 'Participation', 'Comp. 1', 'Comp. 2', 'Examen', 'Moyenne'].map((h) => (
-                <th key={h} style={th}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {grades.slice(0, 5).map((g) => (
-              <tr key={g.id}>
-                <td style={{ ...td, fontWeight: 600 }}>{g.studentName}</td>
-                <td style={td}><input defaultValue={g.continuous} style={inputStyle} /></td>
-                <td style={td}><input defaultValue={g.test1} style={inputStyle} /></td>
-                <td style={td}><input defaultValue={g.test2} style={inputStyle} /></td>
-                <td style={td}><input defaultValue={g.final} style={inputStyle} /></td>
-                <td style={{ ...td, fontWeight: 700, color: g.average >= 14 ? '#00C48C' : g.average >= 10 ? '#1A6BFF' : '#FF4757' }}>
-                  {g.average}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item label="Eleve" name="student" rules={[{ required: true, message: 'Requis' }]}>
+            <Input placeholder="ID de l'eleve" />
+          </Form.Item>
+          <Form.Item label="Matiere" name="subject" rules={[{ required: true, message: 'Requis' }]}>
+            <Input placeholder="ID de la matiere" />
+          </Form.Item>
+          <Form.Item label="Trimestre" name="trimester">
+            <Select placeholder="Trimestre">
+              <Select.Option value={1}>Trimestre 1</Select.Option>
+              <Select.Option value={2}>Trimestre 2</Select.Option>
+              <Select.Option value={3}>Trimestre 3</Select.Option>
+            </Select>
+          </Form.Item>
+          <Form.Item label="Note" name="score" rules={[{ required: true, message: 'Requis' }]}>
+            <InputNumber min={0} max={20} step={0.5} style={{ width: '100%' }} placeholder="Note sur 20" />
+          </Form.Item>
+          <Form.Item label="Statut" name="status">
+            <Select placeholder="Statut">
+              <Select.Option value="draft">Brouillon</Select.Option>
+              <Select.Option value="submitted">Soumis</Select.Option>
+              <Select.Option value="published">Publie</Select.Option>
+            </Select>
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   );
 };
-
-const th: React.CSSProperties = {
-  padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#6B7280',
-  textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #F3F4F6', background: '#F9FAFB',
-};
-const td: React.CSSProperties = {
-  padding: '12px 14px', fontSize: 13, color: '#374151', borderBottom: '1px solid #F3F4F6',
-};
-const inputStyle: React.CSSProperties = {
-  width: 60, padding: '6px 10px', borderRadius: 8, border: '1.5px solid #D1D5DB', fontSize: 13,
-  textAlign: 'center', fontFamily: "'Plus Jakarta Sans', sans-serif",
-};
-
-function btn(variant: string): React.CSSProperties {
-  const base: React.CSSProperties = {
-    padding: '6px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600,
-    display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: "'Plus Jakarta Sans', sans-serif",
-  };
-  switch (variant) {
-    case 'primary': return { ...base, background: '#1A6BFF', color: '#fff' };
-    case 'accent': return { ...base, background: '#FF6B35', color: '#fff' };
-    case 'success': return { ...base, background: '#00C48C', color: '#fff' };
-    case 'outline': return { ...base, background: '#fff', color: '#1A6BFF', border: '1.5px solid #1A6BFF' };
-    case 'secondary': return { ...base, background: '#F3F4F6', color: '#374151' };
-    default: return { ...base, background: '#1A6BFF', color: '#fff' };
-  }
-}
 
 export default GradeManagement;

@@ -1,10 +1,23 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import Avatar from '../ui/Avatar';
+import {
+  DashboardOutlined,
+  TeamOutlined,
+  SolutionOutlined,
+  FileTextOutlined,
+  CheckCircleOutlined,
+  CalendarOutlined,
+  NotificationOutlined,
+  MessageOutlined,
+  DollarOutlined,
+  BarChartOutlined,
+  SettingOutlined,
+} from '@ant-design/icons';
+import './Sidebar.css';
 
 interface NavItem {
   path: string;
-  icon: string;
+  icon: React.ReactNode;
   label: string;
 }
 
@@ -15,147 +28,85 @@ interface NavSection {
 
 const sections: NavSection[] = [
   {
-    title: 'PRINCIPAL',
-    items: [{ path: '/dashboard', icon: '📊', label: 'Tableau de bord' }],
-  },
-  {
-    title: 'ACADÉMIQUE',
+    title: 'Principal',
     items: [
-      { path: '/students', icon: '👥', label: 'Élèves' },
-      { path: '/teachers', icon: '👩‍🏫', label: 'Enseignants' },
-      { path: '/grades', icon: '📋', label: 'Notes & Bulletins' },
-      { path: '/attendance', icon: '✅', label: 'Absences' },
-      { path: '/timetable', icon: '📅', label: 'Emploi du temps' },
+      { path: '/dashboard', icon: <DashboardOutlined />, label: 'Tableau de bord' },
     ],
   },
   {
-    title: 'COMMUNICATION',
+    title: 'Academique',
     items: [
-      { path: '/announcements', icon: '📢', label: 'Annonces' },
-      { path: '/messaging', icon: '💬', label: 'Messagerie' },
+      { path: '/students', icon: <TeamOutlined />, label: 'Eleves' },
+      { path: '/teachers', icon: <SolutionOutlined />, label: 'Enseignants' },
+      { path: '/grades', icon: <FileTextOutlined />, label: 'Notes & Bulletins' },
+      { path: '/attendance', icon: <CheckCircleOutlined />, label: 'Absences' },
+      { path: '/timetable', icon: <CalendarOutlined />, label: 'Emploi du temps' },
     ],
   },
   {
-    title: 'ADMINISTRATION',
+    title: 'Communication',
     items: [
-      { path: '/financial', icon: '💰', label: 'Finances' },
-      { path: '/analytics', icon: '📈', label: 'Analytiques' },
-      { path: '/settings', icon: '⚙️', label: 'Paramètres' },
+      { path: '/announcements', icon: <NotificationOutlined />, label: 'Annonces' },
+      { path: '/messaging', icon: <MessageOutlined />, label: 'Messagerie' },
+    ],
+  },
+  {
+    title: 'Administration',
+    items: [
+      { path: '/financial', icon: <DollarOutlined />, label: 'Finances' },
+      { path: '/analytics', icon: <BarChartOutlined />, label: 'Analytiques' },
+      { path: '/settings', icon: <SettingOutlined />, label: 'Parametres' },
     ],
   },
 ];
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
-
   const isActive = (path: string) => location.pathname.startsWith(path);
 
   return (
-    <div
-      style={{
-        width: 220,
-        background: '#0D1B3E',
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '16px 12px',
-        gap: 4,
-        flexShrink: 0,
-        overflowY: 'auto',
-        height: '100%',
-      }}
-    >
+    <nav className="sidebar">
       {/* Logo */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          padding: '4px 12px 16px',
-        }}
-      >
-        <div
-          style={{
-            width: 28,
-            height: 28,
-            background: 'linear-gradient(135deg, #1A6BFF, #FF6B35)',
-            borderRadius: 8,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 14,
-          }}
-        >
-          🎓
+      <div className="sidebar__logo">
+        <div className="sidebar__logo-mark">EC</div>
+        <div className="sidebar__logo-text">
+          Edu<span>Connect</span>
         </div>
-        <span style={{ color: '#fff', fontWeight: 800, fontSize: 18 }}>EduConnect</span>
       </div>
 
       {/* Navigation */}
       {sections.map((section) => (
         <React.Fragment key={section.title}>
-          <div
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              color: 'rgba(255,255,255,0.3)',
-              textTransform: 'uppercase',
-              letterSpacing: 1,
-              padding: '12px 12px 4px',
-            }}
-          >
-            {section.title}
-          </div>
-          {section.items.map((item) => {
-            const active = isActive(item.path);
-            return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '10px 12px',
-                  borderRadius: 10,
-                  fontSize: 13,
-                  fontWeight: active ? 600 : 500,
-                  background: active ? '#1A6BFF' : 'transparent',
-                  color: active ? '#fff' : 'rgba(255,255,255,0.55)',
-                  textDecoration: 'none',
-                  transition: 'all 0.15s',
-                }}
-              >
-                <span>{item.icon}</span>
-                <span>{item.label}</span>
-              </NavLink>
-            );
-          })}
+          <div className="sidebar__section-title">{section.title}</div>
+          {section.items.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={`sidebar__nav-item${isActive(item.path) ? ' sidebar__nav-item--active' : ''}`}
+            >
+              <span className="sidebar__nav-icon">{item.icon}</span>
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
         </React.Fragment>
       ))}
 
       {/* Spacer */}
-      <div style={{ flex: 1 }} />
+      <div className="sidebar__spacer" />
 
-      {/* School profile */}
-      <div
-        style={{
-          padding: 12,
-          background: 'rgba(255,255,255,0.05)',
-          borderRadius: 12,
-          marginTop: 8,
-        }}
-      >
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <Avatar name="École Ibn Khaldoun" size={32} color="#1A6BFF" />
+      {/* School info */}
+      <div className="sidebar__school-card">
+        <div className="sidebar__school-info">
+          <div className="sidebar__school-avatar">EIK</div>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.9)' }}>
-              École Ibn Khaldoun
-            </div>
-            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>Plan Pro</div>
+            <div className="sidebar__school-name">Ecole Ibn Khaldoun</div>
+            <div className="sidebar__school-plan">Plan Premium</div>
           </div>
         </div>
       </div>
-    </div>
+
+      <div className="sidebar__version">v2.0.0</div>
+    </nav>
   );
 };
 
