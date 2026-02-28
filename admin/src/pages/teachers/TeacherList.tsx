@@ -43,30 +43,16 @@ const TeacherList: React.FC = () => {
       title: 'Enseignant',
       key: 'name',
       render: (_: unknown, r: Record<string, unknown>) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #10B981, #059669)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#fff',
-              fontSize: 12,
-              fontWeight: 700,
-              flexShrink: 0,
-            }}
-          >
+        <div className="flex-row flex-center gap-10">
+          <div className="avatar avatar--sm avatar--green">
             {((r.first_name as string)?.[0] || '').toUpperCase()}
             {((r.last_name as string)?.[0] || '').toUpperCase()}
           </div>
           <div>
-            <div style={{ fontWeight: 600, color: 'var(--gray-900)' }}>
+            <div className="font-semibold">
               {(r.first_name as string) || ''} {(r.last_name as string) || ''}
             </div>
-            <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>
+            <div className="text-sub">
               {(r.email as string) || ''}
             </div>
           </div>
@@ -83,7 +69,7 @@ const TeacherList: React.FC = () => {
       title: 'Matiere',
       dataIndex: 'subject',
       key: 'subject',
-      render: (v: string) => v ? <Tag color="green">{v}</Tag> : <span style={{ color: 'var(--gray-400)' }}>—</span>,
+      render: (v: string) => v ? <Tag color="green">{v}</Tag> : <span className="text-muted">—</span>,
     },
     {
       title: 'Statut',
@@ -148,15 +134,15 @@ const TeacherList: React.FC = () => {
       </div>
 
       <Input
-        prefix={<SearchOutlined style={{ color: 'var(--gray-400)' }} />}
+        prefix={<SearchOutlined className="search-icon" />}
         placeholder="Rechercher par nom..."
         value={search}
         onChange={(e) => { setSearch(e.target.value); setPage(1); }}
         allowClear
-        style={{ maxWidth: 400, height: 40 }}
+        className="search-input"
       />
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="card card--table">
         <Table
           columns={columns}
           dataSource={data?.results || []}
@@ -181,7 +167,7 @@ const TeacherList: React.FC = () => {
         onClose={() => setDrawerOpen(false)}
         width={440}
         footer={
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <div className="drawer-footer">
             <Button onClick={() => setDrawerOpen(false)}>Annuler</Button>
             <Button type="primary" onClick={handleSubmit} loading={submitting}>Enregistrer</Button>
           </div>
@@ -222,40 +208,25 @@ const TeacherList: React.FC = () => {
         width={440}
       >
         {selectedTeacher && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div
-                style={{
-                  width: 52,
-                  height: 52,
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #10B981, #059669)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#fff',
-                  fontSize: 18,
-                  fontWeight: 700,
-                }}
-              >
+          <div className="flex-col gap-16">
+            <div className="flex-row flex-center gap-14">
+              <div className="avatar avatar--md avatar--green">
                 {((t.first_name as string)?.[0] || '').toUpperCase()}
                 {((t.last_name as string)?.[0] || '').toUpperCase()}
               </div>
               <div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--gray-900)' }}>
+                <div className="detail-name">
                   {(t.first_name as string) || ''} {(t.last_name as string) || ''}
                 </div>
-                <div style={{ fontSize: 13, color: 'var(--gray-500)' }}>
+                <div className="text-sub">
                   {(t.subject as string) || 'Enseignant'}
                 </div>
               </div>
             </div>
-            <div style={{ background: 'var(--gray-50)', borderRadius: 'var(--radius-md)', padding: 16 }}>
-              <div style={{ display: 'grid', gap: 12 }}>
-                <div><span style={{ fontSize: 12, color: 'var(--gray-500)', fontWeight: 600 }}>Telephone</span><br /><span className="font-mono">{(t.phone_number as string) || '—'}</span></div>
-                <div><span style={{ fontSize: 12, color: 'var(--gray-500)', fontWeight: 600 }}>Email</span><br />{(t.email as string) || '—'}</div>
-                <div><span style={{ fontSize: 12, color: 'var(--gray-500)', fontWeight: 600 }}>Statut</span><br /><Tag color={(t.is_active as boolean) !== false ? 'green' : 'default'}>{(t.is_active as boolean) !== false ? 'Actif' : 'Inactif'}</Tag></div>
-              </div>
+            <div className="detail-info-panel">
+              <div className="detail-info-item"><span className="detail-info-label">Telephone</span><br /><span className="font-mono">{(t.phone_number as string) || '—'}</span></div>
+              <div className="detail-info-item"><span className="detail-info-label">Email</span><br />{(t.email as string) || '—'}</div>
+              <div className="detail-info-item"><span className="detail-info-label">Statut</span><br /><Tag color={(t.is_active as boolean) !== false ? 'green' : 'default'}>{(t.is_active as boolean) !== false ? 'Actif' : 'Inactif'}</Tag></div>
             </div>
           </div>
         )}

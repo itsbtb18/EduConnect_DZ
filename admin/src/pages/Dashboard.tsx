@@ -60,7 +60,7 @@ const Dashboard: React.FC = () => {
       title: 'Classe',
       dataIndex: 'name',
       key: 'name',
-      render: (v: string) => <span style={{ fontWeight: 600 }}>{v || '—'}</span>,
+      render: (v: string) => <span className="font-semibold">{v || '—'}</span>,
     },
     {
       title: 'Niveau',
@@ -85,7 +85,6 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="page animate-fade-in">
-      {/* Header */}
       <div className="page-header">
         <div className="page-header__info">
           <h1>Tableau de bord</h1>
@@ -99,18 +98,15 @@ const Dashboard: React.FC = () => {
           <div
             key={s.label}
             className="stat-card card-interactive"
-            style={{ '--accent-color': s.color } as React.CSSProperties}
             onClick={() => navigate(s.route)}
           >
-            <div className="stat-card" style={{ border: 'none', boxShadow: 'none', padding: 0, cursor: 'pointer' }} onClick={() => navigate(s.route)}>
-              <div className="stat-card__icon" style={{ background: s.bg, color: s.color }}>
-                {s.icon}
-              </div>
-              <div className="stat-card__content">
-                <div className="stat-card__label">{s.label}</div>
-                <div className="stat-card__value">
-                  {isLoading ? <Spin size="small" /> : s.value}
-                </div>
+            <div className="stat-card__icon" style={{ background: s.bg, color: s.color }}>
+              {s.icon}
+            </div>
+            <div className="stat-card__content">
+              <div className="stat-card__label">{s.label}</div>
+              <div className="stat-card__value">
+                {isLoading ? <Spin size="small" /> : s.value}
               </div>
             </div>
           </div>
@@ -137,16 +133,16 @@ const Dashboard: React.FC = () => {
         </Card>
 
         {/* Right column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div className="flex-col gap-20">
           {/* Quick actions */}
           <Card title={<span className="section-title">Actions rapides</span>}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div className="grid-quick-actions">
               {quickActions.map((a) => (
                 <Button
                   key={a.label}
                   icon={a.icon}
                   onClick={() => navigate(a.route)}
-                  style={{ height: 42, fontWeight: 600, fontSize: 12 }}
+                  className="btn-quick-action"
                   block
                 >
                   {a.label}
@@ -161,28 +157,23 @@ const Dashboard: React.FC = () => {
             extra={<Button type="link" onClick={() => navigate('/announcements')}>Voir tout</Button>}
           >
             {announcementData?.results?.length ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="flex-col gap-12">
                 {announcementData.results.slice(0, 3).map((a: any, i: number) => (
                   <div
                     key={(a.id as string) || i}
-                    style={{
-                      padding: '10px 14px',
-                      background: 'var(--gray-50)',
-                      borderRadius: 'var(--radius-md)',
-                      borderLeft: '3px solid var(--primary)',
-                    }}
+                    className="announcement-item"
                   >
-                    <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--gray-900)', marginBottom: 2 }}>
+                    <div className="announcement-item__title">
                       {(a.title as string) || 'Sans titre'}
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>
+                    <div className="announcement-item__date">
                       {(a.created_at as string)?.slice(0, 10) || (a.date as string) || ''}
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="empty-state" style={{ padding: 24 }}>
+              <div className="empty-state">
                 <div className="empty-state__icon"><BellOutlined /></div>
                 <div className="empty-state__title">Aucune annonce</div>
                 <div className="empty-state__desc">Les annonces apparaitront ici</div>
@@ -193,17 +184,11 @@ const Dashboard: React.FC = () => {
           {/* Notifications */}
           {notifData?.results && notifData.results.length > 0 && (
             <Card title={<span className="section-title"><BellOutlined /> Notifications</span>}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="flex-col gap-8">
                 {notifData.results.slice(0, 4).map((n: any, i: number) => (
                   <div
                     key={(n.id as string) || i}
-                    style={{
-                      padding: '8px 12px',
-                      background: (n.is_read as boolean) ? 'transparent' : 'var(--primary-50)',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: 13,
-                      color: 'var(--gray-700)',
-                    }}
+                    className={`notif-item ${!(n.is_read as boolean) ? 'notif-item--unread' : ''}`}
                   >
                     {(n.message as string) || (n.title as string) || 'Notification'}
                   </div>

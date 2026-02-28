@@ -11,7 +11,7 @@ const StudentDetail: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="page" style={{ display: 'flex', justifyContent: 'center', paddingTop: 100 }}>
+      <div className="page loading-center">
         <Spin size="large" />
       </div>
     );
@@ -23,7 +23,7 @@ const StudentDetail: React.FC = () => {
         <div className="empty-state">
           <div className="empty-state__title">Eleve introuvable</div>
           <div className="empty-state__desc">Cet eleve n'existe pas ou a ete supprime.</div>
-          <Button type="primary" onClick={() => navigate('/students')} style={{ marginTop: 16 }}>
+          <Button type="primary" onClick={() => navigate('/students')} className="mt-16">
             Retour a la liste
           </Button>
         </div>
@@ -36,7 +36,7 @@ const StudentDetail: React.FC = () => {
   return (
     <div className="page animate-fade-in">
       <div className="page-header">
-        <div className="page-header__info" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div className="page-header__info flex-row flex-center gap-16">
           <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/students')}>
             Retour
           </Button>
@@ -54,29 +54,16 @@ const StudentDetail: React.FC = () => {
 
       <div className="grid-main">
         <Card>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 24 }}>
-            <div
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, var(--primary), #6366F1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#fff',
-                fontSize: 22,
-                fontWeight: 700,
-              }}
-            >
+          <div className="flex-row flex-center gap-20 mb-24">
+            <div className="avatar avatar--lg avatar--primary">
               {((s.first_name as string)?.[0] || '').toUpperCase()}
               {((s.last_name as string)?.[0] || '').toUpperCase()}
             </div>
             <div>
-              <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: 'var(--gray-900)' }}>
+              <h2 className="detail-name lg">
                 {(s.first_name as string) || ''} {(s.last_name as string) || ''}
               </h2>
-              <Tag color={(s.is_active as boolean) !== false ? 'green' : 'red'} style={{ marginTop: 4 }}>
+              <Tag color={(s.is_active as boolean) !== false ? 'green' : 'red'} className="mt-4">
                 {(s.is_active as boolean) !== false ? 'Actif' : 'Inactif'}
               </Tag>
             </div>
@@ -94,14 +81,14 @@ const StudentDetail: React.FC = () => {
           </Descriptions>
         </Card>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div className="flex-col gap-20">
           <Card title="Notes recentes">
-            <div className="empty-state" style={{ padding: 24 }}>
+            <div className="empty-state">
               <div className="empty-state__desc">Les notes de cet eleve apparaitront ici</div>
             </div>
           </Card>
           <Card title="Absences">
-            <div className="empty-state" style={{ padding: 24 }}>
+            <div className="empty-state">
               <div className="empty-state__desc">L'historique des absences apparaitra ici</div>
             </div>
           </Card>

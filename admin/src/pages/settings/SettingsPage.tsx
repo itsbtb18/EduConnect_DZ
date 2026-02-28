@@ -47,35 +47,22 @@ const SettingsPage: React.FC = () => {
     {
       key: 'profile',
       label: (
-        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span className="settings-tab-label">
           <UserOutlined /> Profil
         </span>
       ),
       children: (
         <Card>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 24 }}>
-            <div
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, var(--primary), #6366F1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#fff',
-                fontSize: 22,
-                fontWeight: 700,
-              }}
-            >
+          <div className="settings-profile-header">
+            <div className="avatar avatar--lg avatar--primary">
               {(user?.first_name?.[0] || 'A').toUpperCase()}
               {(user?.last_name?.[0] || 'D').toUpperCase()}
             </div>
             <div>
-              <h3 style={{ margin: 0, fontWeight: 700, fontSize: 18 }}>
+              <h3 className="settings-profile-name">
                 {user ? `${user.first_name} ${user.last_name}`.trim() || 'Admin' : 'Admin'}
               </h3>
-              <span style={{ color: 'var(--gray-500)', fontSize: 13 }}>{user?.role || 'superadmin'}</span>
+              <span className="settings-profile-role">{user?.role || 'superadmin'}</span>
             </div>
           </div>
 
@@ -89,7 +76,7 @@ const SettingsPage: React.FC = () => {
               phone_number: user?.phone_number || '',
             }}
           >
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className="grid-2col">
               <Form.Item label="Prenom" name="first_name">
                 <Input />
               </Form.Item>
@@ -97,7 +84,7 @@ const SettingsPage: React.FC = () => {
                 <Input />
               </Form.Item>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className="grid-2col">
               <Form.Item label="Email" name="email">
                 <Input />
               </Form.Item>
@@ -115,14 +102,14 @@ const SettingsPage: React.FC = () => {
     {
       key: 'security',
       label: (
-        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span className="settings-tab-label">
           <LockOutlined /> Securite
         </span>
       ),
       children: (
         <Card>
-          <h3 style={{ fontWeight: 700, marginBottom: 16 }}>Changer le mot de passe</h3>
-          <Form form={passwordForm} layout="vertical" style={{ maxWidth: 400 }}>
+          <h3 className="settings-section-title">Changer le mot de passe</h3>
+          <Form form={passwordForm} layout="vertical" className="settings-form--narrow">
             <Form.Item label="Mot de passe actuel" name="current_password" rules={[{ required: true, message: 'Requis' }]}>
               <Input.Password />
             </Form.Item>
@@ -142,14 +129,14 @@ const SettingsPage: React.FC = () => {
     {
       key: 'notifications',
       label: (
-        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span className="settings-tab-label">
           <BellOutlined /> Notifications
         </span>
       ),
       children: (
         <Card>
-          <h3 style={{ fontWeight: 700, marginBottom: 20 }}>Preferences de notification</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <h3 className="settings-section-title">Preferences de notification</h3>
+          <div className="settings-notif-list">
             {[
               { label: 'Notifications par email', desc: 'Recevoir les notifications importantes par email' },
               { label: 'Notifications SMS', desc: 'Recevoir les alertes urgentes par SMS' },
@@ -157,10 +144,10 @@ const SettingsPage: React.FC = () => {
               { label: 'Paiements', desc: 'Notifier lors de nouveaux paiements' },
               { label: 'Absences', desc: 'Alertes d\'absences non justifiees' },
             ].map((item) => (
-              <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--gray-100)' }}>
+              <div key={item.label} className="settings-notif-item">
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: 14 }}>{item.label}</div>
-                  <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>{item.desc}</div>
+                  <div className="settings-notif-label">{item.label}</div>
+                  <div className="settings-notif-desc">{item.desc}</div>
                 </div>
                 <Switch defaultChecked />
               </div>
@@ -172,14 +159,14 @@ const SettingsPage: React.FC = () => {
     {
       key: 'general',
       label: (
-        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span className="settings-tab-label">
           <GlobalOutlined /> General
         </span>
       ),
       children: (
         <Card>
-          <h3 style={{ fontWeight: 700, marginBottom: 20 }}>Parametres generaux</h3>
-          <Form layout="vertical" style={{ maxWidth: 400 }}>
+          <h3 className="settings-section-title">Parametres generaux</h3>
+          <Form layout="vertical" className="settings-form--narrow">
             <Form.Item label="Langue">
               <Select defaultValue="fr">
                 <Select.Option value="fr">Francais</Select.Option>

@@ -54,7 +54,7 @@ const GradeManagement: React.FC = () => {
       dataIndex: 'student_name',
       key: 'student_name',
       render: (v: string, r: Record<string, unknown>) =>
-        <span style={{ fontWeight: 600 }}>{v || (r.student as string) || '—'}</span>,
+        <span className="font-semibold">{v || (r.student as string) || '—'}</span>,
     },
     {
       title: 'Matiere',
@@ -78,8 +78,7 @@ const GradeManagement: React.FC = () => {
       render: (v: number, r: Record<string, unknown>) => {
         const score = v ?? (r.average as number) ?? (r.grade as number);
         if (score == null) return '—';
-        const color = score >= 10 ? 'var(--success)' : 'var(--danger)';
-        return <span style={{ fontWeight: 700, color }}>{score}/20</span>;
+        return <span className={score >= 10 ? 'score--pass' : 'score--fail'}>{score}/20</span>;
       },
     },
     {
@@ -119,18 +118,18 @@ const GradeManagement: React.FC = () => {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+      <div className="filter-row">
         <Input
-          prefix={<SearchOutlined style={{ color: 'var(--gray-400)' }} />}
+          prefix={<SearchOutlined className="search-icon" />}
           placeholder="Rechercher..."
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           allowClear
-          style={{ maxWidth: 300, height: 40 }}
+          className="search-input"
         />
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="card card--table">
         <Table
           columns={columns}
           dataSource={data?.results || []}
@@ -156,7 +155,7 @@ const GradeManagement: React.FC = () => {
         okText={editId ? 'Enregistrer' : 'Ajouter'}
         cancelText="Annuler"
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+        <Form form={form} layout="vertical" className="modal-form">
           <Form.Item label="Eleve" name="student" rules={[{ required: true, message: 'Requis' }]}>
             <Input placeholder="ID de l'eleve" />
           </Form.Item>

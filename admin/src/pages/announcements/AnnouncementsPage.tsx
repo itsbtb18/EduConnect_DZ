@@ -38,7 +38,7 @@ const AnnouncementsPage: React.FC = () => {
       title: 'Titre',
       dataIndex: 'title',
       key: 'title',
-      render: (v: string) => <span style={{ fontWeight: 600 }}>{v || '—'}</span>,
+      render: (v: string) => <span className="font-semibold">{v || '—'}</span>,
     },
     {
       title: 'Audience',
@@ -94,7 +94,7 @@ const AnnouncementsPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="card card--table">
         <Table
           columns={columns}
           dataSource={data?.results || []}
@@ -121,7 +121,7 @@ const AnnouncementsPage: React.FC = () => {
         cancelText="Annuler"
         width={560}
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+        <Form form={form} layout="vertical" className="modal-form">
           <Form.Item label="Titre" name="title" rules={[{ required: true, message: 'Requis' }]}>
             <Input placeholder="Titre de l'annonce" />
           </Form.Item>

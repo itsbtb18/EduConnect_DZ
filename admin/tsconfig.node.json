@@ -11,6 +11,7 @@
     "emitDeclarationOnly": true,
     "composite": true,
     "strict": true,
+    "forceConsistentCasingInFileNames": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false
   },

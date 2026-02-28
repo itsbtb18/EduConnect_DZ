@@ -35,53 +35,31 @@ const MessagingPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden', height: 'calc(100vh - 240px)', display: 'flex' }}>
+      <div className="card msg-container">
         {/* Room list */}
-        <div style={{
-          width: 280,
-          borderRight: '1px solid var(--gray-200)',
-          display: 'flex',
-          flexDirection: 'column',
-          flexShrink: 0,
-        }}>
-          <div style={{ padding: '16px', borderBottom: '1px solid var(--gray-100)', fontWeight: 700, fontSize: 14, color: 'var(--gray-900)' }}>
+        <div className="msg-sidebar">
+          <div className="msg-sidebar__header">
             Conversations
           </div>
-          <div style={{ flex: 1, overflowY: 'auto' }}>
+          <div className="msg-sidebar__list">
             {roomsLoading ? (
-              <div style={{ padding: 40, textAlign: 'center' }}><Spin /></div>
+              <div className="msg-sidebar__loading"><Spin /></div>
             ) : rooms?.results?.length ? (
               rooms.results.map((room: Record<string, unknown>) => (
                 <div
                   key={room.id as string}
                   onClick={() => setSelectedRoom(room.id as string)}
-                  style={{
-                    padding: '12px 16px',
-                    cursor: 'pointer',
-                    background: selectedRoom === room.id ? 'var(--primary-50)' : 'transparent',
-                    borderLeft: selectedRoom === room.id ? '3px solid var(--primary)' : '3px solid transparent',
-                    transition: 'all 150ms ease',
-                  }}
+                  className={`msg-room ${selectedRoom === room.id ? 'msg-room--active' : ''}`}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: '50%',
-                      background: 'var(--gray-200)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 14,
-                      color: 'var(--gray-600)',
-                    }}>
+                  <div className="flex-row flex-center gap-10">
+                    <div className="msg-room__avatar">
                       <UserOutlined />
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--gray-900)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div className="flex-1 min-w-0">
+                      <div className="msg-room__name">
                         {(room.name as string) || `Salle ${room.id}`}
                       </div>
-                      <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>
+                      <div className="msg-room__preview">
                         {(room.last_message as string)?.slice(0, 30) || 'Aucun message'}
                       </div>
                     </div>
@@ -89,35 +67,27 @@ const MessagingPage: React.FC = () => {
                 </div>
               ))
             ) : (
-              <Empty description="Aucune conversation" style={{ padding: 40 }} image={Empty.PRESENTED_IMAGE_SIMPLE} />
+              <Empty description="Aucune conversation" className="msg-sidebar__loading" image={Empty.PRESENTED_IMAGE_SIMPLE} />
             )}
           </div>
         </div>
 
         {/* Message area */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div className="msg-area">
           {selectedRoom ? (
             <>
               {/* Messages */}
-              <div style={{ flex: 1, overflowY: 'auto', padding: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="msg-list">
                 {msgsLoading ? (
-                  <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 40 }}><Spin /></div>
+                  <div className="loading-center"><Spin /></div>
                 ) : messages?.results?.length ? (
                   messages.results.map((msg: Record<string, unknown>, i: number) => (
                     <div
                       key={(msg.id as string) || i}
-                      style={{
-                        maxWidth: '70%',
-                        alignSelf: (msg.is_mine as boolean) ? 'flex-end' : 'flex-start',
-                        background: (msg.is_mine as boolean) ? 'var(--primary)' : 'var(--gray-100)',
-                        color: (msg.is_mine as boolean) ? '#fff' : 'var(--gray-800)',
-                        padding: '10px 14px',
-                        borderRadius: 14,
-                        fontSize: 13,
-                      }}
+                      className={`msg-bubble ${(msg.is_mine as boolean) ? 'msg-bubble--mine' : 'msg-bubble--other'}`}
                     >
                       {!msg.is_mine && (
-                        <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 2, opacity: 0.7 }}>
+                        <div className="msg-bubble__sender">
                           {(msg.sender_name as string) || (msg.sender as string) || ''}
                         </div>
                       )}
@@ -130,25 +100,25 @@ const MessagingPage: React.FC = () => {
               </div>
 
               {/* Input */}
-              <div style={{ padding: '12px 16px', borderTop: '1px solid var(--gray-200)', display: 'flex', gap: 8 }}>
+              <div className="msg-input-bar">
                 <Input
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Ecrire un message..."
-                  style={{ borderRadius: 20, height: 40 }}
+                  className="msg-input"
                 />
                 <Button
                   type="primary"
                   icon={<SendOutlined />}
                   onClick={handleSend}
                   loading={sendMessage.isPending}
-                  style={{ borderRadius: 20, height: 40, width: 40, padding: 0 }}
+                  className="msg-send-btn"
                 />
               </div>
             </>
           ) : (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div className="msg-empty">
               <div className="empty-state">
                 <div className="empty-state__icon"><MessageOutlined /></div>
                 <div className="empty-state__title">Selectionnez une conversation</div>

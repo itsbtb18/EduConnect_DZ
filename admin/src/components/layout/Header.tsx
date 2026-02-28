@@ -82,7 +82,7 @@ const Header: React.FC = () => {
 
         <div className="header__divider" />
 
-        <div ref={dropdownRef} style={{ position: 'relative' }}>
+        <div ref={dropdownRef} className="pos-relative">
           <div className="header__user" onClick={() => setDropdownOpen((v) => !v)}>
             <div className="header__user-avatar">{initials}</div>
             <div className="header__user-info">

@@ -46,7 +46,7 @@ const AnalyticsPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="page" style={{ display: 'flex', justifyContent: 'center', paddingTop: 100 }}>
+      <div className="page loading-center">
         <Spin size="large" />
       </div>
     );

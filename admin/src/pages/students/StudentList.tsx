@@ -69,30 +69,16 @@ const StudentList: React.FC = () => {
       title: 'Nom',
       key: 'name',
       render: (_: unknown, r: Record<string, unknown>) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, var(--primary), #6366F1)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#fff',
-              fontSize: 12,
-              fontWeight: 700,
-              flexShrink: 0,
-            }}
-          >
+        <div className="flex-row flex-center gap-10">
+          <div className="avatar avatar--sm avatar--primary">
             {((r.first_name as string)?.[0] || '').toUpperCase()}
             {((r.last_name as string)?.[0] || '').toUpperCase()}
           </div>
           <div>
-            <div style={{ fontWeight: 600, color: 'var(--gray-900)' }}>
+            <div className="font-semibold">
               {(r.first_name as string) || ''} {(r.last_name as string) || ''}
             </div>
-            <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>
+            <div className="text-sub">
               {(r.email as string) || (r.phone_number as string) || ''}
             </div>
           </div>
@@ -103,7 +89,7 @@ const StudentList: React.FC = () => {
       title: 'Classe',
       dataIndex: 'class_name',
       key: 'class_name',
-      render: (v: string) => v ? <Tag color="blue">{v}</Tag> : <span style={{ color: 'var(--gray-400)' }}>—</span>,
+      render: (v: string) => v ? <Tag color="blue">{v}</Tag> : <span className="text-muted">—</span>,
     },
     {
       title: 'Telephone',
@@ -177,16 +163,16 @@ const StudentList: React.FC = () => {
 
       {/* Search */}
       <Input
-        prefix={<SearchOutlined style={{ color: 'var(--gray-400)' }} />}
+        prefix={<SearchOutlined className="search-icon" />}
         placeholder="Rechercher par nom, telephone..."
         value={search}
         onChange={(e) => { setSearch(e.target.value); setPage(1); }}
         allowClear
-        style={{ maxWidth: 400, height: 40 }}
+        className="search-input"
       />
 
       {/* Table */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="card card--table">
         <Table
           columns={columns}
           dataSource={data?.results || []}
@@ -211,7 +197,7 @@ const StudentList: React.FC = () => {
         onClose={() => { setDrawerOpen(false); setEditingStudent(null); }}
         width={440}
         footer={
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <div className="drawer-footer">
             <Button onClick={() => setDrawerOpen(false)}>Annuler</Button>
             <Button type="primary" onClick={handleSubmit} loading={submitting}>
               {editingStudent ? 'Enregistrer' : 'Ajouter'}

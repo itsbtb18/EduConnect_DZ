@@ -28,7 +28,7 @@ const TimetablePage: React.FC = () => {
       key: 'day',
       render: (v: string, r: Record<string, unknown>) => {
         const day = v || (r.day_of_week as string) || '—';
-        return <Tag color={dayColors[day] ? 'blue' : 'default'} style={{ fontWeight: 600 }}>{day}</Tag>;
+        return <Tag color={dayColors[day] ? 'blue' : 'default'} className="font-semibold">{day}</Tag>;
       },
     },
     {
@@ -48,7 +48,7 @@ const TimetablePage: React.FC = () => {
       dataIndex: 'subject',
       key: 'subject',
       render: (v: string, r: Record<string, unknown>) => (
-        <span style={{ fontWeight: 600 }}>{v || (r.subject_name as string) || '—'}</span>
+        <span className="font-semibold">{v || (r.subject_name as string) || '—'}</span>
       ),
     },
     {
@@ -79,23 +79,12 @@ const TimetablePage: React.FC = () => {
 
       {/* Schedule grid view */}
       {slots.length > 0 && (
-        <div className="card" style={{ overflowX: 'auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '100px repeat(5, 1fr)', gap: 2, minWidth: 700 }}>
+        <div className="card timetable-grid-wrapper">
+          <div className="timetable-grid">
             {/* Header */}
-            <div style={{ padding: 8 }} />
+            <div className="timetable-empty-cell" />
             {days.map((d) => (
-              <div
-                key={d}
-                style={{
-                  padding: '10px 8px',
-                  fontWeight: 700,
-                  fontSize: 12,
-                  textAlign: 'center',
-                  color: 'var(--gray-700)',
-                  background: 'var(--gray-50)',
-                  borderRadius: 'var(--radius-sm)',
-                }}
-              >
+              <div key={d} className="timetable-day-header">
                 {d}
               </div>
             ))}
@@ -103,15 +92,7 @@ const TimetablePage: React.FC = () => {
             {/* Time rows */}
             {timeSlots.map((time) => (
               <React.Fragment key={time}>
-                <div style={{
-                  padding: '8px',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: 'var(--gray-500)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  fontFamily: 'var(--font-mono)',
-                }}>
+                <div className="timetable-time-cell">
                   {time}
                 </div>
                 {days.map((day) => {
@@ -123,24 +104,22 @@ const TimetablePage: React.FC = () => {
                     return (
                       <div
                         key={day}
+                        className="timetable-slot"
                         style={{
-                          padding: '8px',
                           background: `${dayColors[day] || '#1A6BFF'}10`,
-                          borderLeft: `3px solid ${dayColors[day] || '#1A6BFF'}`,
-                          borderRadius: 'var(--radius-sm)',
-                          fontSize: 12,
+                          borderLeftColor: dayColors[day] || '#1A6BFF',
                         }}
                       >
-                        <div style={{ fontWeight: 700, color: 'var(--gray-900)' }}>
+                        <div className="timetable-slot__subject">
                           {(slot as Record<string, unknown>).subject_name as string || (slot as Record<string, unknown>).subject as string || '—'}
                         </div>
-                        <div style={{ color: 'var(--gray-500)', fontSize: 11 }}>
+                        <div className="timetable-slot__room">
                           {(slot as Record<string, unknown>).room as string || ''}
                         </div>
                       </div>
                     );
                   }
-                  return <div key={day} style={{ padding: 8 }} />;
+                  return <div key={day} className="timetable-empty-cell" />;
                 })}
               </React.Fragment>
             ))}
@@ -149,7 +128,7 @@ const TimetablePage: React.FC = () => {
       )}
 
       {/* List view */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="card card--table">
         <Table
           columns={columns}
           dataSource={slots}

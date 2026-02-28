@@ -56,13 +56,13 @@ const FinancialPage: React.FC = () => {
       dataIndex: 'student_name',
       key: 'student_name',
       render: (v: string, r: Record<string, unknown>) =>
-        <span style={{ fontWeight: 600 }}>{v || (r.student as string) || '—'}</span>,
+        <span className="font-semibold">{v || (r.student as string) || '—'}</span>,
     },
     {
       title: 'Montant',
       dataIndex: 'amount',
       key: 'amount',
-      render: (v: number) => v != null ? <span className="font-mono" style={{ fontWeight: 700 }}>{v.toLocaleString()} DA</span> : '—',
+      render: (v: number) => v != null ? <span className="font-mono font-bold">{v.toLocaleString()} DA</span> : '—',
     },
     {
       title: 'Methode',
@@ -107,7 +107,7 @@ const FinancialPage: React.FC = () => {
       </div>
 
       {/* Summary cards */}
-      <div className="stats-grid stagger-children" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+      <div className="stats-grid stats-grid--3 stagger-children">
         <Card>
           <Statistic
             title="Total percu"
@@ -135,7 +135,7 @@ const FinancialPage: React.FC = () => {
         </Card>
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="card card--table">
         <Table
           columns={columns}
           dataSource={results}
@@ -161,7 +161,7 @@ const FinancialPage: React.FC = () => {
         okText="Enregistrer"
         cancelText="Annuler"
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+        <Form form={form} layout="vertical" className="modal-form">
           <Form.Item label="Eleve" name="student" rules={[{ required: true, message: 'Requis' }]}>
             <Input placeholder="ID de l'eleve" />
           </Form.Item>

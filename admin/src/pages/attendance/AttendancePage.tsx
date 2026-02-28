@@ -40,7 +40,7 @@ const AttendancePage: React.FC = () => {
       dataIndex: 'student_name',
       key: 'student_name',
       render: (v: string, r: Record<string, unknown>) =>
-        <span style={{ fontWeight: 600 }}>{v || (r.student as string) || '—'}</span>,
+        <span className="font-semibold">{v || (r.student as string) || '—'}</span>,
     },
     {
       title: 'Classe',
@@ -86,7 +86,7 @@ const AttendancePage: React.FC = () => {
         </div>
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="card card--table">
         <Table
           columns={columns}
           dataSource={data?.results || []}
@@ -112,7 +112,7 @@ const AttendancePage: React.FC = () => {
         okText="Enregistrer"
         cancelText="Annuler"
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+        <Form form={form} layout="vertical" className="modal-form">
           <Form.Item label="Eleve" name="student" rules={[{ required: true, message: 'Requis' }]}>
             <Input placeholder="ID de l'eleve" />
           </Form.Item>
