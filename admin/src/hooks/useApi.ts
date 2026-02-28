@@ -12,6 +12,7 @@ import {
   notificationsAPI,
   authAPI,
   schoolsAPI,
+  usersAPI,
 } from '../api/services';
 
 /* ─────────────────────────────── Types ─────────────────────────────── */
@@ -340,6 +341,134 @@ export function useSchools(params?: Record<string, unknown>) {
       return extractData(res);
     },
     retry: 1,
+  });
+}
+
+export function useSchool(id: string) {
+  return useQuery({
+    queryKey: ['schools', id],
+    queryFn: async () => {
+      const { data } = await schoolsAPI.get(id);
+      return data;
+    },
+    enabled: !!id,
+  });
+}
+
+export function useCreateSchool() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => schoolsAPI.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['schools'] });
+      message.success('Ecole creee avec succes');
+    },
+    onError: () => message.error("Erreur lors de la creation de l'ecole"),
+  });
+}
+
+export function useUpdateSchool() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      schoolsAPI.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['schools'] });
+      message.success('Ecole mise a jour');
+    },
+    onError: () => message.error('Erreur de mise a jour'),
+  });
+}
+
+export function useDeleteSchool() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => schoolsAPI.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['schools'] });
+      message.success('Ecole supprimee');
+    },
+    onError: () => message.error('Erreur de suppression'),
+  });
+}
+
+/* ─────────────────────────── Users (admin) ──────────────────────────── */
+export function useUsers(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['users', params],
+    queryFn: async () => {
+      const res = await usersAPI.list(params);
+      return extractData(res);
+    },
+    retry: 1,
+  });
+}
+
+export function useUser(id: string) {
+  return useQuery({
+    queryKey: ['users', id],
+    queryFn: async () => {
+      const { data } = await usersAPI.get(id);
+      return data;
+    },
+    enabled: !!id,
+  });
+}
+
+export function useCreateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => usersAPI.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['users'] });
+      message.success('Utilisateur cree avec succes');
+    },
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: Record<string, unknown> } };
+      const detail = err?.response?.data;
+      if (detail) {
+        const msgs = Object.values(detail).flat().join(', ');
+        message.error(msgs || 'Erreur lors de la creation');
+      } else {
+        message.error('Erreur lors de la creation');
+      }
+    },
+  });
+}
+
+export function useUpdateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      usersAPI.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['users'] });
+      message.success('Utilisateur mis a jour');
+    },
+    onError: () => message.error('Erreur de mise a jour'),
+  });
+}
+
+export function useDeleteUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => usersAPI.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['users'] });
+      message.success('Utilisateur desactive');
+    },
+    onError: () => message.error('Erreur de suppression'),
+  });
+}
+
+export function useResetUserPassword() {
+  return useMutation({
+    mutationFn: ({ id, new_password }: { id: string; new_password: string }) =>
+      usersAPI.resetPassword(id, new_password),
+    onSuccess: () => {
+      message.success('Mot de passe reinitialise');
+    },
+    onError: () => message.error('Erreur lors de la reinitialisation'),
   });
 }
 

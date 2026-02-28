@@ -1,0 +1,118 @@
+/* ── School Management Page ── */
+.school-management {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.school-management__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.school-management__title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary, #1F2937);
+}
+
+.school-management__subtitle {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--text-secondary, #6B7280);
+}
+
+.school-management__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 20px;
+}
+
+.school-card {
+  border-radius: 14px;
+  transition: box-shadow 0.2s;
+}
+
+.school-card:hover {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+}
+
+.school-card__header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.school-card__avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1A6BFF 0%, #6366F1 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.school-card__name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary, #1F2937);
+  margin: 0;
+}
+
+.school-card__subdomain {
+  font-size: 12px;
+  color: var(--text-secondary, #6B7280);
+}
+
+.school-card__details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.school-card__detail-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary, #6B7280);
+}
+
+.school-card__detail-row .anticon {
+  color: #1A6BFF;
+  font-size: 14px;
+  min-width: 18px;
+}
+
+.school-card__actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color, #F1F5F9);
+}
+
+.school-card__admins {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color, #F1F5F9);
+}
+
+.school-card__admins-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #6B7280);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}

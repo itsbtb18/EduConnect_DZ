@@ -12,14 +12,16 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from core.permissions import IsSchoolAdmin
+from core.permissions import IsSchoolAdmin, IsSuperAdmin
 
 from .serializers import (
     ChangePasswordSerializer,
     CustomTokenObtainPairSerializer,
     PINLoginSerializer,
+    ResetPasswordSerializer,
     UserCreateSerializer,
     UserSerializer,
+    UserUpdateSerializer,
 )
 
 User = get_user_model()
@@ -200,18 +202,29 @@ class TokenRefreshAPIView(TokenRefreshView):
 
 
 # ---------------------------------------------------------------------------
-# User management
+# User management (school admin or superadmin)
 # ---------------------------------------------------------------------------
+
+
+class IsSuperOrSchoolAdmin(permissions.BasePermission):
+    """Allow SUPER_ADMIN, ADMIN, or SECTION_ADMIN."""
+
+    def has_permission(self, request, view):
+        return (
+            request.user
+            and request.user.is_authenticated
+            and request.user.role in ("SUPER_ADMIN", "ADMIN", "SECTION_ADMIN")
+        )
 
 
 @extend_schema(tags=["auth"])
 class UserListCreateView(generics.ListCreateAPIView):
     """
-    GET  /api/v1/auth/users/  → List users in the school
-    POST /api/v1/auth/users/  → Create a new user (admins only)
+    GET  /api/v1/auth/users/  → List users (filtered by school or all for superadmin)
+    POST /api/v1/auth/users/  → Create a new user
     """
 
-    permission_classes = [permissions.IsAuthenticated, IsSchoolAdmin]
+    permission_classes = [permissions.IsAuthenticated, IsSuperOrSchoolAdmin]
 
     def get_serializer_class(self):
         if self.request.method == "POST":
@@ -219,17 +232,50 @@ class UserListCreateView(generics.ListCreateAPIView):
         return UserSerializer
 
     def get_queryset(self):
-        return User.objects.filter(school=self.request.user.school)
+        user = self.request.user
+        qs = User.objects.select_related("school").all()
 
-    def perform_create(self, serializer):
-        serializer.save(
-            school=self.request.user.school,
-            created_by=self.request.user,
-        )
+        # SUPER_ADMIN sees all users; school admins see only their school
+        if user.role != "SUPER_ADMIN":
+            qs = qs.filter(school=user.school)
+
+        # Optional filters
+        role = self.request.query_params.get("role")
+        if role:
+            qs = qs.filter(role=role)
+
+        school_id = self.request.query_params.get("school")
+        if school_id and user.role == "SUPER_ADMIN":
+            qs = qs.filter(school_id=school_id)
+
+        search = self.request.query_params.get("search")
+        if search:
+            from django.db.models import Q
+
+            qs = qs.filter(
+                Q(first_name__icontains=search)
+                | Q(last_name__icontains=search)
+                | Q(phone_number__icontains=search)
+                | Q(email__icontains=search)
+            )
+
+        is_active = self.request.query_params.get("is_active")
+        if is_active is not None:
+            qs = qs.filter(is_active=is_active.lower() in ("true", "1"))
+
+        return qs.order_by("last_name", "first_name")
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        ctx["request"] = self.request
+        return ctx
 
     @extend_schema(
-        summary="List school users",
-        description="List all users in the authenticated admin's school.",
+        summary="List users",
+        description=(
+            "List users. SUPER_ADMIN sees all (can filter by school/role). "
+            "School admins see only their school's users."
+        ),
         responses={200: UserSerializer(many=True)},
     )
     def get(self, request, *args, **kwargs):
@@ -238,14 +284,14 @@ class UserListCreateView(generics.ListCreateAPIView):
     @extend_schema(
         summary="Create a user",
         description=(
-            "Create a new user in the admin's school. "
-            "Requires **ADMIN** or **SECTION_ADMIN** role."
+            "Create a new user. SUPER_ADMIN can specify any school. "
+            "School admins auto-assign their own school."
         ),
         request=UserCreateSerializer,
         responses={
             201: UserSerializer,
             400: OpenApiResponse(description="Validation error."),
-            403: OpenApiResponse(description="Not a school admin."),
+            403: OpenApiResponse(description="Insufficient permissions."),
         },
     )
     def post(self, request, *args, **kwargs):
@@ -260,15 +306,23 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     DELETE /api/v1/auth/users/<id>/
     """
 
-    serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated, IsSchoolAdmin]
+    permission_classes = [permissions.IsAuthenticated, IsSuperOrSchoolAdmin]
+
+    def get_serializer_class(self):
+        if self.request.method in ("PATCH", "PUT"):
+            return UserUpdateSerializer
+        return UserSerializer
 
     def get_queryset(self):
-        return User.objects.filter(school=self.request.user.school)
+        user = self.request.user
+        qs = User.objects.select_related("school").all()
+        if user.role != "SUPER_ADMIN":
+            qs = qs.filter(school=user.school)
+        return qs
 
     @extend_schema(
         summary="Retrieve a user",
-        description="Get details of a user in the admin's school.",
+        description="Get details of a user.",
         responses={
             200: UserSerializer,
             404: OpenApiResponse(description="User not found."),
@@ -279,8 +333,8 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     @extend_schema(
         summary="Update a user",
-        description="Partially update a user in the admin's school.",
-        request=UserSerializer,
+        description="Partially update a user.",
+        request=UserUpdateSerializer,
         responses={
             200: UserSerializer,
             404: OpenApiResponse(description="User not found."),
@@ -291,11 +345,59 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     @extend_schema(
         summary="Delete a user",
-        description="Remove a user from the admin's school.",
+        description="Deactivate (soft-delete) a user.",
         responses={204: None, 404: OpenApiResponse(description="User not found.")},
     )
     def delete(self, request, *args, **kwargs):
-        return super().delete(request, *args, **kwargs)
+        # Soft-delete: deactivate instead of hard delete
+        instance = self.get_object()
+        instance.is_active = False
+        instance.save(update_fields=["is_active"])
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ---------------------------------------------------------------------------
+# Admin password reset (superadmin / school admin resets a user's password)
+# ---------------------------------------------------------------------------
+
+
+class ResetUserPasswordView(APIView):
+    """
+    POST /api/v1/auth/users/<uuid:pk>/reset-password/
+    Admin resets a user's password without knowing the old one.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsSuperOrSchoolAdmin]
+
+    @extend_schema(
+        tags=["auth"],
+        summary="Reset a user's password",
+        description="Admin resets a user's password. Sets is_first_login=True.",
+        request=ResetPasswordSerializer,
+        responses={
+            200: _DetailSchema,
+            404: OpenApiResponse(description="User not found."),
+        },
+    )
+    def post(self, request, pk):
+        try:
+            qs = User.objects.all()
+            if request.user.role != "SUPER_ADMIN":
+                qs = qs.filter(school=request.user.school)
+            target_user = qs.get(pk=pk)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = ResetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        target_user.set_password(serializer.validated_data["new_password"])
+        target_user.is_first_login = True
+        target_user.save(update_fields=["password", "is_first_login"])
+
+        return Response({"detail": "Password has been reset. User must change it on next login."})
 
 
 class MeView(generics.RetrieveUpdateAPIView):

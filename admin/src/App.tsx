@@ -19,6 +19,8 @@ import FinancialPage from './pages/financial/FinancialPage';
 import AnalyticsPage from './pages/analytics/AnalyticsPage';
 import TimetablePage from './pages/timetable/TimetablePage';
 import SettingsPage from './pages/settings/SettingsPage';
+import UserManagement from './pages/users/UserManagement';
+import SchoolManagement from './pages/schools/SchoolManagement';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -75,6 +77,8 @@ const AppRoutes: React.FC = () => (
       }
     >
       <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/users" element={<UserManagement />} />
+      <Route path="/schools" element={<SchoolManagement />} />
       <Route path="/students" element={<StudentList />} />
       <Route path="/students/:id" element={<StudentDetail />} />
       <Route path="/teachers" element={<TeacherList />} />

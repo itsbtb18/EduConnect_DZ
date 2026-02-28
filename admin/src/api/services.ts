@@ -18,12 +18,44 @@ export const authAPI = {
   me: () => apiClient.get('/auth/me/'),
 };
 
+// ── Users (admin management) ──
+export const usersAPI = {
+  list: (params?: Record<string, unknown>) =>
+    apiClient.get('/auth/users/', { params }),
+
+  get: (id: string) => apiClient.get(`/auth/users/${id}/`),
+
+  create: (data: Record<string, unknown>) =>
+    apiClient.post('/auth/users/', data),
+
+  update: (id: string, data: Record<string, unknown>) =>
+    apiClient.patch(`/auth/users/${id}/`, data),
+
+  delete: (id: string) => apiClient.delete(`/auth/users/${id}/`),
+
+  resetPassword: (id: string, new_password: string) =>
+    apiClient.post(`/auth/users/${id}/reset-password/`, { new_password }),
+
+  changePassword: (old_password: string, new_password: string) =>
+    apiClient.post('/auth/change-password/', { old_password, new_password }),
+};
+
 // ── Schools ──
 export const schoolsAPI = {
   list: (params?: Record<string, unknown>) =>
     apiClient.get('/schools/', { params }),
 
   get: (id: string) => apiClient.get(`/schools/${id}/`),
+
+  create: (data: Record<string, unknown>) =>
+    apiClient.post('/schools/', data),
+
+  update: (id: string, data: Record<string, unknown>) =>
+    apiClient.patch(`/schools/${id}/`, data),
+
+  delete: (id: string) => apiClient.delete(`/schools/${id}/`),
+
+  mySchool: () => apiClient.get('/schools/my-school/'),
 
   sections: (params?: Record<string, unknown>) =>
     apiClient.get('/schools/sections/', { params }),

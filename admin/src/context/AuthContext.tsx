@@ -12,15 +12,21 @@ interface User {
   last_name: string;
   role: string;
   school: string | null;
+  school_detail?: { id: string; name: string; subdomain: string; subscription_plan: string } | null;
   photo: string | null;
+  is_first_login: boolean;
+  is_active: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isSuperAdmin: boolean;
+  isAdmin: boolean;
   login: (phone_number: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -77,14 +83,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const isAdmin = isSuperAdmin || user?.role === 'ADMIN' || user?.role === 'SECTION_ADMIN';
+
   return (
     <AuthContext.Provider
       value={{
         user,
         isAuthenticated: !!user,
         isLoading,
+        isSuperAdmin,
+        isAdmin,
         login,
         logout,
+        refreshUser: fetchUser,
       }}
     >
       {children}

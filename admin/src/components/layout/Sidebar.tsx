@@ -12,13 +12,18 @@ import {
   DollarOutlined,
   BarChartOutlined,
   SettingOutlined,
+  UserOutlined,
+  BankOutlined,
 } from '@ant-design/icons';
+import { useAuth } from '../../context/AuthContext';
 import './Sidebar.css';
 
 interface NavItem {
   path: string;
   icon: React.ReactNode;
   label: string;
+  superAdminOnly?: boolean;
+  adminOnly?: boolean;
 }
 
 interface NavSection {
@@ -31,6 +36,13 @@ const sections: NavSection[] = [
     title: 'Principal',
     items: [
       { path: '/dashboard', icon: <DashboardOutlined />, label: 'Tableau de bord' },
+    ],
+  },
+  {
+    title: 'Gestion',
+    items: [
+      { path: '/users', icon: <UserOutlined />, label: 'Utilisateurs', adminOnly: true },
+      { path: '/schools', icon: <BankOutlined />, label: 'Ecoles', superAdminOnly: true },
     ],
   },
   {
@@ -62,7 +74,11 @@ const sections: NavSection[] = [
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
+  const { user } = useAuth();
   const isActive = (path: string) => location.pathname.startsWith(path);
+
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'SECTION_ADMIN' || isSuperAdmin;
 
   return (
     <nav className="sidebar">
@@ -75,21 +91,29 @@ const Sidebar: React.FC = () => {
       </div>
 
       {/* Navigation */}
-      {sections.map((section) => (
-        <React.Fragment key={section.title}>
-          <div className="sidebar__section-title">{section.title}</div>
-          {section.items.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={`sidebar__nav-item${isActive(item.path) ? ' sidebar__nav-item--active' : ''}`}
-            >
-              <span className="sidebar__nav-icon">{item.icon}</span>
-              <span>{item.label}</span>
-            </NavLink>
-          ))}
-        </React.Fragment>
-      ))}
+      {sections.map((section) => {
+        const visibleItems = section.items.filter((item) => {
+          if (item.superAdminOnly && !isSuperAdmin) return false;
+          if (item.adminOnly && !isAdmin) return false;
+          return true;
+        });
+        if (visibleItems.length === 0) return null;
+        return (
+          <React.Fragment key={section.title}>
+            <div className="sidebar__section-title">{section.title}</div>
+            {visibleItems.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={`sidebar__nav-item${isActive(item.path) ? ' sidebar__nav-item--active' : ''}`}
+              >
+                <span className="sidebar__nav-icon">{item.icon}</span>
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
+          </React.Fragment>
+        );
+      })}
 
       {/* Spacer */}
       <div className="sidebar__spacer" />
