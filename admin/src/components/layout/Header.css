@@ -111,6 +111,10 @@
   flex-shrink: 0;
 }
 
+.header__user-avatar--sa {
+  background: linear-gradient(135deg, #f5222d, #fa541c);
+}
+
 .header__user-info {
   display: flex;
   flex-direction: column;

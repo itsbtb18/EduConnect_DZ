@@ -484,3 +484,16 @@ export function useCurrentUser() {
     staleTime: 120_000,
   });
 }
+
+/* ──────────────────── Platform Stats (Super Admin) ──────────────────── */
+export function usePlatformStats() {
+  return useQuery({
+    queryKey: ['platformStats'],
+    queryFn: async () => {
+      const { data } = await authAPI.platformStats();
+      return data;
+    },
+    retry: 1,
+    staleTime: 60_000,
+  });
+}

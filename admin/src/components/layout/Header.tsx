@@ -14,16 +14,23 @@ import './Header.css';
 
 const pageTitles: Record<string, string> = {
   '/dashboard': 'Tableau de bord',
-  '/students': 'Gestion des eleves',
+  '/students': 'Gestion des élèves',
   '/teachers': 'Gestion des enseignants',
   '/grades': 'Notes & Bulletins',
   '/attendance': 'Suivi des absences',
   '/timetable': 'Emploi du temps',
   '/announcements': 'Annonces',
   '/messaging': 'Messagerie',
-  '/financial': 'Gestion financiere',
+  '/financial': 'Gestion financière',
   '/analytics': 'Analytiques',
-  '/settings': 'Parametres',
+  '/settings': 'Paramètres',
+  '/users': 'Gestion des utilisateurs',
+  '/platform/dashboard': 'Tableau de bord plateforme',
+  '/platform/schools': 'Gestion des écoles',
+  '/platform/users': 'Gestion des utilisateurs',
+  '/platform/plans': 'Gestion des abonnements',
+  '/platform/analytics': 'Analytiques plateforme',
+  '/platform/settings': 'Paramètres plateforme',
 };
 
 const Header: React.FC = () => {
@@ -59,6 +66,9 @@ const Header: React.FC = () => {
     ? `${(user.first_name || '')[0] || ''}${(user.last_name || '')[0] || ''}`.toUpperCase() || 'AD'
     : 'AD';
 
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const settingsPath = isSuperAdmin ? '/platform/settings' : '/settings';
+
   return (
     <header className="header">
       <h1 className="header__title">{title}</h1>
@@ -76,7 +86,7 @@ const Header: React.FC = () => {
           )}
         </div>
 
-        <button className="header__icon-btn" title="Parametres" onClick={() => navigate('/settings')}>
+        <button className="header__icon-btn" title="Paramètres" onClick={() => navigate(settingsPath)}>
           <SettingOutlined />
         </button>
 
@@ -84,27 +94,29 @@ const Header: React.FC = () => {
 
         <div ref={dropdownRef} className="pos-relative">
           <div className="header__user" onClick={() => setDropdownOpen((v) => !v)}>
-            <div className="header__user-avatar">{initials}</div>
+            <div className={`header__user-avatar ${isSuperAdmin ? 'header__user-avatar--sa' : ''}`}>{initials}</div>
             <div className="header__user-info">
               <span className="header__user-name">
                 {user ? `${user.first_name} ${user.last_name}`.trim() || 'Admin' : 'Admin'}
               </span>
-              <span className="header__user-role">{user?.role || 'superadmin'}</span>
+              <span className="header__user-role">
+                {user?.role?.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) || 'Admin'}
+              </span>
             </div>
             <DownOutlined className="header__caret" />
           </div>
 
           {dropdownOpen && (
             <div className="header__dropdown">
-              <button className="header__dropdown-btn" onClick={() => { setDropdownOpen(false); navigate('/settings'); }}>
+              <button className="header__dropdown-btn" onClick={() => { setDropdownOpen(false); navigate(settingsPath); }}>
                 <UserOutlined /> Mon profil
               </button>
-              <button className="header__dropdown-btn" onClick={() => { setDropdownOpen(false); navigate('/settings'); }}>
-                <SettingOutlined /> Parametres
+              <button className="header__dropdown-btn" onClick={() => { setDropdownOpen(false); navigate(settingsPath); }}>
+                <SettingOutlined /> Paramètres
               </button>
               <div className="header__dropdown-sep" />
               <button className="header__dropdown-btn header__dropdown-btn--danger" onClick={handleLogout}>
-                <LogoutOutlined /> Deconnexion
+                <LogoutOutlined /> Déconnexion
               </button>
             </div>
           )}

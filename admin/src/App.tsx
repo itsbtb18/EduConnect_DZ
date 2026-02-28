@@ -22,6 +22,11 @@ import SettingsPage from './pages/settings/SettingsPage';
 import UserManagement from './pages/users/UserManagement';
 import SchoolManagement from './pages/schools/SchoolManagement';
 
+// Super Admin pages
+import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
+import PlanManagement from './pages/superadmin/PlanManagement';
+import PlatformSettings from './pages/superadmin/PlatformSettings';
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -66,34 +71,48 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
-const AppRoutes: React.FC = () => (
-  <Routes>
-    <Route path="/login" element={<LoginPage />} />
-    <Route
-      element={
-        <ProtectedRoute>
-          <AppLayout />
-        </ProtectedRoute>
-      }
-    >
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/users" element={<UserManagement />} />
-      <Route path="/schools" element={<SchoolManagement />} />
-      <Route path="/students" element={<StudentList />} />
-      <Route path="/students/:id" element={<StudentDetail />} />
-      <Route path="/teachers" element={<TeacherList />} />
-      <Route path="/grades" element={<GradeManagement />} />
-      <Route path="/attendance" element={<AttendancePage />} />
-      <Route path="/announcements" element={<AnnouncementsPage />} />
-      <Route path="/messaging" element={<MessagingPage />} />
-      <Route path="/financial" element={<FinancialPage />} />
-      <Route path="/analytics" element={<AnalyticsPage />} />
-      <Route path="/timetable" element={<TimetablePage />} />
-      <Route path="/settings" element={<SettingsPage />} />
-    </Route>
-    <Route path="*" element={<Navigate to="/dashboard" replace />} />
-  </Routes>
-);
+const AppRoutes: React.FC = () => {
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const defaultPath = isSuperAdmin ? '/platform/dashboard' : '/dashboard';
+
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route
+        element={
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        }
+      >
+        {/* ── Super Admin routes ── */}
+        <Route path="/platform/dashboard" element={<SuperAdminDashboard />} />
+        <Route path="/platform/schools" element={<SchoolManagement />} />
+        <Route path="/platform/users" element={<UserManagement />} />
+        <Route path="/platform/plans" element={<PlanManagement />} />
+        <Route path="/platform/analytics" element={<AnalyticsPage />} />
+        <Route path="/platform/settings" element={<PlatformSettings />} />
+
+        {/* ── School Admin routes ── */}
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/users" element={<UserManagement />} />
+        <Route path="/students" element={<StudentList />} />
+        <Route path="/students/:id" element={<StudentDetail />} />
+        <Route path="/teachers" element={<TeacherList />} />
+        <Route path="/grades" element={<GradeManagement />} />
+        <Route path="/attendance" element={<AttendancePage />} />
+        <Route path="/announcements" element={<AnnouncementsPage />} />
+        <Route path="/messaging" element={<MessagingPage />} />
+        <Route path="/financial" element={<FinancialPage />} />
+        <Route path="/analytics" element={<AnalyticsPage />} />
+        <Route path="/timetable" element={<TimetablePage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+      </Route>
+      <Route path="*" element={<Navigate to={defaultPath} replace />} />
+    </Routes>
+  );
+};
 
 const App: React.FC = () => (
   <ConfigProvider theme={theme}>

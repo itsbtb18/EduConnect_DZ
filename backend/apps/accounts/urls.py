@@ -26,4 +26,10 @@ urlpatterns = [
     path(
         "change-password/", views.ChangePasswordView.as_view(), name="change-password"
     ),
+    # Platform stats (super admin only)
+    path(
+        "platform-stats/",
+        views.PlatformStatsView.as_view(),
+        name="platform-stats",
+    ),
 ]

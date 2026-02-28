@@ -16,6 +16,8 @@ export const authAPI = {
     apiClient.post('/auth/logout/', { refresh }),
 
   me: () => apiClient.get('/auth/me/'),
+
+  platformStats: () => apiClient.get('/auth/platform-stats/'),
 };
 
 // ── Users (admin management) ──

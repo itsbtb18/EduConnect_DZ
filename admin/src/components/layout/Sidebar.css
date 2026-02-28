@@ -160,3 +160,39 @@
   color: rgba(255, 255, 255, 0.15);
   padding: 12px 0 4px;
 }
+
+/* ── Super Admin badge ── */
+.sidebar__sa-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  margin: 0 6px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #f5222d, #fa541c);
+  letter-spacing: 0.5px;
+}
+
+/* Super Admin logo mark variant */
+.sidebar__logo-mark--sa {
+  background: linear-gradient(135deg, #f5222d 0%, #fa541c 100%);
+  box-shadow: 0 4px 12px rgba(245, 34, 45, 0.3);
+}
+
+/* Super Admin school card variant */
+.sidebar__school-card--sa {
+  border-color: rgba(245, 34, 45, 0.15);
+  background: rgba(245, 34, 45, 0.06);
+}
+
+.sidebar__school-card--sa:hover {
+  background: rgba(245, 34, 45, 0.1);
+}
+
+.sidebar__school-avatar--sa {
+  background: linear-gradient(135deg, #f5222d, #fa541c);
+  font-size: 16px;
+}

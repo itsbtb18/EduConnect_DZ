@@ -16,6 +16,9 @@ interface User {
   photo: string | null;
   is_first_login: boolean;
   is_active: boolean;
+  // Convenience getters added after fetch
+  school_name?: string;
+  subscription_plan?: string;
 }
 
 interface AuthContextType {
@@ -49,6 +52,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
       const { data } = await authAPI.me();
+      // Add convenience fields from school_detail
+      data.school_name = data.school_detail?.name || '';
+      data.subscription_plan = data.school_detail?.subscription_plan || '';
       setUser(data);
     } catch {
       localStorage.removeItem('access_token');

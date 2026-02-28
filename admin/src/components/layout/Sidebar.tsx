@@ -14,6 +14,9 @@ import {
   SettingOutlined,
   UserOutlined,
   BankOutlined,
+  CrownOutlined,
+  SafetyCertificateOutlined,
+  GlobalOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext';
 import './Sidebar.css';
@@ -22,8 +25,6 @@ interface NavItem {
   path: string;
   icon: React.ReactNode;
   label: string;
-  superAdminOnly?: boolean;
-  adminOnly?: boolean;
 }
 
 interface NavSection {
@@ -31,7 +32,28 @@ interface NavSection {
   items: NavItem[];
 }
 
-const sections: NavSection[] = [
+/* ── Super Admin navigation ── */
+const superAdminSections: NavSection[] = [
+  {
+    title: 'Plateforme',
+    items: [
+      { path: '/platform/dashboard', icon: <DashboardOutlined />, label: 'Tableau de bord' },
+      { path: '/platform/schools', icon: <BankOutlined />, label: 'Écoles' },
+      { path: '/platform/users', icon: <UserOutlined />, label: 'Utilisateurs' },
+      { path: '/platform/plans', icon: <CrownOutlined />, label: 'Abonnements' },
+    ],
+  },
+  {
+    title: 'Configuration',
+    items: [
+      { path: '/platform/analytics', icon: <BarChartOutlined />, label: 'Analytiques' },
+      { path: '/platform/settings', icon: <SettingOutlined />, label: 'Paramètres' },
+    ],
+  },
+];
+
+/* ── School Admin navigation ── */
+const schoolAdminSections: NavSection[] = [
   {
     title: 'Principal',
     items: [
@@ -41,14 +63,13 @@ const sections: NavSection[] = [
   {
     title: 'Gestion',
     items: [
-      { path: '/users', icon: <UserOutlined />, label: 'Utilisateurs', adminOnly: true },
-      { path: '/schools', icon: <BankOutlined />, label: 'Ecoles', superAdminOnly: true },
+      { path: '/users', icon: <UserOutlined />, label: 'Utilisateurs' },
     ],
   },
   {
-    title: 'Academique',
+    title: 'Académique',
     items: [
-      { path: '/students', icon: <TeamOutlined />, label: 'Eleves' },
+      { path: '/students', icon: <TeamOutlined />, label: 'Élèves' },
       { path: '/teachers', icon: <SolutionOutlined />, label: 'Enseignants' },
       { path: '/grades', icon: <FileTextOutlined />, label: 'Notes & Bulletins' },
       { path: '/attendance', icon: <CheckCircleOutlined />, label: 'Absences' },
@@ -67,7 +88,7 @@ const sections: NavSection[] = [
     items: [
       { path: '/financial', icon: <DollarOutlined />, label: 'Finances' },
       { path: '/analytics', icon: <BarChartOutlined />, label: 'Analytiques' },
-      { path: '/settings', icon: <SettingOutlined />, label: 'Parametres' },
+      { path: '/settings', icon: <SettingOutlined />, label: 'Paramètres' },
     ],
   },
 ];
@@ -78,56 +99,78 @@ const Sidebar: React.FC = () => {
   const isActive = (path: string) => location.pathname.startsWith(path);
 
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
-  const isAdmin = user?.role === 'ADMIN' || user?.role === 'SECTION_ADMIN' || isSuperAdmin;
+  const sections = isSuperAdmin ? superAdminSections : schoolAdminSections;
 
   return (
     <nav className="sidebar">
       {/* Logo */}
       <div className="sidebar__logo">
-        <div className="sidebar__logo-mark">EC</div>
+        <div className={`sidebar__logo-mark ${isSuperAdmin ? 'sidebar__logo-mark--sa' : ''}`}>
+          {isSuperAdmin ? 'SA' : 'EC'}
+        </div>
         <div className="sidebar__logo-text">
-          Edu<span>Connect</span>
+          {isSuperAdmin ? (
+            <>Edu<span>Connect</span></>
+          ) : (
+            <>Edu<span>Connect</span></>
+          )}
         </div>
       </div>
 
+      {/* Super Admin badge */}
+      {isSuperAdmin && (
+        <div className="sidebar__sa-badge">
+          <SafetyCertificateOutlined />
+          <span>Super Admin</span>
+        </div>
+      )}
+
       {/* Navigation */}
-      {sections.map((section) => {
-        const visibleItems = section.items.filter((item) => {
-          if (item.superAdminOnly && !isSuperAdmin) return false;
-          if (item.adminOnly && !isAdmin) return false;
-          return true;
-        });
-        if (visibleItems.length === 0) return null;
-        return (
-          <React.Fragment key={section.title}>
-            <div className="sidebar__section-title">{section.title}</div>
-            {visibleItems.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className={`sidebar__nav-item${isActive(item.path) ? ' sidebar__nav-item--active' : ''}`}
-              >
-                <span className="sidebar__nav-icon">{item.icon}</span>
-                <span>{item.label}</span>
-              </NavLink>
-            ))}
-          </React.Fragment>
-        );
-      })}
+      {sections.map((section) => (
+        <React.Fragment key={section.title}>
+          <div className="sidebar__section-title">{section.title}</div>
+          {section.items.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={`sidebar__nav-item${isActive(item.path) ? ' sidebar__nav-item--active' : ''}`}
+            >
+              <span className="sidebar__nav-icon">{item.icon}</span>
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
+        </React.Fragment>
+      ))}
 
       {/* Spacer */}
       <div className="sidebar__spacer" />
 
-      {/* School info */}
-      <div className="sidebar__school-card">
-        <div className="sidebar__school-info">
-          <div className="sidebar__school-avatar">EIK</div>
-          <div>
-            <div className="sidebar__school-name">Ecole Ibn Khaldoun</div>
-            <div className="sidebar__school-plan">Plan Premium</div>
+      {/* Bottom card */}
+      {isSuperAdmin ? (
+        <div className="sidebar__school-card sidebar__school-card--sa">
+          <div className="sidebar__school-info">
+            <div className="sidebar__school-avatar sidebar__school-avatar--sa">
+              <GlobalOutlined />
+            </div>
+            <div>
+              <div className="sidebar__school-name">EduConnect DZ</div>
+              <div className="sidebar__school-plan">Plateforme Multi-Écoles</div>
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="sidebar__school-card">
+          <div className="sidebar__school-info">
+            <div className="sidebar__school-avatar">
+              {(user?.school_name || 'EC')[0]?.toUpperCase() || 'E'}
+            </div>
+            <div>
+              <div className="sidebar__school-name">{user?.school_name || 'Mon école'}</div>
+              <div className="sidebar__school-plan">{user?.subscription_plan || 'Plan Starter'}</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="sidebar__version">v2.0.0</div>
     </nav>

@@ -463,3 +463,122 @@ class ChangePasswordView(APIView):
         user.save(update_fields=["password", "is_first_login"])
 
         return Response({"detail": "Password changed successfully."})
+
+
+# ---------------------------------------------------------------------------
+# Platform stats (super admin only)
+# ---------------------------------------------------------------------------
+
+
+class PlatformStatsView(APIView):
+    """
+    GET /api/v1/auth/platform-stats/
+    Returns platform-wide statistics for the super admin dashboard.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsSuperAdmin]
+
+    @extend_schema(
+        tags=["auth"],
+        summary="Platform statistics (super admin)",
+        description=(
+            "Returns aggregated statistics across the entire platform: "
+            "total schools, users, subscriptions, recent activity."
+        ),
+    )
+    def get(self, request):
+        from datetime import timedelta
+
+        from django.db.models import Count, Q
+        from django.utils import timezone
+
+        from apps.schools.models import School
+
+        now = timezone.now()
+        thirty_days_ago = now - timedelta(days=30)
+        seven_days_ago = now - timedelta(days=7)
+
+        # School stats
+        total_schools = School.objects.filter(is_deleted=False).count()
+        active_subscriptions = School.objects.filter(
+            is_deleted=False, subscription_active=True
+        ).count()
+        inactive_subscriptions = total_schools - active_subscriptions
+
+        # Plan distribution
+        plan_distribution = list(
+            School.objects.filter(is_deleted=False)
+            .values("subscription_plan")
+            .annotate(count=Count("id"))
+            .order_by("subscription_plan")
+        )
+
+        # User stats
+        total_users = User.objects.filter(is_active=True).count()
+        users_by_role = list(
+            User.objects.filter(is_active=True)
+            .values("role")
+            .annotate(count=Count("id"))
+            .order_by("role")
+        )
+        new_users_30d = User.objects.filter(
+            is_active=True, created_at__gte=thirty_days_ago
+        ).count()
+
+        # Recent schools added
+        recent_schools = list(
+            School.objects.filter(is_deleted=False)
+            .order_by("-created_at")[:5]
+            .values(
+                "id",
+                "name",
+                "subdomain",
+                "subscription_plan",
+                "subscription_active",
+                "created_at",
+            )
+        )
+
+        # Recent users added
+        recent_users = list(
+            User.objects.filter(is_active=True)
+            .select_related("school")
+            .order_by("-created_at")[:10]
+            .values(
+                "id",
+                "first_name",
+                "last_name",
+                "role",
+                "phone_number",
+                "school__name",
+                "created_at",
+            )
+        )
+
+        # Activity counts for last 7 days
+        new_users_7d = User.objects.filter(
+            is_active=True, created_at__gte=seven_days_ago
+        ).count()
+        new_schools_7d = School.objects.filter(
+            is_deleted=False, created_at__gte=seven_days_ago
+        ).count()
+
+        return Response(
+            {
+                "schools": {
+                    "total": total_schools,
+                    "active_subscriptions": active_subscriptions,
+                    "inactive_subscriptions": inactive_subscriptions,
+                    "plan_distribution": plan_distribution,
+                    "new_last_7d": new_schools_7d,
+                },
+                "users": {
+                    "total": total_users,
+                    "by_role": users_by_role,
+                    "new_last_30d": new_users_30d,
+                    "new_last_7d": new_users_7d,
+                },
+                "recent_schools": recent_schools,
+                "recent_users": recent_users,
+            }
+        )

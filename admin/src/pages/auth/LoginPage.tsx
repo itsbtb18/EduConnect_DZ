@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { Form, Input, Button } from 'antd';
 import {
   SafetyCertificateOutlined,
@@ -11,22 +11,21 @@ import { useAuth } from '../../context/AuthContext';
 import './LoginPage.css';
 
 const LoginPage: React.FC = () => {
-  const { login, isAuthenticated, isLoading: authLoading } = useAuth();
-  const navigate = useNavigate();
+  const { login, isAuthenticated, isSuperAdmin, isLoading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   if (authLoading) return null;
-  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+  if (isAuthenticated) return <Navigate to={isSuperAdmin ? '/platform/dashboard' : '/dashboard'} replace />;
 
   const onFinish = async (values: { phone_number: string; password: string }) => {
     setLoading(true);
     setError('');
     try {
       await login(values.phone_number, values.password);
-      navigate('/dashboard', { replace: true });
+      // Redirect is handled by the isAuthenticated check above on re-render
     } catch {
-      setError('Numero de telephone ou mot de passe incorrect');
+      setError('Numéro de téléphone ou mot de passe incorrect');
     } finally {
       setLoading(false);
     }
