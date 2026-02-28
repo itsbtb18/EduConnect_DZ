@@ -156,13 +156,13 @@ const SchoolManagement: React.FC = () => {
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
           allowClear
-          style={{ maxWidth: 400 }}
+          className="school-management__search-input"
         />
       </Card>
 
       {/* School cards */}
       {isLoading ? (
-        <div style={{ textAlign: 'center', padding: 60 }}><Spin size="large" /></div>
+        <div className="school-management__loading"><Spin size="large" /></div>
       ) : schools.length === 0 ? (
         <Card><Empty description="Aucune ecole trouvee" /></Card>
       ) : (
@@ -177,7 +177,7 @@ const SchoolManagement: React.FC = () => {
                   <h3 className="school-card__name">{school.name}</h3>
                   <span className="school-card__subdomain">{school.subdomain}.educonnect.dz</span>
                 </div>
-                <div style={{ marginLeft: 'auto' }}>
+                <div className="school-card__status">
                   <Badge
                     status={school.subscription_active ? 'success' : 'error'}
                     text={school.subscription_active ? 'Actif' : 'Inactif'}
@@ -322,9 +322,9 @@ const SchoolManagement: React.FC = () => {
         destroyOnClose
       >
         {selectedSchoolId && schoolAdmins && schoolAdmins.results.length > 0 && (
-          <div style={{ marginBottom: 16 }}>
+          <div className="school-management__admin-section">
             <Text type="secondary" strong>Admins existants:</Text>
-            <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            <div className="school-management__admin-tags">
               {schoolAdmins.results.map((admin: Record<string, unknown>) => (
                 <Tag key={admin.id as string} color="blue">
                   {admin.first_name as string} {admin.last_name as string}

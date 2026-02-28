@@ -30,14 +30,7 @@ const ROLE_COLORS: Record<string, string> = {
   STUDENT: 'cyan',
 };
 
-const AVATAR_COLORS: Record<string, string> = {
-  SUPER_ADMIN: '#EF4444',
-  ADMIN: '#3B82F6',
-  SECTION_ADMIN: '#8B5CF6',
-  TEACHER: '#10B981',
-  PARENT: '#F59E0B',
-  STUDENT: '#06B6D4',
-};
+
 
 interface UserRecord {
   id: string;
@@ -141,8 +134,7 @@ const UserManagement: React.FC = () => {
       render: (_: unknown, record: UserRecord) => (
         <div className="user-management__user-cell">
           <div
-            className="user-management__user-avatar"
-            style={{ backgroundColor: AVATAR_COLORS[record.role] || '#6B7280' }}
+            className={`user-management__user-avatar user-management__user-avatar--${record.role.toLowerCase().replace('_', '-')}`}
           >
             {record.first_name?.[0]}{record.last_name?.[0]}
           </div>
@@ -249,7 +241,7 @@ const UserManagement: React.FC = () => {
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             allowClear
-            style={{ width: 240 }}
+            className="user-management__filter-search"
           />
           <Select
             placeholder="Filtrer par role"
@@ -257,7 +249,7 @@ const UserManagement: React.FC = () => {
             value={roleFilter}
             onChange={setRoleFilter}
             options={roleOptions}
-            style={{ width: 180 }}
+            className="user-management__filter-role"
           />
           {isSuperAdmin && (
             <Select
@@ -269,7 +261,7 @@ const UserManagement: React.FC = () => {
                 value: s.id as string,
                 label: s.name as string,
               }))}
-              style={{ width: 220 }}
+              className="user-management__filter-school"
               showSearch
               filterOption={(input, option) =>
                 (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
@@ -432,7 +424,7 @@ const UserManagement: React.FC = () => {
         width={420}
         destroyOnClose
       >
-        <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
+        <Text type="secondary" className="user-management__reset-hint">
           L'utilisateur devra changer son mot de passe a la prochaine connexion.
         </Text>
         <Form form={resetPwForm} layout="vertical" onFinish={handleResetPassword}>

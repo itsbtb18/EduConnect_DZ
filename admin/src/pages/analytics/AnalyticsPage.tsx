@@ -22,10 +22,10 @@ const AnalyticsPage: React.FC = () => {
   const { data: paymentData } = usePayments({ page_size: 100 });
 
   const overviewData = [
-    { name: 'Eleves', value: studentCount, icon: <TeamOutlined />, color: '#1A6BFF' },
-    { name: 'Enseignants', value: teacherCount, icon: <SolutionOutlined />, color: '#10B981' },
-    { name: 'Classes', value: classCount, icon: <BookOutlined />, color: '#F59E0B' },
-    { name: 'Paiements', value: paymentCount, icon: <DollarOutlined />, color: '#6366F1' },
+    { name: 'Eleves', value: studentCount, icon: <TeamOutlined />, colorClass: 'stat-card__icon--blue' },
+    { name: 'Enseignants', value: teacherCount, icon: <SolutionOutlined />, colorClass: 'stat-card__icon--green' },
+    { name: 'Classes', value: classCount, icon: <BookOutlined />, colorClass: 'stat-card__icon--yellow' },
+    { name: 'Paiements', value: paymentCount, icon: <DollarOutlined />, colorClass: 'stat-card__icon--purple' },
   ];
 
   // Build class distribution for charts
@@ -65,7 +65,7 @@ const AnalyticsPage: React.FC = () => {
       <div className="stats-grid stagger-children">
         {overviewData.map((item) => (
           <div key={item.name} className="stat-card">
-            <div className="stat-card__icon" style={{ background: `${item.color}15`, color: item.color }}>
+            <div className={`stat-card__icon ${item.colorClass}`}>
               {item.icon}
             </div>
             <div className="stat-card__content">

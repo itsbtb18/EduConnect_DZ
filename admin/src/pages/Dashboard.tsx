@@ -25,32 +25,28 @@ const Dashboard: React.FC = () => {
       label: 'Eleves',
       value: studentCount,
       icon: <TeamOutlined />,
-      color: '#1A6BFF',
-      bg: '#EBF2FF',
+      colorClass: 'stat-card__icon--blue',
       route: '/students',
     },
     {
       label: 'Enseignants',
       value: teacherCount,
       icon: <SolutionOutlined />,
-      color: '#10B981',
-      bg: '#ECFDF5',
+      colorClass: 'stat-card__icon--green',
       route: '/teachers',
     },
     {
       label: 'Classes',
       value: classCount,
       icon: <BookOutlined />,
-      color: '#F59E0B',
-      bg: '#FFFBEB',
+      colorClass: 'stat-card__icon--yellow',
       route: '/grades',
     },
     {
       label: 'Paiements',
       value: paymentCount,
       icon: <DollarOutlined />,
-      color: '#6366F1',
-      bg: '#EEF2FF',
+      colorClass: 'stat-card__icon--purple',
       route: '/financial',
     },
   ];
@@ -100,7 +96,7 @@ const Dashboard: React.FC = () => {
             className="stat-card card-interactive"
             onClick={() => navigate(s.route)}
           >
-            <div className="stat-card__icon" style={{ background: s.bg, color: s.color }}>
+            <div className={`stat-card__icon ${s.colorClass}`}>
               {s.icon}
             </div>
             <div className="stat-card__content">

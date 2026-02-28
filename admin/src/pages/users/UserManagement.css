@@ -57,7 +57,27 @@
   font-size: 14px;
   color: #fff;
   flex-shrink: 0;
+  background-color: #6B7280;
 }
+
+/* Avatar role color variants */
+.user-management__user-avatar--super-admin { background-color: #EF4444; }
+.user-management__user-avatar--admin { background-color: #3B82F6; }
+.user-management__user-avatar--section-admin { background-color: #8B5CF6; }
+.user-management__user-avatar--teacher { background-color: #10B981; }
+.user-management__user-avatar--parent { background-color: #F59E0B; }
+.user-management__user-avatar--student { background-color: #06B6D4; }
+
+/* Reset password modal helper text */
+.user-management__reset-hint {
+  display: block;
+  margin-bottom: 16px;
+}
+
+/* Filter input widths */
+.user-management__filter-search { width: 240px; }
+.user-management__filter-role { width: 180px; }
+.user-management__filter-school { width: 220px; }
 
 .user-management__user-info {
   display: flex;

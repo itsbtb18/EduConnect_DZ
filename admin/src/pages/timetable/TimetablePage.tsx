@@ -8,12 +8,12 @@ const timeSlots = [
   '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00',
 ];
 
-const dayColors: Record<string, string> = {
-  Dimanche: '#1A6BFF',
-  Lundi: '#10B981',
-  Mardi: '#F59E0B',
-  Mercredi: '#EF4444',
-  Jeudi: '#6366F1',
+const daySlotClasses: Record<string, string> = {
+  Dimanche: 'timetable-slot--dimanche',
+  Lundi: 'timetable-slot--lundi',
+  Mardi: 'timetable-slot--mardi',
+  Mercredi: 'timetable-slot--mercredi',
+  Jeudi: 'timetable-slot--jeudi',
 };
 
 const TimetablePage: React.FC = () => {
@@ -28,7 +28,7 @@ const TimetablePage: React.FC = () => {
       key: 'day',
       render: (v: string, r: Record<string, unknown>) => {
         const day = v || (r.day_of_week as string) || '—';
-        return <Tag color={dayColors[day] ? 'blue' : 'default'} className="font-semibold">{day}</Tag>;
+        return <Tag color={daySlotClasses[day] ? 'blue' : 'default'} className="font-semibold">{day}</Tag>;
       },
     },
     {
@@ -104,11 +104,7 @@ const TimetablePage: React.FC = () => {
                     return (
                       <div
                         key={day}
-                        className="timetable-slot"
-                        style={{
-                          background: `${dayColors[day] || '#1A6BFF'}10`,
-                          borderLeftColor: dayColors[day] || '#1A6BFF',
-                        }}
+                        className={`timetable-slot ${daySlotClasses[day] || 'timetable-slot--default'}`}
                       >
                         <div className="timetable-slot__subject">
                           {(slot as Record<string, unknown>).subject_name as string || (slot as Record<string, unknown>).subject as string || '—'}

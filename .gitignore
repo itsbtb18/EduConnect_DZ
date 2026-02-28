@@ -51,6 +51,10 @@ admin_panel/build/
 admin_panel/.next/
 admin_panel/dist/
 
+# ---- Legacy projects (not used) ----
+educonnect-admin/
+frontend/
+
 # ---- Environment & Secrets ----
 .env
 .env.local

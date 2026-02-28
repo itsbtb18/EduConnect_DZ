@@ -102,6 +102,34 @@
   border-top: 1px solid var(--border-color, #F1F5F9);
 }
 
+/* Search input */
+.school-management__search-input {
+  max-width: 400px;
+}
+
+/* Loading spinner container */
+.school-management__loading {
+  text-align: center;
+  padding: 60px;
+}
+
+/* Card header status badge (right-aligned) */
+.school-card__status {
+  margin-left: auto;
+}
+
+/* Admin list in modal */
+.school-management__admin-section {
+  margin-bottom: 16px;
+}
+
+.school-management__admin-tags {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .school-card__admins {
   margin-top: 12px;
   padding-top: 12px;

@@ -305,6 +305,14 @@ body {
   flex-shrink: 0;
 }
 
+/* Stat card icon color variants */
+.stat-card__icon--blue { background: #EBF2FF; color: #1A6BFF; }
+.stat-card__icon--green { background: #ECFDF5; color: #10B981; }
+.stat-card__icon--yellow { background: #FFFBEB; color: #F59E0B; }
+.stat-card__icon--purple { background: #EEF2FF; color: #6366F1; }
+.stat-card__icon--red { background: #FEF2F2; color: #EF4444; }
+.stat-card__icon--pink { background: #FDF2F8; color: #EC4899; }
+
 .stat-card__content {
   flex: 1;
   min-width: 0;
@@ -900,6 +908,14 @@ body {
   border-radius: var(--radius-sm);
   font-size: 12px;
 }
+
+/* Timetable slot day color variants */
+.timetable-slot--dimanche { background: rgba(26, 107, 255, 0.06); border-left: 3px solid #1A6BFF; }
+.timetable-slot--lundi { background: rgba(16, 185, 129, 0.06); border-left: 3px solid #10B981; }
+.timetable-slot--mardi { background: rgba(245, 158, 11, 0.06); border-left: 3px solid #F59E0B; }
+.timetable-slot--mercredi { background: rgba(239, 68, 68, 0.06); border-left: 3px solid #EF4444; }
+.timetable-slot--jeudi { background: rgba(99, 102, 241, 0.06); border-left: 3px solid #6366F1; }
+.timetable-slot--default { background: rgba(26, 107, 255, 0.06); border-left: 3px solid #1A6BFF; }
 .timetable-slot__subject {
   font-weight: 700;
   color: var(--gray-900);
