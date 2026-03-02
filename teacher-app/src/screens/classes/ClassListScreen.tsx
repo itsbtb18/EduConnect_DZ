@@ -7,18 +7,18 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { Colors, Fonts, Radius, Shadow, Spacing } from '../../theme';
 import useStore from '../../store/useStore';
 import ScreenHeader from '../../components/ui/ScreenHeader';
 import Badge from '../../components/ui/Badge';
-import { ClassesStackParamList } from '../../navigation';
+import { ClassesStackParamList } from '../../navigation/AppNavigator';
 import { ClassRoom } from '../../types';
 
 const DAYS_FR = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'] as const;
 
 export default function ClassListScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<ClassesStackParamList>>();
+  const navigation = useNavigation<StackNavigationProp<ClassesStackParamList>>();
   const classes    = useStore(s => s.classes);
 
   const todayName  = DAYS_FR[new Date().getDay()];

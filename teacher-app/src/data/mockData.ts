@@ -8,7 +8,7 @@ import {
   AttendanceSession,
   AttendanceStatus,
   ChatRoom,
-  Notification,
+  AppNotification,
 } from '../types';
 
 export const currentTeacher: TeacherProfile = {
@@ -80,7 +80,7 @@ export const myStudents: Student[] = [
   { id: 'ST25', firstName: 'Yasmine', lastName: 'Guerfi',    classId: 'C3', className: '4ème B', average: 16.5, attendanceRate: 97, parentName: 'Mme. Guerfi',   parentPhone: '0555 000 222', status: 'active' },
 ];
 
-export const homeworkPosts: HomeworkPost[] = [
+export const initialHomeworkPosts: HomeworkPost[] = [
   {
     id: 'HW1', classId: 'C1', className: '4ème A', subject: 'Mathématiques',
     title: 'Exercices sur les équations du second degré',
@@ -119,7 +119,7 @@ export const homeworkPosts: HomeworkPost[] = [
   },
 ];
 
-export const resources: Resource[] = [
+export const initialResources: Resource[] = [
   { id: 'R1', classId: 'C1', className: '4ème A', subject: 'Mathématiques', title: 'Cours Chapitre 3 — Équations', description: 'Cours complet avec exemples résolus', fileType: 'pdf', fileUrl: '#', fileSize: '2.4 Mo', chapter: 'Chapitre 3', uploadedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), downloadCount: 24 },
   { id: 'R2', classId: 'C1', className: '4ème A', subject: 'Mathématiques', title: 'Présentation : Introduction aux fonctions', fileType: 'pptx', fileUrl: '#', fileSize: '5.1 Mo', chapter: 'Chapitre 4', uploadedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), downloadCount: 19 },
   { id: 'R3', classId: 'C1', className: '4ème A', subject: 'Mathématiques', title: 'Vidéo : Loi de Pythagore expliquée', fileType: 'video', fileUrl: 'https://youtube.com', chapter: 'Chapitre 2', uploadedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), downloadCount: 31 },
@@ -127,7 +127,7 @@ export const resources: Resource[] = [
   { id: 'R5', classId: 'C3', className: '4ème B', subject: 'Mathématiques', title: 'Cours Chapitre 5 — Statistiques', fileType: 'pdf', fileUrl: '#', fileSize: '3.2 Mo', chapter: 'Chapitre 5', uploadedAt: new Date().toISOString(), downloadCount: 2 },
 ];
 
-export const gradeSessions: GradeSession[] = [
+export const initialGradeSessions: GradeSession[] = [
   {
     id: 'GS1', classId: 'C1', className: '4ème A', subject: 'Mathématiques',
     trimester: 1, examType: 'TEST_1', status: 'published',
@@ -170,7 +170,7 @@ export const gradeSessions: GradeSession[] = [
   },
 ];
 
-export const attendanceSessions: AttendanceSession[] = [
+export const initialAttendanceSessions: AttendanceSession[] = [
   {
     id: 'AS1', classId: 'C1', className: '4ème A',
     subject: 'Mathématiques', date: new Date().toISOString(),
@@ -183,7 +183,7 @@ export const attendanceSessions: AttendanceSession[] = [
   },
 ];
 
-export const chatRooms: ChatRoom[] = [
+export const initialChatRooms: ChatRoom[] = [
   {
     id: 'CR1', type: 'TEACHER_PARENT',
     relatedStudentId: 'ST01', relatedStudentName: 'Ahmed Benali',
@@ -235,7 +235,7 @@ export const chatRooms: ChatRoom[] = [
   },
 ];
 
-export const notifications: Notification[] = [
+export const initialNotifications: AppNotification[] = [
   { id: 'N1', type: 'grade_returned',    title: 'Notes renvoyées',       body: "L'admin a renvoyé les notes de Composition 2 — 4ème A avec un commentaire.", isRead: false, createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString() },
   { id: 'N2', type: 'new_message',        title: 'Nouveau message',        body: 'M. Kaci vous a envoyé un message concernant Youcef.',                          isRead: false, createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString() },
   { id: 'N3', type: 'absence_justified',  title: 'Absence justifiée',      body: "L'absence d'Ahmed Benali du 20/02 a été justifiée par l'administration.",     isRead: true,  createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString() },

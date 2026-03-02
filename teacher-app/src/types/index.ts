@@ -167,7 +167,7 @@ export interface ChatRoom {
   messages: ChatMessage[];
 }
 
-export interface Notification {
+export interface AppNotification {
   id: string;
   type: 'grade_returned' | 'new_message' | 'absence_justified' | 'announcement' | 'reminder';
   title: string;

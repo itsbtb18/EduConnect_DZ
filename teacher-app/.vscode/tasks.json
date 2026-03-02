@@ -7,6 +7,14 @@
 			"command": "npx expo start",
 			"isBackground": true,
 			"problemMatcher": []
+		},
+		{
+			"label": "Start Teacher App",
+			"type": "shell",
+			"command": "npx expo start --clear",
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
 		}
 	]
 }

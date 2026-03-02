@@ -12,20 +12,20 @@ import {
   Platform,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { StackNavigationProp } from '@react-navigation/stack';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import Toast from 'react-native-toast-message';
 import { Colors, Fonts, Radius, Shadow, Spacing } from '../../theme';
 import useStore from '../../store/useStore';
-import { ClassesStackParamList } from '../../navigation';
+import { ClassesStackParamList } from '../../navigation/AppNavigator';
 import ScreenHeader from '../../components/ui/ScreenHeader';
 import Input from '../../components/ui/Input';
 import FileTypeIcon from '../../components/ui/FileTypeIcon';
 import { Attachment } from '../../types';
 
 type Route = RouteProp<ClassesStackParamList, 'AddHomeworkScreen'>;
-type Nav   = NativeStackNavigationProp<ClassesStackParamList>;
+type Nav   = StackNavigationProp<ClassesStackParamList>;
 
 // ─── Calendar helpers ─────────────────────────────────────────────────────────
 const DAYS_HEADER = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];

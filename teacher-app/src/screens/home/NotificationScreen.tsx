@@ -7,19 +7,19 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { Colors, Fonts, Radius, Spacing } from '../../theme';
 import useStore from '../../store/useStore';
-import { HomeStackParamList } from '../../navigation';
+import { HomeStackParamList } from '../../navigation/AppNavigator';
 import ScreenHeader from '../../components/ui/ScreenHeader';
 import EmptyState from '../../components/ui/EmptyState';
-import { Notification } from '../../types';
+import { AppNotification } from '../../types';
 
-type Nav = NativeStackNavigationProp<HomeStackParamList>;
+type Nav = StackNavigationProp<HomeStackParamList>;
 
 // ─── Type config ─────────────────────────────────────────────────────────────
 const TYPE_CONFIG: Record<
-  Notification['type'],
+  AppAppNotification['type'],
   { icon: string; bg: string }
 > = {
   grade_returned:    { icon: '📊', bg: '#FFF0E0' },
@@ -62,7 +62,7 @@ export default function NotificationScreen() {
     ? `Notifications (${unreadCount})`
     : 'Notifications';
 
-  const renderItem = ({ item }: { item: Notification }) => {
+  const renderItem = ({ item }: { item: AppNotification }) => {
     const cfg = TYPE_CONFIG[item.type];
     return (
       <TouchableOpacity
@@ -111,7 +111,7 @@ export default function NotificationScreen() {
       {sorted.length === 0 ? (
         <EmptyState
           icon="🔔"
-          title="Aucune notification"
+          title="Aucune AppNotification"
           subtitle="Vous êtes à jour !"
         />
       ) : (

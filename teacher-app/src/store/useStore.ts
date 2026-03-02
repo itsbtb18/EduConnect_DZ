@@ -12,18 +12,18 @@ import {
   ChatMessage,
   MessageType,
   ChatRoomType,
-  Notification,
+  AppNotification,
 } from '../types';
 import {
   currentTeacher,
   myClasses,
   myStudents,
-  homeworkPosts as initialHomeworkPosts,
-  resources as initialResources,
-  gradeSessions as initialGradeSessions,
-  attendanceSessions as initialAttendanceSessions,
-  chatRooms as initialChatRooms,
-  notifications as initialNotifications,
+  initialHomeworkPosts,
+  initialResources,
+  initialGradeSessions,
+  initialAttendanceSessions,
+  initialChatRooms,
+  initialNotifications,
 } from '../data/mockData';
 
 interface AppState {
@@ -38,12 +38,17 @@ interface AppState {
   gradeSessions: GradeSession[];
   attendanceSessions: AttendanceSession[];
   chatRooms: ChatRoom[];
-  notifications: Notification[];
+  notifications: AppNotification[];
 
   // UI state
+  isLoggedIn: boolean;
   activeClassId: string | null;
   unreadNotificationCount: number;
   unreadMessageCount: number;
+
+  // Actions — AUTH
+  login: () => void;
+  logout: () => void;
 
   // Actions — HOMEWORK
   addHomework: (hw: HomeworkPost) => void;
@@ -90,9 +95,14 @@ const useStore = create<AppState>((set, get) => ({
   attendanceSessions: initialAttendanceSessions,
   chatRooms: initialChatRooms,
   notifications: initialNotifications,
+  isLoggedIn: false,
   activeClassId: 'C1',
   unreadNotificationCount: initialNotifications.filter(n => !n.isRead).length,
   unreadMessageCount: initialChatRooms.reduce((sum, r) => sum + r.unreadCount, 0),
+
+  // ─── AUTH actions ──────────────────────────────────────────────────────────
+  login: () => set({ isLoggedIn: true }),
+  logout: () => set({ isLoggedIn: false }),
 
   // ─── HOMEWORK actions ────────────────────────────────────────────────────────
   addHomework: (hw) =>

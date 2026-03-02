@@ -9,11 +9,11 @@ import {
   Linking,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Fonts, Radius, Shadow, Spacing } from '../../theme';
 import useStore from '../../store/useStore';
-import { ClassesStackParamList } from '../../navigation';
+import { ClassesStackParamList } from '../../navigation/AppNavigator';
 import Avatar from '../../components/ui/Avatar';
 import Badge from '../../components/ui/Badge';
 import Card from '../../components/ui/Card';
@@ -22,7 +22,7 @@ import AttendanceDot from '../../components/ui/AttendanceDot';
 import { EXAM_LABELS } from '../grades/GradeListScreen';
 
 type Route = RouteProp<ClassesStackParamList, 'StudentDetailScreen'>;
-type Nav   = NativeStackNavigationProp<ClassesStackParamList>;
+type Nav   = StackNavigationProp<ClassesStackParamList>;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const STATUS_BADGE: Record<string, { label: string; color: 'green' | 'orange' | 'red' }> = {

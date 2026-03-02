@@ -10,17 +10,17 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { Colors, Fonts, Radius, Shadow, Spacing } from '../../theme';
 import useStore from '../../store/useStore';
-import { GradesStackParamList } from '../../navigation';
+import { GradesStackParamList } from '../../navigation/AppNavigator';
 import ScreenHeader from '../../components/ui/ScreenHeader';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import { GradeSession, GradeStatus, ExamType, GradeScale } from '../../types';
 
-type Nav = NativeStackNavigationProp<GradesStackParamList>;
+type Nav = StackNavigationProp<GradesStackParamList>;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 export const EXAM_LABELS: Record<ExamType, string> = {
