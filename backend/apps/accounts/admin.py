@@ -4,6 +4,8 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
 from apps.academics.models import ParentProfile, StudentProfile, TeacherProfile
 
+from .forms import CustomUserChangeForm, CustomUserCreationForm
+
 User = get_user_model()
 
 
@@ -30,6 +32,10 @@ class ParentProfileInline(admin.StackedInline):
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
+    # ── Custom forms for our phone_number‑based User model ──
+    form = CustomUserChangeForm
+    add_form = CustomUserCreationForm
+
     list_display = ("phone_number", "first_name", "last_name", "role", "school", "is_active")
     list_filter = ("role", "school", "is_active")
     search_fields = ("phone_number", "first_name", "last_name", "email")
@@ -37,7 +43,7 @@ class UserAdmin(BaseUserAdmin):
     fieldsets = (
         (None, {"fields": ("phone_number", "password")}),
         (
-            "Personal Info",
+            "Informations personnelles",
             {
                 "fields": (
                     "first_name",
@@ -47,8 +53,8 @@ class UserAdmin(BaseUserAdmin):
                 )
             },
         ),
-        ("Role & School", {"fields": ("role", "school")}),
-        ("Status", {"fields": ("is_active", "is_first_login")}),
+        ("Rôle & École", {"fields": ("role", "school")}),
+        ("Statut", {"fields": ("is_active", "is_first_login")}),
         (
             "Permissions",
             {
@@ -74,8 +80,26 @@ class UserAdmin(BaseUserAdmin):
                     "last_name",
                     "role",
                     "school",
+                    "is_active",
+                    "is_staff",
                 ),
             },
         ),
     )
     inlines = [StudentProfileInline, TeacherProfileInline, ParentProfileInline]
+
+    def save_model(self, request, obj, form, change):
+        """
+        Ensure:
+        1. Passwords are always properly hashed.
+        2. SUPER_ADMIN users automatically get is_staff + is_superuser.
+        """
+        if change and "password" in form.changed_data:
+            obj.set_password(form.cleaned_data["password"])
+
+        # Auto-promote SUPER_ADMIN to staff / superuser
+        if obj.role == "SUPER_ADMIN":
+            obj.is_staff = True
+            obj.is_superuser = True
+
+        super().save_model(request, obj, form, change)

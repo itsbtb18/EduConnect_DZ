@@ -7,6 +7,8 @@ import {
   LogoutOutlined,
   UserOutlined,
   DownOutlined,
+  MoonOutlined,
+  SunOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../hooks/useApi';
@@ -16,6 +18,7 @@ const pageTitles: Record<string, string> = {
   '/dashboard': 'Tableau de bord',
   '/students': 'Gestion des élèves',
   '/teachers': 'Gestion des enseignants',
+  '/classes': 'Gestion des classes',
   '/grades': 'Notes & Bulletins',
   '/attendance': 'Suivi des absences',
   '/timetable': 'Emploi du temps',
@@ -25,12 +28,16 @@ const pageTitles: Record<string, string> = {
   '/analytics': 'Analytiques',
   '/settings': 'Paramètres',
   '/users': 'Gestion des utilisateurs',
+  '/homework': 'Devoirs',
+  '/notifications': 'Notifications',
   '/platform/dashboard': 'Tableau de bord plateforme',
   '/platform/schools': 'Gestion des écoles',
   '/platform/users': 'Gestion des utilisateurs',
   '/platform/plans': 'Gestion des abonnements',
   '/platform/analytics': 'Analytiques plateforme',
   '/platform/settings': 'Paramètres plateforme',
+  '/platform/activity-logs': 'Journal d\'activité',
+  '/platform/system-health': 'Santé du système',
 };
 
 const Header: React.FC = () => {
@@ -41,10 +48,21 @@ const Header: React.FC = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Dark mode toggle
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('theme');
+    return saved === 'dark';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+    localStorage.setItem('theme', darkMode ? 'dark' : 'light');
+  }, [darkMode]);
+
   const unreadCount = notifData?.results?.filter((n: any) => !n.is_read).length || 0;
 
   const matchedPath = Object.keys(pageTitles).find((p) => location.pathname.startsWith(p));
-  const title = matchedPath ? pageTitles[matchedPath] : 'EduConnect';
+  const title = matchedPath ? pageTitles[matchedPath] : 'Madrassa';
 
   useEffect(() => {
     const handleOutside = (e: MouseEvent) => {
@@ -85,6 +103,14 @@ const Header: React.FC = () => {
             <span className="header__notif-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
           )}
         </div>
+
+        <button
+          className={`header__icon-btn ${darkMode ? 'header__icon-btn--active' : ''}`}
+          title={darkMode ? 'Mode clair' : 'Mode sombre'}
+          onClick={() => setDarkMode((v) => !v)}
+        >
+          {darkMode ? <SunOutlined /> : <MoonOutlined />}
+        </button>
 
         <button className="header__icon-btn" title="Paramètres" onClick={() => navigate(settingsPath)}>
           <SettingOutlined />

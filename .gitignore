@@ -1,5 +1,5 @@
 # ========================
-# EduConnect Algeria
+# Madrassa
 # ========================
 
 # ---- Python / Django ----
@@ -52,7 +52,7 @@ admin_panel/.next/
 admin_panel/dist/
 
 # ---- Legacy projects (not used) ----
-educonnect-admin/
+madrassa-admin/
 frontend/
 
 # ---- Environment & Secrets ----

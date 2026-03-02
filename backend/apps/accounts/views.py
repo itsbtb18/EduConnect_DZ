@@ -397,7 +397,9 @@ class ResetUserPasswordView(APIView):
         target_user.is_first_login = True
         target_user.save(update_fields=["password", "is_first_login"])
 
-        return Response({"detail": "Password has been reset. User must change it on next login."})
+        return Response(
+            {"detail": "Password has been reset. User must change it on next login."}
+        )
 
 
 class MeView(generics.RetrieveUpdateAPIView):
@@ -582,3 +584,157 @@ class PlatformStatsView(APIView):
                 "recent_users": recent_users,
             }
         )
+
+
+# ─── Platform Settings (Super Admin) ────────────────────────────────
+class PlatformSettingsView(APIView):
+    """Retrieve or update the singleton platform configuration."""
+
+    permission_classes = [permissions.IsAuthenticated, IsSuperAdmin]
+
+    def get(self, request):
+        from .models import PlatformConfig
+
+        config, _ = PlatformConfig.objects.get_or_create(pk=1)
+        return Response(
+            {
+                "platform_name": config.platform_name,
+                "default_language": config.default_language,
+                "maintenance_mode": config.maintenance_mode,
+                "allow_registration": config.allow_registration,
+                "max_schools": config.max_schools,
+                "smtp_configured": config.smtp_configured,
+                "sms_configured": config.sms_configured,
+                "backup_enabled": config.backup_enabled,
+            }
+        )
+
+    def patch(self, request):
+        from .models import PlatformConfig
+
+        config, _ = PlatformConfig.objects.get_or_create(pk=1)
+        allowed_fields = [
+            "platform_name",
+            "default_language",
+            "maintenance_mode",
+            "allow_registration",
+            "max_schools",
+            "smtp_configured",
+            "sms_configured",
+            "backup_enabled",
+        ]
+        for field in allowed_fields:
+            if field in request.data:
+                setattr(config, field, request.data[field])
+        config.save()
+        return Response({"status": "ok"})
+
+
+# ─── Activity Logs (Super Admin) ─────────────────────────────────────
+class ActivityLogListView(generics.ListAPIView):
+    """Paginated activity logs. Supports ?search= and ?action= filters."""
+
+    permission_classes = [permissions.IsAuthenticated, IsSuperAdmin]
+
+    def get_queryset(self):
+        from .models import ActivityLog
+
+        qs = ActivityLog.objects.select_related("user").all()
+        search = self.request.query_params.get("search", "")
+        action = self.request.query_params.get("action", "")
+        if search:
+            qs = qs.filter(description__icontains=search)
+        if action:
+            qs = qs.filter(action=action)
+        return qs
+
+    def list(self, request, *args, **kwargs):
+        qs = self.get_queryset()
+        page = self.paginate_queryset(qs)
+        results = page if page is not None else qs[:50]
+        data = [
+            {
+                "id": str(log.id),
+                "user": log.user.full_name if log.user else "System",
+                "action": log.action,
+                "resource": log.resource,
+                "description": log.description,
+                "ip_address": log.ip_address,
+                "created_at": log.created_at.isoformat(),
+            }
+            for log in results
+        ]
+        if page is not None:
+            return self.get_paginated_response(data)
+        return Response({"count": len(data), "results": data})
+
+
+# ─── System Health Check ─────────────────────────────────────────────
+class SystemHealthView(APIView):
+    """Quick system health check: DB, Redis, Celery, Storage."""
+
+    permission_classes = [permissions.IsAuthenticated, IsSuperAdmin]
+
+    def get(self, request):
+        import os
+        from django.conf import settings as dj_settings
+        from django.db import connection
+
+        health = {}
+
+        # Database
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+            db_name = dj_settings.DATABASES.get("default", {}).get("NAME", "unknown")
+            health["database"] = {
+                "status": "healthy",
+                "name": db_name,
+                "engine": "PostgreSQL",
+            }
+        except Exception as exc:
+            health["database"] = {"status": "unhealthy", "error": str(exc)}
+
+        # Redis
+        try:
+            cache.set("_health_check", "ok", 5)
+            val = cache.get("_health_check")
+            health["redis"] = {
+                "status": "healthy" if val == "ok" else "degraded",
+                "ping": val == "ok",
+            }
+        except Exception as exc:
+            health["redis"] = {"status": "unhealthy", "error": str(exc)}
+
+        # Celery
+        try:
+            from madrassa.celery import app as celery_app
+
+            insp = celery_app.control.inspect(timeout=2)
+            active = insp.active()
+            health["celery"] = {
+                "status": "healthy" if active else "degraded",
+                "workers": len(active) if active else 0,
+            }
+        except Exception:
+            health["celery"] = {"status": "unknown", "workers": 0}
+
+        # Storage
+        try:
+            media_root = getattr(dj_settings, "MEDIA_ROOT", "")
+            if media_root and os.path.isdir(media_root):
+                stat = os.statvfs(media_root) if hasattr(os, "statvfs") else None
+                if stat:
+                    free_gb = round(stat.f_bavail * stat.f_frsize / (1024**3), 2)
+                    health["storage"] = {"status": "healthy", "free_gb": free_gb}
+                else:
+                    health["storage"] = {
+                        "status": "healthy",
+                        "free_gb": "N/A (Windows)",
+                    }
+            else:
+                health["storage"] = {"status": "unknown", "path": media_root}
+        except Exception as exc:
+            health["storage"] = {"status": "unhealthy", "error": str(exc)}
+
+        return Response(health)

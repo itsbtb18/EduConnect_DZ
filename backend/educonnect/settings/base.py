@@ -1,5 +1,5 @@
 """
-EduConnect Algeria — Base Django Settings
+Madrassa — Base Django Settings
 ==========================================
 Settings common to all environments.
 """
@@ -85,7 +85,7 @@ MIDDLEWARE = [
     "core.middleware.tenant.TenantMiddleware",
 ]
 
-ROOT_URLCONF = "educonnect.urls"
+ROOT_URLCONF = "madrassa.urls"
 
 TEMPLATES = [
     {
@@ -103,8 +103,8 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "educonnect.wsgi.application"
-ASGI_APPLICATION = "educonnect.asgi.application"
+WSGI_APPLICATION = "madrassa.wsgi.application"
+ASGI_APPLICATION = "madrassa.asgi.application"
 
 
 # ===========================================================================
@@ -114,8 +114,8 @@ ASGI_APPLICATION = "educonnect.asgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("DB_NAME", default="educonnect_db"),
-        "USER": config("DB_USER", default="educonnect_user"),
+        "NAME": config("DB_NAME", default="madrassa_db"),
+        "USER": config("DB_USER", default="madrassa_user"),
         "PASSWORD": config("DB_PASSWORD", default="password"),
         "HOST": config("DB_HOST", default="localhost"),
         "PORT": config("DB_PORT", default="5432"),
@@ -290,7 +290,7 @@ MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50 MB for homework files
 # ===========================================================================
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "EduConnect Algeria API",
+    "TITLE": "Madrassa API",
     "DESCRIPTION": (
         "Complete E-Learning & School Management API for Private Schools in Algeria.\n\n"
         "## Authentication\n"
@@ -352,7 +352,7 @@ FIREBASE_SERVICE_ACCOUNT_PATH = os.path.join(
     BASE_DIR,
     config("FIREBASE_SERVICE_ACCOUNT_PATH", default="firebase-service-account.json"),
 )
-FIREBASE_PROJECT_ID = config("FIREBASE_PROJECT_ID", default="educonnectdz")
+FIREBASE_PROJECT_ID = config("FIREBASE_PROJECT_ID", default="madrassadz")
 
 
 # ===========================================================================
@@ -362,4 +362,4 @@ FIREBASE_PROJECT_ID = config("FIREBASE_PROJECT_ID", default="educonnectdz")
 OPENAI_API_KEY = config("OPENAI_API_KEY", default="")
 PINECONE_API_KEY = config("PINECONE_API_KEY", default="")
 PINECONE_ENVIRONMENT = config("PINECONE_ENVIRONMENT", default="")
-PINECONE_INDEX_NAME = config("PINECONE_INDEX_NAME", default="educonnect-knowledge")
+PINECONE_INDEX_NAME = config("PINECONE_INDEX_NAME", default="madrassa-knowledge")

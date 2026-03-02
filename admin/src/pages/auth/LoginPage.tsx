@@ -7,6 +7,7 @@ import {
   BarChartOutlined,
   MessageOutlined,
 } from '@ant-design/icons';
+import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import './LoginPage.css';
 
@@ -24,8 +25,20 @@ const LoginPage: React.FC = () => {
     try {
       await login(values.phone_number, values.password);
       // Redirect is handled by the isAuthenticated check above on re-render
-    } catch {
-      setError('Numéro de téléphone ou mot de passe incorrect');
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        const status = err.response?.status;
+        const detail = err.response?.data?.detail;
+        if (status === 401) {
+          setError(detail || 'Numéro de téléphone ou mot de passe incorrect');
+        } else if (status === 429) {
+          setError('Trop de tentatives. Veuillez réessayer plus tard.');
+        } else {
+          setError(detail || 'Erreur de connexion. Veuillez réessayer.');
+        }
+      } else {
+        setError('Erreur de connexion au serveur. Vérifiez votre connexion internet.');
+      }
     } finally {
       setLoading(false);
     }

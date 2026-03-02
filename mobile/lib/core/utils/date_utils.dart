@@ -1,6 +1,6 @@
 import 'package:intl/intl.dart';
 
-/// Date formatting and utility helpers for the EduConnect app.
+/// Date formatting and utility helpers for the Madrassa app.
 class AppDateUtils {
   AppDateUtils._();
 

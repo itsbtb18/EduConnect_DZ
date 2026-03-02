@@ -17,6 +17,11 @@ import {
   CrownOutlined,
   SafetyCertificateOutlined,
   GlobalOutlined,
+  BellOutlined,
+  BookOutlined,
+  AuditOutlined,
+  HeartOutlined,
+  AppstoreOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext';
 import './Sidebar.css';
@@ -47,6 +52,9 @@ const superAdminSections: NavSection[] = [
     title: 'Configuration',
     items: [
       { path: '/platform/analytics', icon: <BarChartOutlined />, label: 'Analytiques' },
+      { path: '/platform/activity-logs', icon: <AuditOutlined />, label: 'Journal d\'activité' },
+      { path: '/platform/system-health', icon: <HeartOutlined />, label: 'Santé système' },
+      { path: '/platform/notifications', icon: <BellOutlined />, label: 'Notifications' },
       { path: '/platform/settings', icon: <SettingOutlined />, label: 'Paramètres' },
     ],
   },
@@ -71,8 +79,10 @@ const schoolAdminSections: NavSection[] = [
     items: [
       { path: '/students', icon: <TeamOutlined />, label: 'Élèves' },
       { path: '/teachers', icon: <SolutionOutlined />, label: 'Enseignants' },
+      { path: '/classes', icon: <AppstoreOutlined />, label: 'Classes' },
       { path: '/grades', icon: <FileTextOutlined />, label: 'Notes & Bulletins' },
       { path: '/attendance', icon: <CheckCircleOutlined />, label: 'Absences' },
+      { path: '/homework', icon: <BookOutlined />, label: 'Devoirs' },
       { path: '/timetable', icon: <CalendarOutlined />, label: 'Emploi du temps' },
     ],
   },
@@ -81,6 +91,7 @@ const schoolAdminSections: NavSection[] = [
     items: [
       { path: '/announcements', icon: <NotificationOutlined />, label: 'Annonces' },
       { path: '/messaging', icon: <MessageOutlined />, label: 'Messagerie' },
+      { path: '/notifications', icon: <BellOutlined />, label: 'Notifications' },
     ],
   },
   {
@@ -106,13 +117,13 @@ const Sidebar: React.FC = () => {
       {/* Logo */}
       <div className="sidebar__logo">
         <div className={`sidebar__logo-mark ${isSuperAdmin ? 'sidebar__logo-mark--sa' : ''}`}>
-          {isSuperAdmin ? 'SA' : 'EC'}
+          {isSuperAdmin ? 'SA' : 'M'}
         </div>
         <div className="sidebar__logo-text">
           {isSuperAdmin ? (
-            <>Edu<span>Connect</span></>
+            <>Madra<span>ssa</span></>
           ) : (
-            <>Edu<span>Connect</span></>
+            <>Madra<span>ssa</span></>
           )}
         </div>
       </div>
@@ -153,7 +164,7 @@ const Sidebar: React.FC = () => {
               <GlobalOutlined />
             </div>
             <div>
-              <div className="sidebar__school-name">EduConnect DZ</div>
+              <div className="sidebar__school-name">Madrassa DZ</div>
               <div className="sidebar__school-plan">Plateforme Multi-Écoles</div>
             </div>
           </div>

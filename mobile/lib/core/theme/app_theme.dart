@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Application color palette — EduConnect Algeria brand colors
+/// Application color palette — Madrassa brand colors
 class AppColors {
   AppColors._();
 

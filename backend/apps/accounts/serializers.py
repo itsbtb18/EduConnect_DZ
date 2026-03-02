@@ -2,11 +2,17 @@
 Serializers for the Accounts app.
 """
 
+import logging
+
 from django.contrib.auth import get_user_model
+from django.contrib.auth.hashers import identify_hasher
 from rest_framework import serializers
+from rest_framework_simplejwt.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from apps.schools.models import School
+
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
@@ -46,7 +52,52 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return token
 
     def validate(self, attrs):
-        data = super().validate(attrs)
+        try:
+            data = super().validate(attrs)
+        except AuthenticationFailed:
+            # ── Auto-repair: detect unhashed passwords and fix them ──
+            phone = attrs.get(self.username_field)
+            user = User.objects.filter(phone_number=phone).first()
+
+            if user is not None:
+                # Check if the stored password looks unhashed
+                is_hashed = True
+                if user.password and not user.password.startswith("!"):
+                    try:
+                        identify_hasher(user.password)
+                    except ValueError:
+                        is_hashed = False
+
+                if not is_hashed:
+                    # The stored password is plain text — probably saved by a
+                    # buggy admin form or a bulk-import script.
+                    logger.warning(
+                        "Auto-fixing unhashed password for user %s during login.",
+                        phone,
+                    )
+                    user.set_password(user.password)
+                    user.save(update_fields=["password"])
+                    # Retry authentication with the now-hashed password
+                    try:
+                        data = super().validate(attrs)
+                    except AuthenticationFailed:
+                        logger.warning(
+                            "Login still failed after rehash for %s "
+                            "(is_active=%s, has_usable_pw=%s)",
+                            phone, user.is_active, user.has_usable_password(),
+                        )
+                        raise
+                else:
+                    # Password IS hashed; log diagnostic info and re-raise
+                    logger.warning(
+                        "Login failed for existing user %s "
+                        "(is_active=%s, has_usable_pw=%s)",
+                        phone, user.is_active, user.has_usable_password(),
+                    )
+                    raise
+            else:
+                raise  # No such phone number
+
         # Extra fields returned alongside access/refresh
         data["role"] = self.user.role
         data["is_first_login"] = self.user.is_first_login

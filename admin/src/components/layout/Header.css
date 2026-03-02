@@ -49,6 +49,11 @@
   transform: scale(0.95);
 }
 
+.header__icon-btn--active {
+  color: var(--primary);
+  background: var(--primary-light, rgba(26, 107, 255, 0.08));
+}
+
 /* Notification badge */
 .header__notif-wrapper {
   position: relative;

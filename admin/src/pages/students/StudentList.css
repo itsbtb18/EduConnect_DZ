@@ -1,0 +1,18 @@
+/* StudentList — extracted inline styles */
+
+.student-list__csv-input {
+  display: none;
+}
+
+.student-list__stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 768px) {
+  .student-list__stats-row {
+    grid-template-columns: 1fr;
+  }
+}

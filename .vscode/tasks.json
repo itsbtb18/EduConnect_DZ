@@ -1,0 +1,79 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "TypeScript Check",
+			"type": "shell",
+			"command": "cd d:\\WorkSpace\\ECOLE\\admin && npx tsc --noEmit",
+			"isBackground": false
+		},
+		{
+			"label": "tsc-check",
+			"type": "shell",
+			"command": "cd d:\\WorkSpace\\ECOLE\\admin && npx tsc --noEmit 2>&1 && echo TSC_OK || echo TSC_FAILED",
+			"isBackground": false
+		},
+		{
+			"label": "tsc-validate",
+			"type": "shell",
+			"command": "cd d:\\WorkSpace\\ECOLE\\admin && npx tsc --noEmit 2>&1 | head -50"
+		},
+		{
+			"label": "tsc-noEmit",
+			"type": "shell",
+			"command": "cd d:\\WorkSpace\\ECOLE\\admin && npx tsc --noEmit 2>&1"
+		},
+		{
+			"label": "tsc-verify",
+			"type": "shell",
+			"command": "cd d:\\WorkSpace\\ECOLE\\admin && npx tsc --noEmit 2>&1 && echo TSC_OK || echo TSC_FAILED"
+		},
+		{
+			"label": "tsc-check-admin",
+			"type": "shell",
+			"command": "cd d:\\WorkSpace\\ECOLE\\admin && npx tsc --noEmit 2>&1 && echo TSC_OK || echo TSC_FAILED"
+		},
+		{
+			"label": "docker-compose-build",
+			"type": "shell",
+			"command": "cd d:\\WorkSpace\\ECOLE && docker compose build 2>&1",
+			"isBackground": false
+		},
+		{
+			"label": "tsc-final-check",
+			"type": "shell",
+			"command": "cd d:\\WorkSpace\\ECOLE\\admin && npx tsc --noEmit 2>&1 && echo TSC_OK || echo TSC_FAILED",
+			"isBackground": false
+		},
+		{
+			"label": "docker-build-all",
+			"type": "shell",
+			"command": "cd d:\\WorkSpace\\ECOLE && Remove-Item -Recurse -Force backend\\educonnect 2>$null; echo 'OLD_DIR_REMOVED' && docker compose build --no-cache 2>&1",
+			"isBackground": true
+		},
+		{
+			"label": "cleanup-educonnect",
+			"type": "shell",
+			"command": "cd d:\\WorkSpace\\ECOLE && if (Test-Path backend\\educonnect) { Remove-Item -Recurse -Force backend\\educonnect; Write-Host 'Removed old educonnect directory' } else { Write-Host 'educonnect dir already removed' }",
+			"isBackground": false
+		},
+		{
+			"label": "remove-old-educonnect",
+			"type": "shell",
+			"command": "Remove-Item -Recurse -Force d:\\WorkSpace\\ECOLE\\backend\\educonnect 2>$null; Write-Host 'CLEANUP_DONE'",
+			"isBackground": false
+		},
+		{
+			"label": "docker-full-build",
+			"type": "shell",
+			"command": "cd d:\\WorkSpace\\ECOLE && Remove-Item -Recurse -Force backend\\educonnect 2>$null; echo '=== Starting Docker build ===' && docker compose build 2>&1 && echo 'BUILD_SUCCESS' || echo 'BUILD_FAILED'",
+			"isBackground": true
+		},
+		{
+			"label": "docker-build-all-services",
+			"type": "shell",
+			"command": "cd d:\\WorkSpace\\ECOLE && Remove-Item -Recurse -Force backend\\educonnect 2>$null; Write-Host '--- Removed old educonnect dir ---'; docker compose build 2>&1; if ($LASTEXITCODE -eq 0) { Write-Host 'BUILD_SUCCESS' } else { Write-Host 'BUILD_FAILED' }",
+			"isBackground": false
+		}
+	]
+}

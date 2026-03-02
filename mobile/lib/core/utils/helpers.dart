@@ -1,4 +1,4 @@
-/// Utility helpers for the EduConnect Flutter app
+/// Utility helpers for the Madrassa Flutter app
 library;
 
 import 'package:flutter/material.dart';

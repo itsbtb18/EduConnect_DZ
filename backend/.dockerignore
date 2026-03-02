@@ -1,5 +1,5 @@
 # ============================================================
-# EduConnect Algeria — Docker Build Ignore
+# Madrassa — Docker Build Ignore
 # ============================================================
 # Keeps the build context small and fast.
 # ============================================================
@@ -7,6 +7,9 @@
 # Version control
 .git
 .gitignore
+
+# Stale config directory (replaced by madrassa/)
+educonnect/
 
 # Python
 __pycache__

@@ -1,5 +1,5 @@
 """
-EduConnect Algeria — Production Settings
+Madrassa — Production Settings
 =========================================
 """
 
@@ -25,7 +25,7 @@ X_FRAME_OPTIONS = "DENY"
 DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID", default="")
 AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY", default="")
-AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME", default="educonnect-files")
+AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME", default="madrassa-files")
 AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", default="auto")
 AWS_S3_ENDPOINT_URL = config("AWS_S3_ENDPOINT_URL", default="")
 AWS_S3_FILE_OVERWRITE = False
@@ -39,7 +39,7 @@ EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
-DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="noreply@educonnect.dz")
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="noreply@madrassa.dz")
 
 # Sentry error monitoring
 SENTRY_DSN = config("SENTRY_DSN", default="")
@@ -68,7 +68,7 @@ LOGGING = {
         },
         "file": {
             "class": "logging.handlers.RotatingFileHandler",
-            "filename": BASE_DIR / "logs" / "educonnect.log",  # noqa: F405
+            "filename": BASE_DIR / "logs" / "madrassa.log",  # noqa: F405
             "maxBytes": 10 * 1024 * 1024,  # 10 MB
             "backupCount": 5,
             "formatter": "verbose",

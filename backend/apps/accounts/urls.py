@@ -32,4 +32,22 @@ urlpatterns = [
         views.PlatformStatsView.as_view(),
         name="platform-stats",
     ),
+    # Platform settings (super admin only)
+    path(
+        "platform-settings/",
+        views.PlatformSettingsView.as_view(),
+        name="platform-settings",
+    ),
+    # Activity logs (super admin only)
+    path(
+        "activity-logs/",
+        views.ActivityLogListView.as_view(),
+        name="activity-logs",
+    ),
+    # System health (super admin only)
+    path(
+        "system-health/",
+        views.SystemHealthView.as_view(),
+        name="system-health",
+    ),
 ]

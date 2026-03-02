@@ -1,5 +1,5 @@
 # ============================================================
-# EduConnect Algeria — Docker Compose (Production)
+# Madrassa — Docker Compose (Production)
 # ============================================================
 # Usage:
 #   docker compose up -d                 # Start all services
@@ -24,7 +24,7 @@ x-backend-common: &backend-common
     network: host                   # Fix apt-get DNS on Windows Docker Desktop
   env_file: .env
   environment: &backend-env
-    DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-educonnect.settings.production}
+    DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-madrassa.settings.production}
     DB_HOST: db
     DB_PORT: "5432"
     REDIS_URL: redis://redis:6379/0
@@ -44,7 +44,7 @@ x-backend-common: &backend-common
       condition: service_healthy
   restart: unless-stopped
   networks:
-    - educonnect
+    - madrassa
 
 services:
   # ──────────────────────────────────────────────
@@ -54,8 +54,8 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DB_NAME:-educonnect_db}
-      POSTGRES_USER: ${DB_USER:-educonnect_user}
+      POSTGRES_DB: ${DB_NAME:-madrassa_db}
+      POSTGRES_USER: ${DB_USER:-madrassa_user}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-10082007}
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
@@ -63,13 +63,13 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-educonnect_user} -d ${DB_NAME:-educonnect_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-madrassa_user} -d ${DB_NAME:-madrassa_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
     networks:
-      - educonnect
+      - madrassa
     deploy:
       resources:
         limits:
@@ -93,7 +93,7 @@ services:
       retries: 5
       start_period: 5s
     networks:
-      - educonnect
+      - madrassa
     deploy:
       resources:
         limits:
@@ -104,12 +104,12 @@ services:
   # ──────────────────────────────────────────────
   api:
     <<: *backend-common
-    container_name: educonnect-api
+    container_name: madrassa-api
     environment:
       <<: *backend-env
       COLLECT_STATIC: "1"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -124,18 +124,18 @@ services:
   # ──────────────────────────────────────────────
   celery_worker:
     <<: *backend-common
-    container_name: educonnect-celery-worker
+    container_name: madrassa-celery-worker
     environment:
       <<: *backend-env
       COLLECT_STATIC: "0"
     command: >
-      celery -A educonnect worker
+      celery -A madrassa worker
         -l info
         --concurrency=4
         -E
         -Q default,notifications,reports
     healthcheck:
-      test: ["CMD-SHELL", "celery -A educonnect inspect ping --timeout 10 || exit 1"]
+      test: ["CMD-SHELL", "celery -A madrassa inspect ping --timeout 10 || exit 1"]
       interval: 60s
       timeout: 15s
       retries: 3
@@ -150,12 +150,12 @@ services:
   # ──────────────────────────────────────────────
   celery_beat:
     <<: *backend-common
-    container_name: educonnect-celery-beat
+    container_name: madrassa-celery-beat
     environment:
       <<: *backend-env
       COLLECT_STATIC: "0"
     command: >
-      celery -A educonnect beat
+      celery -A madrassa beat
         -l info
         --scheduler django_celery_beat.schedulers:DatabaseScheduler
         --pidfile /tmp/celerybeat.pid
@@ -171,7 +171,7 @@ services:
     build:
       context: ./admin
       dockerfile: Dockerfile
-    container_name: educonnect-admin
+    container_name: madrassa-admin
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost/ || exit 1"]
@@ -180,7 +180,7 @@ services:
       retries: 3
       start_period: 10s
     networks:
-      - educonnect
+      - madrassa
     deploy:
       resources:
         limits:
@@ -191,7 +191,7 @@ services:
   # ──────────────────────────────────────────────
   nginx:
     image: nginx:1.27-alpine
-    container_name: educonnect-nginx
+    container_name: madrassa-nginx
     restart: unless-stopped
     ports:
       - "80:80"
@@ -213,7 +213,7 @@ services:
       retries: 3
       start_period: 10s
     networks:
-      - educonnect
+      - madrassa
     deploy:
       resources:
         limits:
@@ -236,5 +236,5 @@ volumes:
 # Network
 # ──────────────────────────────────────────────
 networks:
-  educonnect:
+  madrassa:
     driver: bridge

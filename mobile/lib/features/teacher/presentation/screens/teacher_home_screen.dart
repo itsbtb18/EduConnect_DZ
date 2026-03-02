@@ -21,7 +21,7 @@ class TeacherHomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('EduConnect — Enseignant'),
+        title: const Text('Madrassa — Enseignant'),
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_outlined),

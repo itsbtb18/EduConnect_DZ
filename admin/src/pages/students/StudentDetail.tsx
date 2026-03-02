@@ -1,13 +1,15 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, Descriptions, Tag, Spin, Card } from 'antd';
+import { Button, Descriptions, Tag, Spin, Card, Table } from 'antd';
 import { ArrowLeftOutlined, EditOutlined, MailOutlined, PhoneOutlined } from '@ant-design/icons';
-import { useStudent } from '../../hooks/useApi';
+import { useStudent, useGrades, useAttendance } from '../../hooks/useApi';
 
 const StudentDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: student, isLoading, isError } = useStudent(id || '');
+  const { data: gradesData } = useGrades({ student: id });
+  const { data: attendanceData } = useAttendance({ student: id });
 
   if (isLoading) {
     return (
@@ -46,7 +48,7 @@ const StudentDetail: React.FC = () => {
           </div>
         </div>
         <div className="page-header__actions">
-          <Button type="primary" icon={<EditOutlined />}>
+          <Button type="primary" icon={<EditOutlined />} onClick={() => navigate(`/students?edit=${id}`)}>
             Modifier
           </Button>
         </div>
@@ -83,14 +85,43 @@ const StudentDetail: React.FC = () => {
 
         <div className="flex-col gap-20">
           <Card title="Notes recentes">
-            <div className="empty-state">
-              <div className="empty-state__desc">Les notes de cet eleve apparaitront ici</div>
-            </div>
+            {gradesData?.results?.length ? (
+              <Table
+                dataSource={gradesData.results.slice(0, 10)}
+                rowKey={(r: Record<string, any>) => r.id || `grade-${r.subject_name}-${r.trimester}`}
+                pagination={false}
+                size="small"
+                columns={[
+                  { title: 'Matiere', dataIndex: 'subject_name', key: 'subject_name', render: (v: string) => v || '—' },
+                  { title: 'Note', dataIndex: 'score', key: 'score', render: (v: number) => v != null ? `${v}/20` : '—' },
+                  { title: 'Trimestre', dataIndex: 'trimester', key: 'trimester', render: (v: string) => v || '—' },
+                  { title: 'Statut', dataIndex: 'status', key: 'status', render: (v: string) => <Tag>{v || '—'}</Tag> },
+                ]}
+              />
+            ) : (
+              <div className="empty-state">
+                <div className="empty-state__desc">Aucune note enregistree</div>
+              </div>
+            )}
           </Card>
           <Card title="Absences">
-            <div className="empty-state">
-              <div className="empty-state__desc">L'historique des absences apparaitra ici</div>
-            </div>
+            {attendanceData?.results?.length ? (
+              <Table
+                dataSource={attendanceData.results.slice(0, 10)}
+                rowKey={(r: Record<string, any>) => r.id || `att-${r.date}-${r.status}`}
+                pagination={false}
+                size="small"
+                columns={[
+                  { title: 'Date', dataIndex: 'date', key: 'date', render: (v: string) => v?.slice(0, 10) || '—' },
+                  { title: 'Statut', dataIndex: 'status', key: 'status', render: (v: string) => <Tag color={v === 'PRESENT' ? 'green' : v === 'ABSENT' ? 'red' : 'orange'}>{v || '—'}</Tag> },
+                  { title: 'Justifie', dataIndex: 'excused', key: 'excused', render: (v: boolean) => v ? <Tag color="blue">Oui</Tag> : <Tag>Non</Tag> },
+                ]}
+              />
+            ) : (
+              <div className="empty-state">
+                <div className="empty-state__desc">Aucune absence enregistree</div>
+              </div>
+            )}
           </Card>
         </div>
       </div>

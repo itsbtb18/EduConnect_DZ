@@ -1,5 +1,5 @@
 """
-Tenant-aware base viewset for EduConnect.
+Tenant-aware base viewset for Madrassa.
 All API viewsets that serve tenant-scoped data should inherit from
 TenantAwareViewSet instead of ModelViewSet.
 """

@@ -1,5 +1,5 @@
 """
-Custom validators for EduConnect.
+Custom validators for Madrassa.
 """
 
 from django.core.exceptions import ValidationError

@@ -1,0 +1,7 @@
+/* FinancialPage — extracted inline styles */
+
+.financial__fee-actions {
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: flex-end;
+}

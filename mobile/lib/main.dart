@@ -28,5 +28,5 @@ void main() async {
   // Initialize Firebase for push notifications & analytics
   await Firebase.initializeApp();
 
-  runApp(const EduConnectApp());
+  runApp(const MadrassaApp());
 }

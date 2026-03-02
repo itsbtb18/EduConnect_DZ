@@ -1,4 +1,4 @@
-# EduConnect Algeria — Backend Dependencies
+# Madrassa — Backend Dependencies
 # ==========================================
 
 # Django Core

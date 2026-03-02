@@ -1,4 +1,4 @@
-# EduConnect DZ — Authentication & Admin Management
+# Madrassa DZ — Authentication & Admin Management
 
 ## Table of Contents
 
@@ -17,7 +17,7 @@
 
 ## Architecture Overview
 
-EduConnect uses a **multi-tenant** architecture where each school is a tenant.
+Madrassa uses a **multi-tenant** architecture where each school is a tenant.
 - **Backend**: Django 5.x + Django REST Framework + SimpleJWT
 - **Admin Panel**: React + Vite + Ant Design
 - **Authentication**: JWT (JSON Web Tokens) with access/refresh token pair
@@ -197,7 +197,7 @@ Authorization: Bearer <superadmin_token>
 
 ## Multi-Admin per School
 
-EduConnect supports **multiple admin users per school**. This is the recommended setup for large schools.
+Madrassa supports **multiple admin users per school**. This is the recommended setup for large schools.
 
 ### How It Works
 

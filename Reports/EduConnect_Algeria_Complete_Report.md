@@ -1,4 +1,4 @@
-# 📚 EduConnect Algeria — Complete Product Conception & Technical Blueprint
+# 📚 Madrassa — Complete Product Conception & Technical Blueprint
 
 > **A Multi-Tenant SaaS E-Learning & School Management Platform for Algerian Private Schools**  
 > Version 3.0 — February 2026 | Confidential  
@@ -60,7 +60,7 @@
 
 ## 1. Executive Summary
 
-**EduConnect Algeria** is a multi-tenant SaaS e-learning and school management platform designed specifically for private primary, middle, and high schools in Algeria. The platform addresses a critical gap in the Algerian private education market: fragmented communication, manual administrative work, and a complete lack of digital infrastructure connecting administration, teachers, parents, and students.
+**Madrassa** is a multi-tenant SaaS e-learning and school management platform designed specifically for private primary, middle, and high schools in Algeria. The platform addresses a critical gap in the Algerian private education market: fragmented communication, manual administrative work, and a complete lack of digital infrastructure connecting administration, teachers, parents, and students.
 
 This document consolidates every feature, architecture decision, technology choice, legal consideration, team structure, timeline, and business model required to build and commercialize this product professionally. The goal is to create a platform so complete, so easy to use, and so valuable that private schools cannot afford not to adopt it.
 
@@ -76,7 +76,7 @@ This document consolidates every feature, architecture decision, technology choi
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                  EduConnect Algeria                      │
+│                  Madrassa                              │
 │                                                         │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────────┐ │
 │  │  Admin   │  │ Teacher  │  │  Parent  │  │Student │ │
@@ -111,7 +111,7 @@ This document consolidates every feature, architecture decision, technology choi
 
 > **This is the single most important architectural decision in the entire project. Understand this section before reading anything else.**
 
-EduConnect Algeria is built as a **Multi-Tenant SaaS (Software as a Service)** platform. This means you deploy the system **ONE time** in the cloud, and **ALL schools** use the exact same system. You never redeploy for each new school.
+Madrassa is built as a **Multi-Tenant SaaS (Software as a Service)** platform. This means you deploy the system **ONE time** in the cloud, and **ALL schools** use the exact same system. You never redeploy for each new school.
 
 ### 2.1 How It Works After Deployment
 
@@ -150,7 +150,7 @@ Just like:
 | **Shopify** | Thousands of online stores → one system |
 | **Slack** | Thousands of companies → one system |
 | **Google Workspace** | Millions of organizations → one system |
-| **EduConnect Algeria** | Hundreds of Algerian schools → one system |
+| **Madrassa** | Hundreds of Algerian schools → one system |
 
 Same idea. Same architecture. Same power.
 
@@ -302,7 +302,7 @@ ECOLE/
 │   ├── manage.py
 │   ├── requirements.txt
 │   ├── Dockerfile
-│   ├── educonnect/             # Project settings & config
+│   ├── madrassa/             # Project settings & config
 │   │   ├── settings/           # Split settings (base/dev/prod)
 │   │   ├── urls.py             # Main URL router
 │   │   ├── asgi.py             # ASGI + WebSocket config
@@ -819,7 +819,7 @@ class User(AbstractBaseUser):
 
 ### 9.1 Flexible School Configuration
 
-A school subscribes to EduConnect and chooses which sections they operate. The platform fully supports:
+A school subscribes to Madrassa and chooses which sections they operate. The platform fully supports:
 
 | School Type | Sections Enabled |
 |---|---|
@@ -1803,7 +1803,7 @@ School (tenant root)
 ### 24.1 Versioning & Structure
 
 ```
-Base URL: https://api.educonnect.dz/api/v1/
+Base URL: https://api.madrassa.dz/api/v1/
 ```
 
 All endpoints prefixed `/api/v1/`. Breaking changes go to `/api/v2/` without breaking existing app versions.
@@ -2622,7 +2622,7 @@ Feature: Grade Entry by Teacher
 
 Before writing automated tests, use Postman to explore and verify each endpoint manually. This is faster for catching obvious issues.
 
-Create a **Postman Collection** called "EduConnect API" with folders: Auth, Grades, Homework, Chat, Chatbot, etc. For each endpoint, save:
+Create a **Postman Collection** called "Madrassa API" with folders: Auth, Grades, Homework, Chat, Chatbot, etc. For each endpoint, save:
 
 - The request (method, URL, headers, body)
 - An example of a successful response
@@ -2923,6 +2923,6 @@ Copy `.env.example` to `.env` and fill in:
 
 ---
 
-*EduConnect Algeria — Complete Product Conception & Technical Blueprint*  
+*Madrassa — Complete Product Conception & Technical Blueprint*  
 *Version 3.0 — February 2026 | Confidential*  
 *Merged from: README.md, Full_Report.md, Algerian_schools_system.md*

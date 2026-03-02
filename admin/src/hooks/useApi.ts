@@ -10,9 +10,13 @@ import {
   announcementsAPI,
   chatAPI,
   notificationsAPI,
+  homeworkAPI,
   authAPI,
   schoolsAPI,
   usersAPI,
+  platformSettingsAPI,
+  activityLogsAPI,
+  systemHealthAPI,
 } from '../api/services';
 
 /* ─────────────────────────────── Types ─────────────────────────────── */
@@ -38,6 +42,7 @@ export function useDashboardStats() {
     queryFn: () => studentsAPI.list({ page_size: 1 }),
     retry: 1,
     staleTime: 60_000,
+    refetchInterval: 60_000,
   });
 
   const teachers = useQuery({
@@ -45,6 +50,7 @@ export function useDashboardStats() {
     queryFn: () => teachersAPI.list({ page_size: 1 }),
     retry: 1,
     staleTime: 60_000,
+    refetchInterval: 60_000,
   });
 
   const classes = useQuery({
@@ -52,6 +58,7 @@ export function useDashboardStats() {
     queryFn: () => academicsAPI.classes({ page_size: 1 }),
     retry: 1,
     staleTime: 60_000,
+    refetchInterval: 60_000,
   });
 
   const payments = useQuery({
@@ -59,6 +66,7 @@ export function useDashboardStats() {
     queryFn: () => financeAPI.payments({ page_size: 1 }),
     retry: 1,
     staleTime: 60_000,
+    refetchInterval: 60_000,
   });
 
   return {
@@ -94,6 +102,43 @@ export function useStudent(id: string) {
   });
 }
 
+export function useCreateStudent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => studentsAPI.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['students'] });
+      message.success('Eleve ajoute avec succes');
+    },
+    onError: () => message.error("Erreur lors de l'ajout"),
+  });
+}
+
+export function useUpdateStudent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      studentsAPI.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['students'] });
+      message.success('Eleve mis a jour');
+    },
+    onError: () => message.error('Erreur de mise a jour'),
+  });
+}
+
+export function useDeleteStudent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => studentsAPI.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['students'] });
+      message.success('Eleve supprime');
+    },
+    onError: () => message.error('Erreur de suppression'),
+  });
+}
+
 /* ────────────────────────────── Teachers ────────────────────────────── */
 export function useTeachers(params?: Record<string, unknown>) {
   return useQuery({
@@ -114,6 +159,43 @@ export function useTeacher(id: string) {
       return data;
     },
     enabled: !!id,
+  });
+}
+
+export function useCreateTeacher() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => teachersAPI.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['teachers'] });
+      message.success('Enseignant cree avec succes');
+    },
+    onError: () => message.error("Erreur lors de la creation"),
+  });
+}
+
+export function useUpdateTeacher() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      teachersAPI.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['teachers'] });
+      message.success('Enseignant mis a jour');
+    },
+    onError: () => message.error('Erreur de mise a jour'),
+  });
+}
+
+export function useDeleteTeacher() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => teachersAPI.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['teachers'] });
+      message.success('Enseignant supprime');
+    },
+    onError: () => message.error('Erreur de suppression'),
   });
 }
 
@@ -177,6 +259,18 @@ export function useUpdateGrade() {
   });
 }
 
+export function useDeleteGrade() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => gradesAPI.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['grades'] });
+      message.success('Note supprimée');
+    },
+    onError: () => message.error('Erreur lors de la suppression'),
+  });
+}
+
 /* ─────────────────────────── Attendance ─────────────────────────────── */
 export function useAttendance(params?: Record<string, unknown>) {
   return useQuery({
@@ -219,9 +313,57 @@ export function useCreatePayment() {
     mutationFn: (data: Record<string, unknown>) => financeAPI.createPayment(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['payments'] });
-      message.success('Paiement enregistre');
+      message.success('Paiement enregistré');
     },
     onError: () => message.error('Erreur de paiement'),
+  });
+}
+
+export function useUpdatePayment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      financeAPI.updatePayment(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['payments'] });
+      message.success('Paiement mis à jour');
+    },
+    onError: () => message.error('Erreur de mise à jour'),
+  });
+}
+
+export function useFees(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['fees', params],
+    queryFn: async () => {
+      const res = await financeAPI.fees(params);
+      return extractData(res);
+    },
+    retry: 1,
+  });
+}
+
+export function useCreateFee() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => financeAPI.createFee(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['fees'] });
+      message.success('Frais créé');
+    },
+    onError: () => message.error('Erreur de création'),
+  });
+}
+
+export function useDeleteFee() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => financeAPI.deleteFee(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['fees'] });
+      message.success('Frais supprimé');
+    },
+    onError: () => message.error('Erreur de suppression'),
   });
 }
 
@@ -261,6 +403,19 @@ export function useDeleteAnnouncement() {
   });
 }
 
+export function useUpdateAnnouncement() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      announcementsAPI.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['announcements'] });
+      message.success('Annonce mise a jour');
+    },
+    onError: () => message.error('Erreur de mise a jour'),
+  });
+}
+
 /* ─────────────────────────── Chat ───────────────────────────────────── */
 export function useChatRooms(params?: Record<string, unknown>) {
   return useQuery({
@@ -288,8 +443,8 @@ export function useChatMessages(roomId: string) {
 export function useSendMessage() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ roomId, data }: { roomId: string; data: Record<string, unknown> }) =>
-      chatAPI.sendMessage(roomId, data),
+    mutationFn: ({ roomId, data }: { roomId: string; data: Record<string, unknown> | FormData }) =>
+      chatAPI.sendMessage(roomId, data as Record<string, unknown>),
     onSuccess: (_res, vars) => {
       qc.invalidateQueries({ queryKey: ['chatMessages', vars.roomId] });
     },
@@ -495,5 +650,285 @@ export function usePlatformStats() {
     },
     retry: 1,
     staleTime: 60_000,
+  });
+}
+
+/* ──────────────────── Profile & Password ────────────────────────────── */
+export function useUpdateProfile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) =>
+      usersAPI.update(data.id as string, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['currentUser'] });
+      message.success('Profil mis a jour');
+    },
+    onError: () => message.error('Erreur de mise a jour du profil'),
+  });
+}
+
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: ({ old_password, new_password }: { old_password: string; new_password: string }) =>
+      usersAPI.changePassword(old_password, new_password),
+    onSuccess: () => {
+      message.success('Mot de passe modifie avec succes');
+    },
+    onError: () => message.error('Erreur lors du changement de mot de passe'),
+  });
+}
+
+/* ──────────────────── Homework ────────────────────────────────────── */
+export function useHomework(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['homework', params],
+    queryFn: async () => {
+      const res = await homeworkAPI.list(params);
+      return extractData(res);
+    },
+  });
+}
+
+export function useCreateHomework() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => homeworkAPI.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['homework'] });
+      message.success('Devoir créé avec succès');
+    },
+    onError: () => message.error('Erreur lors de la création du devoir'),
+  });
+}
+
+export function useUpdateHomework() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) =>
+      homeworkAPI.update(data.id as string, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['homework'] });
+      message.success('Devoir mis à jour');
+    },
+    onError: () => message.error('Erreur lors de la mise à jour'),
+  });
+}
+
+export function useDeleteHomework() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => homeworkAPI.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['homework'] });
+      message.success('Devoir supprimé');
+    },
+    onError: () => message.error('Erreur lors de la suppression'),
+  });
+}
+
+/* ─────────────────── Class CRUD (Rec #5) ────────────────────────────── */
+export function useCreateClass() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => academicsAPI.createClass(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['classes'] });
+      message.success('Classe créée avec succès');
+    },
+    onError: () => message.error('Erreur lors de la création'),
+  });
+}
+
+export function useUpdateClass() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      academicsAPI.updateClass(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['classes'] });
+      message.success('Classe mise à jour');
+    },
+    onError: () => message.error('Erreur de mise à jour'),
+  });
+}
+
+export function useDeleteClass() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => academicsAPI.deleteClass(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['classes'] });
+      message.success('Classe supprimée');
+    },
+    onError: () => message.error('Erreur de suppression'),
+  });
+}
+
+/* ─────────────────── Schedule CRUD (Rec #4) ─────────────────────────── */
+export function useCreateScheduleSlot() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => academicsAPI.createScheduleSlot(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['schedule'] });
+      message.success('Créneau ajouté');
+    },
+    onError: () => message.error('Erreur lors de l\'ajout'),
+  });
+}
+
+export function useUpdateScheduleSlot() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      academicsAPI.updateScheduleSlot(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['schedule'] });
+      message.success('Créneau mis à jour');
+    },
+    onError: () => message.error('Erreur de mise à jour'),
+  });
+}
+
+export function useDeleteScheduleSlot() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => academicsAPI.deleteScheduleSlot(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['schedule'] });
+      message.success('Créneau supprimé');
+    },
+    onError: () => message.error('Erreur de suppression'),
+  });
+}
+
+/* ─────────────────── Create Chat Room (Rec #2) ──────────────────────── */
+export function useCreateChatRoom() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => chatAPI.createRoom(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['chatRooms'] });
+      message.success('Conversation créée');
+    },
+    onError: () => message.error('Erreur lors de la création'),
+  });
+}
+
+/* ─────────────────── Bulk Attendance (Rec #9) ───────────────────────── */
+export function useBulkMarkAttendance() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => attendanceAPI.bulkMark(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['attendance'] });
+      message.success('Présence enregistrée pour la classe');
+    },
+    onError: () => message.error('Erreur lors de l\'enregistrement'),
+  });
+}
+
+/* ─────────────────── Report Cards (Rec #8) ──────────────────────────── */
+export function useReportCards(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['reportCards', params],
+    queryFn: async () => {
+      const res = await gradesAPI.reportCards(params);
+      return extractData(res);
+    },
+    retry: 1,
+  });
+}
+
+export function useGenerateReportCard() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => gradesAPI.generateReportCard(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['reportCards'] });
+      message.success('Bulletin généré');
+    },
+    onError: () => message.error('Erreur de génération'),
+  });
+}
+
+/* ─────────────────── Finance Stats (Rec #7) ─────────────────────────── */
+export function useFinanceStats() {
+  return useQuery({
+    queryKey: ['financeStats'],
+    queryFn: async () => {
+      try {
+        const { data } = await financeAPI.stats();
+        return data;
+      } catch {
+        // Fallback: if aggregate endpoint doesn't exist yet, return null
+        return null;
+      }
+    },
+    retry: 0,
+    staleTime: 60_000,
+  });
+}
+
+/* ─────────────── Platform Settings (Rec #3 — Super Admin) ───────────── */
+export function usePlatformSettings() {
+  return useQuery({
+    queryKey: ['platformSettings'],
+    queryFn: async () => {
+      try {
+        const { data } = await platformSettingsAPI.get();
+        return data;
+      } catch {
+        // fallback to localStorage if API not available yet
+        return null;
+      }
+    },
+    retry: 0,
+    staleTime: 120_000,
+  });
+}
+
+export function useUpdatePlatformSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => platformSettingsAPI.update(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['platformSettings'] });
+      message.success('Configuration sauvegardée');
+    },
+    onError: () => message.error('Erreur de sauvegarde'),
+  });
+}
+
+/* ─────────────── Activity Logs (Rec #13 — Super Admin) ──────────────── */
+export function useActivityLogs(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['activityLogs', params],
+    queryFn: async () => {
+      try {
+        const res = await activityLogsAPI.list(params);
+        return extractData(res);
+      } catch {
+        return { results: [], count: 0 };
+      }
+    },
+    retry: 0,
+  });
+}
+
+/* ─────────────── System Health (Rec #14 — Super Admin) ──────────────── */
+export function useSystemHealth() {
+  return useQuery({
+    queryKey: ['systemHealth'],
+    queryFn: async () => {
+      try {
+        const { data } = await systemHealthAPI.check();
+        return data;
+      } catch {
+        return null;
+      }
+    },
+    retry: 0,
+    refetchInterval: 30_000,
   });
 }

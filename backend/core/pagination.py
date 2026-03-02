@@ -1,5 +1,5 @@
 """
-Standard pagination classes for EduConnect API.
+Standard pagination classes for Madrassa API.
 """
 
 from rest_framework.pagination import PageNumberPagination

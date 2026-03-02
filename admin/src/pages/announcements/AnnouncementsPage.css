@@ -1,0 +1,39 @@
+/* AnnouncementsPage — styles */
+
+.announcements__form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.announcements__stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.announcements__stat-card {
+  border-radius: 10px;
+  transition: box-shadow 0.2s;
+}
+.announcements__stat-card:hover {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.announcements__filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .announcements__stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .announcements__form-grid {
+    grid-template-columns: 1fr;
+  }
+}

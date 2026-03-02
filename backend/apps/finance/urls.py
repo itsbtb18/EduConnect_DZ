@@ -6,4 +6,7 @@ app_name = "finance"
 router = DefaultRouter()
 router.register("fees", views.FeeStructureViewSet, basename="fee-structure")
 router.register("payments", views.PaymentViewSet, basename="payment")
-urlpatterns = [path("", include(router.urls))]
+urlpatterns = [
+    path("stats/", views.FinanceStatsView.as_view(), name="finance-stats"),
+    path("", include(router.urls)),
+]

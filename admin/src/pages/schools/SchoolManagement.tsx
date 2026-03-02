@@ -175,7 +175,7 @@ const SchoolManagement: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="school-card__name">{school.name}</h3>
-                  <span className="school-card__subdomain">{school.subdomain}.educonnect.dz</span>
+                  <span className="school-card__subdomain">{school.subdomain}.madrassa.dz</span>
                 </div>
                 <div className="school-card__status">
                   <Badge
@@ -254,7 +254,7 @@ const SchoolManagement: React.FC = () => {
               { pattern: /^[a-z0-9-]+$/, message: 'Lettres minuscules, chiffres et tirets uniquement' },
             ]}
           >
-            <Input placeholder="ibn-khaldoun" suffix=".educonnect.dz" />
+            <Input placeholder="ibn-khaldoun" suffix=".madrassa.dz" />
           </Form.Item>
           <Form.Item name="address" label="Adresse">
             <Input.TextArea rows={2} placeholder="Adresse de l'ecole" />
@@ -290,7 +290,7 @@ const SchoolManagement: React.FC = () => {
             <Input />
           </Form.Item>
           <Form.Item name="subdomain" label="Sous-domaine" rules={[{ required: true }]}>
-            <Input suffix=".educonnect.dz" />
+            <Input suffix=".madrassa.dz" />
           </Form.Item>
           <Form.Item name="address" label="Adresse">
             <Input.TextArea rows={2} />

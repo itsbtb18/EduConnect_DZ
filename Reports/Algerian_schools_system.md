@@ -1,4 +1,4 @@
-# 📚 EduConnect Algeria — Full Application Conception Report
+# 📚 Madrassa — Full Application Conception Report
 
 > **A Multi-Tenant SaaS E-Learning & School Management Platform for Algerian Private Schools**  
 > Version 1.0 — February 2026  
@@ -37,7 +37,7 @@
 
 ## 1. Project Overview
 
-**EduConnect Algeria** is a full-stack multi-tenant SaaS platform designed specifically for private schools in Algeria. It digitalizes and centralizes the daily operations of school administration, teachers, parents, and students into a single connected ecosystem.
+**Madrassa** is a full-stack multi-tenant SaaS platform designed specifically for private schools in Algeria. It digitalizes and centralizes the daily operations of school administration, teachers, parents, and students into a single connected ecosystem.
 
 ### What the Platform Solves
 
@@ -55,7 +55,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                  EduConnect Algeria                      │
+│                  Madrassa                              │
 │                                                         │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────────┐ │
 │  │  Admin   │  │ Teacher  │  │  Parent  │  │Student │ │
@@ -437,7 +437,7 @@ class User(AbstractBaseUser):
 
 ### 7.1 Flexible School Configuration
 
-A school subscribes to EduConnect and chooses which sections they operate. The platform fully supports:
+A school subscribes to Madrassa and chooses which sections they operate. The platform fully supports:
 
 | School Type | Sections Enabled |
 |---|---|
@@ -1250,7 +1250,7 @@ School (tenant root)
 ### 17.1 Versioning & Structure
 
 ```
-https://api.educonnect.dz/api/v1/
+https://api.madrassa.dz/api/v1/
 ```
 
 All endpoints are prefixed with `/api/v1/` from day one. Future breaking changes go to `/api/v2/`.
@@ -1723,6 +1723,6 @@ These are design questions that need a decision before implementation begins:
 
 ---
 
-*EduConnect Algeria — Conception Document v1.0*  
+*Madrassa — Conception Document v1.0*  
 *Last updated: February 2026*  
 *Status: Pre-Development*

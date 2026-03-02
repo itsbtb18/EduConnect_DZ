@@ -11,8 +11,8 @@ import 'features/student/presentation/bloc/student_bloc.dart';
 import 'features/teacher/presentation/bloc/teacher_bloc.dart';
 import 'features/parent/presentation/bloc/parent_bloc.dart';
 
-class EduConnectApp extends StatelessWidget {
-  const EduConnectApp({super.key});
+class MadrassaApp extends StatelessWidget {
+  const MadrassaApp({super.key});
 
   @override
   Widget build(BuildContext context) {

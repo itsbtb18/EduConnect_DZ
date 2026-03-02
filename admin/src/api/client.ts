@@ -1,5 +1,5 @@
 /**
- * Axios API client configured for EduConnect Django backend.
+ * Axios API client configured for Madrassa Django backend.
  * All requests go through /api/v1/ which Vite proxies to Django in dev
  * and nginx routes to Django in production.
  */
@@ -12,12 +12,16 @@ const apiClient = axios.create({
   },
 });
 
-// ── Request interceptor: attach JWT token ──
+// ── Request interceptor: attach JWT token + handle FormData ──
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('access_token');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    // Let the browser set Content-Type (with boundary) for FormData
+    if (config.data instanceof FormData && config.headers) {
+      delete config.headers['Content-Type'];
     }
     return config;
   },

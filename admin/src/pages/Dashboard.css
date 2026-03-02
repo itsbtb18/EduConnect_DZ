@@ -1,0 +1,125 @@
+/* Dashboard — Professional Styles */
+
+.dashboard__date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-secondary, #6B7280);
+  text-transform: capitalize;
+}
+
+.dashboard__auto-refresh {
+  margin-left: 8px;
+}
+
+.dashboard__live-tag {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  border: none;
+  animation: dashboard-pulse 2s ease-in-out infinite;
+}
+
+@keyframes dashboard-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.dashboard__badge-inline {
+  margin-left: 8px;
+}
+
+/* Attendance overview */
+.dashboard__attendance-overview {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 8px 0;
+}
+
+.dashboard__attendance-progress {
+  flex-shrink: 0;
+}
+
+.dashboard__attendance-pct {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary, #1F2937);
+}
+
+.dashboard__attendance-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.dashboard__attendance-stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary, #6B7280);
+}
+
+.dashboard__attendance-stat strong {
+  color: var(--text-primary, #1F2937);
+  font-weight: 600;
+}
+
+.dashboard__attendance-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dashboard__attendance-dot--present {
+  background: #10B981;
+}
+
+.dashboard__attendance-dot--absent {
+  background: #EF4444;
+}
+
+/* Announcement items */
+.announcement-item__left {
+  flex: 1;
+  min-width: 0;
+}
+
+.announcement-item__pin {
+  font-size: 10px;
+  margin-bottom: 2px;
+}
+
+.announcement-item__excerpt {
+  font-size: 12px;
+  color: var(--text-secondary, #9CA3AF);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Notification items */
+.notif-item__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notif-item__time {
+  font-size: 11px;
+  color: var(--text-secondary, #9CA3AF);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dashboard__attendance-overview {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

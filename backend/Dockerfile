@@ -1,5 +1,5 @@
 # ============================================================
-# EduConnect Algeria — Production Dockerfile
+# Madrassa — Production Dockerfile
 # ============================================================
 # Multi-stage build: deps → runtime (smaller final image)
 # Uses Daphne ASGI for HTTP + WebSocket support
@@ -30,14 +30,14 @@ RUN pip install --no-cache-dir --upgrade pip \
 # ---------- Stage 2: Runtime ----------
 FROM python:3.11-slim AS runtime
 
-LABEL maintainer="EduConnect DZ <admin@educonnect.dz>" \
-      description="EduConnect Algeria — Django ASGI Backend" \
+LABEL maintainer="Madrassa DZ <admin@madrassa.dz>" \
+      description="Madrassa — Django ASGI Backend" \
       version="1.0.0"
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     DEBIAN_FRONTEND=noninteractive \
-    DJANGO_SETTINGS_MODULE=educonnect.settings.production \
+    DJANGO_SETTINGS_MODULE=madrassa.settings.production \
     APP_HOME=/app
 
 # Install runtime-only libs (no build tools → smaller image)
@@ -87,7 +87,7 @@ EXPOSE 8000
 
 # Health check — hits Django /api/v1/ or returns unhealthy after 30s
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8000/api/v1/ || exit 1
+    CMD curl -f http://localhost:8000/api/v1/health/ || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]
 
@@ -98,4 +98,4 @@ CMD ["daphne", \
      "--proxy-headers", \
      "--access-log", "-", \
      "-v", "1", \
-     "educonnect.asgi:application"]
+     "madrassa.asgi:application"]

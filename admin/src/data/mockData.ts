@@ -1,25 +1,10 @@
-import type {
-  Student,
-  Teacher,
-  ClassInfo,
-  Grade,
-  GradeSubmission,
-  AttendanceRecord,
-  Announcement,
-  Conversation,
-  Message,
-  Payment,
-  Activity,
-  TimetableSlot,
-} from '../types';
+/**
+ * This file previously contained hardcoded mock data.
+ * All pages now use real API calls via hooks (useApi.ts).
+ * This file is kept empty for reference - safe to delete.
+ */
+export {};
 
-// ── Students (20+) ──────────────────────────────────────────
-export const students: Student[] = [
-  { id: '1', firstName: 'Ahmed', lastName: 'Benali', studentId: 'STD-2024-001', class: '1ère AS A', level: 'Lycée', parentName: 'Mme. Benali', parentPhone: '0550 123 456', attendanceRate: 96, average: 15.2, status: 'active', enrollmentDate: '2024-09-05' },
-  { id: '2', firstName: 'Sara', lastName: 'Hamid', studentId: 'STD-2024-002', class: '4ème A', level: 'Collège', parentName: 'M. Hamid', parentPhone: '0661 789 012', attendanceRate: 88, average: 13.8, status: 'active', enrollmentDate: '2024-09-05' },
-  { id: '3', firstName: 'Youcef', lastName: 'Kaci', studentId: 'STD-2024-003', class: '5ème B', level: 'Collège', parentName: 'Mme. Kaci', parentPhone: '0770 345 678', attendanceRate: 72, average: 10.1, status: 'watch', enrollmentDate: '2024-09-05' },
-  { id: '4', firstName: 'Imane', lastName: 'Zerrouk', studentId: 'STD-2024-004', class: 'CM2 A', level: 'Primaire', parentName: 'M. Zerrouk', parentPhone: '0555 901 234', attendanceRate: 98, average: 17.5, status: 'active', enrollmentDate: '2024-09-05' },
-  { id: '5', firstName: 'Rayan', lastName: 'Bouab', studentId: 'STD-2024-005', class: 'CE1 B', level: 'Primaire', parentName: 'Mme. Bouab', parentPhone: '0699 567 890', attendanceRate: 91, average: 14.0, status: 'active', enrollmentDate: '2024-09-05' },
   { id: '6', firstName: 'Lina', lastName: 'Meziane', studentId: 'STD-2024-006', class: '1ère AS A', level: 'Lycée', parentName: 'M. Meziane', parentPhone: '0556 234 567', attendanceRate: 55, average: 8.9, status: 'suspended', enrollmentDate: '2024-09-05' },
   { id: '7', firstName: 'Mohamed', lastName: 'Boudiaf', studentId: 'STD-2024-007', class: '4ème A', level: 'Collège', parentName: 'Mme. Boudiaf', parentPhone: '0552 111 222', attendanceRate: 94, average: 14.5, status: 'active', enrollmentDate: '2024-09-05' },
   { id: '8', firstName: 'Amira', lastName: 'Bensalah', studentId: 'STD-2024-008', class: '5ème B', level: 'Collège', parentName: 'M. Bensalah', parentPhone: '0663 333 444', attendanceRate: 89, average: 12.3, status: 'active', enrollmentDate: '2024-09-05' },

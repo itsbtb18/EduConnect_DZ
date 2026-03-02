@@ -1,0 +1,18 @@
+/* AnalyticsPage — extracted inline styles */
+
+.analytics__threshold-label {
+  font-size: 13px;
+  color: #6B7280;
+}
+
+.analytics__student-name {
+  font-weight: 600;
+}
+
+.analytics__zero-value {
+  color: #D1D5DB;
+}
+
+.analytics__teacher-name {
+  font-weight: 600;
+}

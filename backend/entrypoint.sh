@@ -1,6 +1,6 @@
 #!/bin/sh
 # ============================================================
-# EduConnect Algeria — Docker Entrypoint
+# Madrassa — Docker Entrypoint
 # ============================================================
 # Waits for PostgreSQL + Redis, runs migrations, then starts
 # the CMD passed by docker-compose / Dockerfile.
@@ -59,18 +59,18 @@ if [ "${COLLECT_STATIC:-0}" = "1" ]; then
 fi
 
 # ---- Optional: create default superuser if env vars set ----
-if [ -n "$DJANGO_SUPERUSER_EMAIL" ] && [ -n "$DJANGO_SUPERUSER_PASSWORD" ]; then
+if [ -n "$DJANGO_SUPERUSER_PHONE" ] && [ -n "$DJANGO_SUPERUSER_PASSWORD" ]; then
     info "Ensuring superuser exists..."
     python manage.py shell -c "
 from django.contrib.auth import get_user_model
 User = get_user_model()
-if not User.objects.filter(email='${DJANGO_SUPERUSER_EMAIL}').exists():
+if not User.objects.filter(phone_number='${DJANGO_SUPERUSER_PHONE}').exists():
     User.objects.create_superuser(
-        email='${DJANGO_SUPERUSER_EMAIL}',
+        phone_number='${DJANGO_SUPERUSER_PHONE}',
         password='${DJANGO_SUPERUSER_PASSWORD}',
-        first_name='Admin',
-        last_name='EduConnect',
-        role='superadmin',
+        first_name='${DJANGO_SUPERUSER_FIRST_NAME:-Admin}',
+        last_name='${DJANGO_SUPERUSER_LAST_NAME:-Madrassa}',
+        email='${DJANGO_SUPERUSER_EMAIL:-admin@madrassa.dz}',
     )
     print('Superuser created.')
 else:

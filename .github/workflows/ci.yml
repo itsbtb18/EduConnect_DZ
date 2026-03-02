@@ -1,4 +1,4 @@
-name: CI — EduConnect Algeria
+name: CI — Madrassa
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: test_educonnect
+          POSTGRES_DB: test_madrassa
           POSTGRES_USER: test_user
           POSTGRES_PASSWORD: test_password
         ports:
@@ -53,8 +53,8 @@ jobs:
 
       - name: Run migrations
         env:
-          DJANGO_SETTINGS_MODULE: educonnect.settings.development
-          DB_NAME: test_educonnect
+          DJANGO_SETTINGS_MODULE: madrassa.settings.development
+          DB_NAME: test_madrassa
           DB_USER: test_user
           DB_PASSWORD: test_password
           DB_HOST: localhost
@@ -67,8 +67,8 @@ jobs:
 
       - name: Run tests
         env:
-          DJANGO_SETTINGS_MODULE: educonnect.settings.development
-          DB_NAME: test_educonnect
+          DJANGO_SETTINGS_MODULE: madrassa.settings.development
+          DB_NAME: test_madrassa
           DB_USER: test_user
           DB_PASSWORD: test_password
           DB_HOST: localhost
@@ -120,4 +120,4 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build backend image
-        run: docker build -t educonnect-api:test ./backend
+        run: docker build -t madrassa-api:test ./backend

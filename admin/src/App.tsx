@@ -21,11 +21,19 @@ import TimetablePage from './pages/timetable/TimetablePage';
 import SettingsPage from './pages/settings/SettingsPage';
 import UserManagement from './pages/users/UserManagement';
 import SchoolManagement from './pages/schools/SchoolManagement';
+import NotificationsPage from './pages/notifications/NotificationsPage';
+import HomeworkPage from './pages/homework/HomeworkPage';
 
 // Super Admin pages
 import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
 import PlanManagement from './pages/superadmin/PlanManagement';
 import PlatformSettings from './pages/superadmin/PlatformSettings';
+import SuperAdminAnalytics from './pages/superadmin/SuperAdminAnalytics.tsx';
+import ActivityLogsPage from './pages/superadmin/ActivityLogsPage';
+import SystemHealthPage from './pages/superadmin/SystemHealthPage';
+
+// Academics
+import ClassManagement from './pages/academics/ClassManagement';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -71,6 +79,20 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
+/** Guard that only allows SUPER_ADMIN role */
+const SuperAdminGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  if (user?.role !== 'SUPER_ADMIN') return <Navigate to="/dashboard" replace />;
+  return <>{children}</>;
+};
+
+/** Guard that blocks SUPER_ADMIN from school-level routes */
+const SchoolAdminGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  if (user?.role === 'SUPER_ADMIN') return <Navigate to="/platform/dashboard" replace />;
+  return <>{children}</>;
+};
+
 const AppRoutes: React.FC = () => {
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
@@ -86,28 +108,34 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       >
-        {/* ── Super Admin routes ── */}
-        <Route path="/platform/dashboard" element={<SuperAdminDashboard />} />
-        <Route path="/platform/schools" element={<SchoolManagement />} />
-        <Route path="/platform/users" element={<UserManagement />} />
-        <Route path="/platform/plans" element={<PlanManagement />} />
-        <Route path="/platform/analytics" element={<AnalyticsPage />} />
-        <Route path="/platform/settings" element={<PlatformSettings />} />
+        {/* ── Super Admin routes (guarded) ── */}
+        <Route path="/platform/dashboard" element={<SuperAdminGuard><SuperAdminDashboard /></SuperAdminGuard>} />
+        <Route path="/platform/schools" element={<SuperAdminGuard><SchoolManagement /></SuperAdminGuard>} />
+        <Route path="/platform/users" element={<SuperAdminGuard><UserManagement /></SuperAdminGuard>} />
+        <Route path="/platform/plans" element={<SuperAdminGuard><PlanManagement /></SuperAdminGuard>} />
+        <Route path="/platform/analytics" element={<SuperAdminGuard><SuperAdminAnalytics /></SuperAdminGuard>} />
+        <Route path="/platform/settings" element={<SuperAdminGuard><PlatformSettings /></SuperAdminGuard>} />
+        <Route path="/platform/activity-logs" element={<SuperAdminGuard><ActivityLogsPage /></SuperAdminGuard>} />
+        <Route path="/platform/system-health" element={<SuperAdminGuard><SystemHealthPage /></SuperAdminGuard>} />
+        <Route path="/platform/notifications" element={<SuperAdminGuard><NotificationsPage /></SuperAdminGuard>} />
 
-        {/* ── School Admin routes ── */}
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/users" element={<UserManagement />} />
-        <Route path="/students" element={<StudentList />} />
-        <Route path="/students/:id" element={<StudentDetail />} />
-        <Route path="/teachers" element={<TeacherList />} />
-        <Route path="/grades" element={<GradeManagement />} />
-        <Route path="/attendance" element={<AttendancePage />} />
-        <Route path="/announcements" element={<AnnouncementsPage />} />
-        <Route path="/messaging" element={<MessagingPage />} />
-        <Route path="/financial" element={<FinancialPage />} />
-        <Route path="/analytics" element={<AnalyticsPage />} />
-        <Route path="/timetable" element={<TimetablePage />} />
-        <Route path="/settings" element={<SettingsPage />} />
+        {/* ── School Admin routes (guarded) ── */}
+        <Route path="/dashboard" element={<SchoolAdminGuard><Dashboard /></SchoolAdminGuard>} />
+        <Route path="/users" element={<SchoolAdminGuard><UserManagement /></SchoolAdminGuard>} />
+        <Route path="/students" element={<SchoolAdminGuard><StudentList /></SchoolAdminGuard>} />
+        <Route path="/students/:id" element={<SchoolAdminGuard><StudentDetail /></SchoolAdminGuard>} />
+        <Route path="/teachers" element={<SchoolAdminGuard><TeacherList /></SchoolAdminGuard>} />
+        <Route path="/classes" element={<SchoolAdminGuard><ClassManagement /></SchoolAdminGuard>} />
+        <Route path="/grades" element={<SchoolAdminGuard><GradeManagement /></SchoolAdminGuard>} />
+        <Route path="/attendance" element={<SchoolAdminGuard><AttendancePage /></SchoolAdminGuard>} />
+        <Route path="/announcements" element={<SchoolAdminGuard><AnnouncementsPage /></SchoolAdminGuard>} />
+        <Route path="/messaging" element={<SchoolAdminGuard><MessagingPage /></SchoolAdminGuard>} />
+        <Route path="/financial" element={<SchoolAdminGuard><FinancialPage /></SchoolAdminGuard>} />
+        <Route path="/analytics" element={<SchoolAdminGuard><AnalyticsPage /></SchoolAdminGuard>} />
+        <Route path="/timetable" element={<SchoolAdminGuard><TimetablePage /></SchoolAdminGuard>} />
+        <Route path="/notifications" element={<SchoolAdminGuard><NotificationsPage /></SchoolAdminGuard>} />
+        <Route path="/homework" element={<SchoolAdminGuard><HomeworkPage /></SchoolAdminGuard>} />
+        <Route path="/settings" element={<SchoolAdminGuard><SettingsPage /></SchoolAdminGuard>} />
       </Route>
       <Route path="*" element={<Navigate to={defaultPath} replace />} />
     </Routes>

@@ -20,7 +20,7 @@ class ParentHomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('EduConnect — Parent'),
+        title: const Text('Madrassa — Parent'),
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_outlined),

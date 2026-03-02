@@ -8,7 +8,7 @@ import 'interceptors/auth_interceptor.dart';
 import 'interceptors/connectivity_interceptor.dart';
 import 'interceptors/logging_interceptor.dart';
 
-/// Configured Dio HTTP client for the EduConnect API.
+/// Configured Dio HTTP client for the Madrassa API.
 ///
 /// Interceptor pipeline (in order):
 /// 1. [ConnectivityInterceptor] – offline detection & cached GET fallback

@@ -1,4 +1,4 @@
-# 🎓 EduConnect Algeria
+# 🎓 Madrassa
 
 > Full-featured e-learning & school management platform for Algerian private schools  
 > **Django REST API** + **Flutter Mobile App** + **React Admin Panel** (planned)
@@ -13,7 +13,7 @@ ECOLE/
 │   ├── manage.py
 │   ├── requirements.txt
 │   ├── Dockerfile
-│   ├── educonnect/             # Project settings & config
+│   ├── madrassa/             # Project settings & config
 │   │   ├── settings/           # Split settings (base/dev/prod)
 │   │   ├── urls.py             # Main URL router
 │   │   ├── asgi.py             # ASGI + WebSocket config
@@ -296,4 +296,4 @@ Copy `.env.example` to `.env` and fill in:
 
 ## 📜 License
 
-Private — EduConnect Algeria © 2024
+Private — Madrassa © 2024

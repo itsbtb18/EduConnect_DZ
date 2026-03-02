@@ -1,5 +1,5 @@
 """
-Grade calculation services for EduConnect.
+Grade calculation services for Madrassa.
 All averages are computed server-side — NEVER on the client.
 """
 

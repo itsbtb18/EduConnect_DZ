@@ -2,8 +2,8 @@
 class AppConstants {
   AppConstants._();
 
-  static const String appName = 'EduConnect Algeria';
-  static const String appNameAr = 'إيدو كونكت الجزائر';
+  static const String appName = 'Madrassa';
+  static const String appNameAr = 'مدرسة';
 
   // API Configuration
   static const String baseUrl = 'http://10.0.2.2:8001/api/v1';

@@ -46,7 +46,7 @@ class RAGService:
 
                 pc = Pinecone(api_key=settings.PINECONE_API_KEY)
                 self._index = pc.Index(
-                    getattr(settings, "PINECONE_INDEX_NAME", "educonnect")
+                    getattr(settings, "PINECONE_INDEX_NAME", "madrassa")
                 )
             except ImportError:
                 logger.warning(

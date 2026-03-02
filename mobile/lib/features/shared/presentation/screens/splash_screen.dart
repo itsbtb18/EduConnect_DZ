@@ -54,7 +54,7 @@ class _SplashScreenState extends State<SplashScreen> {
               const Icon(Icons.school_rounded, size: 100, color: Colors.white),
               const SizedBox(height: 24),
               Text(
-                'EduConnect',
+                'Madrassa',
                 style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,

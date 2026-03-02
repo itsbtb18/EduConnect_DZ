@@ -1,6 +1,6 @@
 {
-    "name": "educonnect_mobile",
-    "short_name": "educonnect_mobile",
+    "name": "Madrassa",
+    "short_name": "Madrassa",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

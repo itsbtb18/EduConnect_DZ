@@ -1,5 +1,5 @@
 """
-Custom exception handler and exception classes for EduConnect API.
+Custom exception handler and exception classes for Madrassa API.
 Provides consistent error response format across all endpoints.
 """
 

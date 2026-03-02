@@ -1,0 +1,116 @@
+/* AttendancePage — extracted inline styles */
+
+.attendance-grid__week-label {
+  font-weight: 600;
+}
+
+.attendance-grid__empty {
+  text-align: center;
+  padding: 40px;
+  color: #9CA3AF;
+}
+
+.attendance-grid__scroll {
+  overflow-x: auto;
+}
+
+.attendance-grid__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.attendance-grid__th {
+  padding: 10px 14px;
+  border-bottom: 2px solid #E5E7EB;
+  text-align: left;
+  font-weight: 700;
+  color: #6B7280;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+.attendance-grid__th--day {
+  padding: 10px 14px;
+  border-bottom: 2px solid #E5E7EB;
+  text-align: center;
+  font-weight: 700;
+  color: #6B7280;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  min-width: 100px;
+}
+
+.attendance-grid__class-name {
+  padding: 10px 14px;
+  border-bottom: 1px solid #F3F4F6;
+  font-weight: 600;
+}
+
+.attendance-grid__cell {
+  padding: 10px 14px;
+  border-bottom: 1px solid #F3F4F6;
+  text-align: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.attendance-grid__cell--clickable {
+  cursor: pointer;
+}
+
+.attendance-grid__cell--empty {
+  cursor: default;
+}
+
+.attendance-grid__cell--bg-none {
+  background: #F9FAFB;
+}
+
+.attendance-grid__cell--bg-green {
+  background: #D1FAE5;
+}
+
+.attendance-grid__cell--bg-yellow {
+  background: #FEF3C7;
+}
+
+.attendance-grid__cell--bg-orange {
+  background: #FED7AA;
+}
+
+.attendance-grid__cell--bg-red {
+  background: #FEE2E2;
+}
+
+.attendance-grid__pct {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.attendance-grid__pct--good {
+  color: #059669;
+}
+
+.attendance-grid__pct--warn {
+  color: #D97706;
+}
+
+.attendance-grid__pct--bad {
+  color: #DC2626;
+}
+
+.attendance-grid__detail {
+  font-size: 11px;
+  color: #6B7280;
+}
+
+.attendance-grid__no-data {
+  color: #D1D5DB;
+}
+
+.attendance-detail__student-name {
+  font-weight: 600;
+}

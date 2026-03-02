@@ -1,17 +1,21 @@
 """
-Custom User model for EduConnect Algeria.
+Custom User model for Madrassa.
 Uses phone_number as USERNAME_FIELD.
 Supports roles: SUPER_ADMIN, ADMIN, SECTION_ADMIN, TEACHER, PARENT, STUDENT.
 """
 
+import logging
 import uuid
 
+from django.contrib.auth.hashers import identify_hasher
 from django.contrib.auth.models import (
     AbstractBaseUser,
     BaseUserManager,
     PermissionsMixin,
 )
 from django.db import models
+
+logger = logging.getLogger(__name__)
 
 
 class UserManager(BaseUserManager):
@@ -46,7 +50,7 @@ class UserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     """
-    Custom User model for EduConnect.
+    Custom User model for Madrassa.
     - Uses phone_number as the unique identifier (USERNAME_FIELD).
     - No username field.
     - SUPER_ADMIN has no school; all other roles belong to a school.
@@ -110,9 +114,86 @@ class User(AbstractBaseUser, PermissionsMixin):
         verbose_name_plural = "Users"
         ordering = ["last_name", "first_name"]
 
+    # ------------------------------------------------------------------
+    # Safety net: detect & hash plain-text passwords before saving
+    # ------------------------------------------------------------------
+    def save(self, *args, **kwargs):
+        if self.password and not self.password.startswith("!"):
+            try:
+                identify_hasher(self.password)
+            except ValueError:
+                # Password is NOT in a recognised hash format → hash it now
+                logger.warning(
+                    "Detected unhashed password for user %s — hashing before save.",
+                    self.phone_number,
+                )
+                self.set_password(self.password)
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.role})"
 
     @property
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
+
+
+class ActivityLog(models.Model):
+    """Audit log for admin actions."""
+
+    class Action(models.TextChoices):
+        CREATE = "CREATE", "Create"
+        UPDATE = "UPDATE", "Update"
+        DELETE = "DELETE", "Delete"
+        LOGIN = "LOGIN", "Login"
+        EXPORT = "EXPORT", "Export"
+        OTHER = "OTHER", "Other"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="activity_logs",
+    )
+    action = models.CharField(max_length=20, choices=Action.choices)
+    resource = models.CharField(max_length=100, blank=True, default="")
+    description = models.TextField(blank=True, default="")
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "activity_logs"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user} — {self.action} — {self.resource} ({self.created_at})"
+
+
+class PlatformConfig(models.Model):
+    """Singleton platform configuration (one row)."""
+
+    platform_name = models.CharField(max_length=100, default="Madrassa DZ")
+    default_language = models.CharField(max_length=10, default="fr")
+    maintenance_mode = models.BooleanField(default=False)
+    allow_registration = models.BooleanField(default=True)
+    max_schools = models.PositiveIntegerField(default=100)
+    smtp_configured = models.BooleanField(default=False)
+    sms_configured = models.BooleanField(default=False)
+    backup_enabled = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "platform_config"
+        verbose_name = "Platform Config"
+        verbose_name_plural = "Platform Config"
+
+    def save(self, *args, **kwargs):
+        # Enforce singleton
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.platform_name

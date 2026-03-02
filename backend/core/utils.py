@@ -1,5 +1,5 @@
 """
-Shared utility functions for EduConnect.
+Shared utility functions for Madrassa.
 """
 
 import uuid

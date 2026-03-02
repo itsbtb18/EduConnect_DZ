@@ -1,5 +1,5 @@
 """
-EduConnect Algeria — URL Configuration
+Madrassa — URL Configuration
 =======================================
 """
 

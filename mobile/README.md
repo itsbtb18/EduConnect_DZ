@@ -1,4 +1,4 @@
-# educonnect_mobile
+# madrassa_mobile
 
 A new Flutter project.
 

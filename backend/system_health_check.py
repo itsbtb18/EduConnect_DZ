@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-EduConnect Algeria — System Health Check
+Madrassa — System Health Check
 ==========================================
 Production-grade diagnostic script that validates every external service
 the platform depends on: Firebase, PostgreSQL, Redis, OpenAI, Pinecone,
@@ -10,7 +10,7 @@ Usage (from backend/):
     python system_health_check.py          # standalone (reads .env itself)
     python manage.py shell < system_health_check.py   # inside Django
 
-Author: EduConnect DevOps
+Author: Madrassa DevOps
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ _PROJECT_ROOT = _BACKEND_DIR.parent
 os.chdir(_BACKEND_DIR)
 
 # If the user didn't export DJANGO_SETTINGS_MODULE, default to development
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "educonnect.settings.development")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "madrassa.settings.development")
 
 # Append backend/ to sys.path so Django can find the project package
 if str(_BACKEND_DIR) not in sys.path:
@@ -175,8 +175,10 @@ def check_database() -> None:
 def check_redis() -> None:
     _header("REDIS STATUS")
 
-    redis_url = getattr(settings, "CACHES", {}).get("default", {}).get(
-        "LOCATION", os.environ.get("REDIS_URL", "redis://localhost:6380/0")
+    redis_url = (
+        getattr(settings, "CACHES", {})
+        .get("default", {})
+        .get("LOCATION", os.environ.get("REDIS_URL", "redis://localhost:6380/0"))
     )
 
     try:
@@ -266,7 +268,9 @@ def check_pinecone() -> None:
         if index_name and index_name in indexes:
             _result("Target index", PASS, index_name)
         elif index_name:
-            _result("Target index", WARN, f"'{index_name}' not found in {list(indexes)}")
+            _result(
+                "Target index", WARN, f"'{index_name}' not found in {list(indexes)}"
+            )
 
         _record("Pinecone", True)
     except ImportError:
@@ -355,7 +359,7 @@ def print_firewall_instructions() -> None:
   If the Flutter device cannot reach Django, open port 8001 in your firewall.
 
   {_BOLD}Windows (PowerShell as Administrator):{_RESET}
-    netsh advfirewall firewall add rule name="EduConnect Django" ^
+    netsh advfirewall firewall add rule name="Madrassa Django" ^
         dir=in action=allow protocol=TCP localport=8001
 
   {_BOLD}macOS:{_RESET}
@@ -394,9 +398,7 @@ def print_summary() -> None:
         print(f"  {_GREEN}{_BOLD}All services healthy — ready to go!{_RESET}")
     else:
         failed = [s for s, ok, _ in _results if not ok]
-        print(
-            f"  {_RED}{_BOLD}Action required on: {', '.join(failed)}{_RESET}"
-        )
+        print(f"  {_RED}{_BOLD}Action required on: {', '.join(failed)}{_RESET}")
     print()
 
 
@@ -408,7 +410,7 @@ def main() -> None:
 
     print()
     print(
-        f"{_BOLD}EduConnect Algeria — System Health Check{_RESET}  "
+        f"{_BOLD}Madrassa — System Health Check{_RESET}  "
         f"({time.strftime('%Y-%m-%d %H:%M:%S')})"
     )
 

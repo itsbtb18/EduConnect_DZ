@@ -1,4 +1,4 @@
-/// Form validation helpers for the EduConnect app.
+/// Form validation helpers for the Madrassa app.
 class AppValidators {
   AppValidators._();
 

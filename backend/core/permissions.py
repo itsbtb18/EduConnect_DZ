@@ -1,5 +1,5 @@
 """
-Custom DRF permission classes for EduConnect.
+Custom DRF permission classes for Madrassa.
 All role checks compare against the User.Role TextChoices enum values.
 """
 
