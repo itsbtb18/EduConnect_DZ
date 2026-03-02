@@ -111,7 +111,7 @@ const StudentList: React.FC = () => {
       { key: 'phone_number', title: 'Téléphone' },
       { key: 'class_name', title: 'Classe' },
     ];
-    exportToPDF(data?.results || [], cols, 'eleves', 'Liste des élèves — Madrassa');
+    exportToPDF(data?.results || [], cols, 'eleves', 'Liste des élèves — ILMI');
   };
 
   // CSV Import — parse file

@@ -1,5 +1,5 @@
 """
-Grade calculation services for Madrassa.
+Grade calculation services for ILMI.
 All averages are computed server-side — NEVER on the client.
 """
 

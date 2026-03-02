@@ -114,7 +114,7 @@ const SuperAdminAnalytics: React.FC = () => {
             <BarChartOutlined style={{ marginRight: 10 }} />
             Analytiques Plateforme
           </h1>
-          <p>Vue d'ensemble des métriques de la plateforme Madrassa</p>
+          <p>Vue d'ensemble des métriques de la plateforme ILMI</p>
         </div>
       </div>
 

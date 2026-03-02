@@ -1,5 +1,5 @@
 # ============================================================
-# Madrassa — Docker Compose (Production)
+# ILMI — Docker Compose (Production)
 # ============================================================
 # Usage:
 #   docker compose up -d                 # Start all services
@@ -24,7 +24,7 @@ x-backend-common: &backend-common
     network: host                   # Fix apt-get DNS on Windows Docker Desktop
   env_file: .env
   environment: &backend-env
-    DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-madrassa.settings.production}
+    DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-ilmi.settings.production}
     DB_HOST: db
     DB_PORT: "5432"
     REDIS_URL: redis://redis:6379/0
@@ -44,7 +44,7 @@ x-backend-common: &backend-common
       condition: service_healthy
   restart: unless-stopped
   networks:
-    - madrassa
+    - ilmi
 
 services:
   # ──────────────────────────────────────────────
@@ -54,8 +54,8 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DB_NAME:-madrassa_db}
-      POSTGRES_USER: ${DB_USER:-madrassa_user}
+      POSTGRES_DB: ${DB_NAME:-ilmi_db}
+      POSTGRES_USER: ${DB_USER:-ilmi_user}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-10082007}
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
@@ -63,13 +63,13 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-madrassa_user} -d ${DB_NAME:-madrassa_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-ilmi_user} -d ${DB_NAME:-ilmi_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
     networks:
-      - madrassa
+      - ilmi
     deploy:
       resources:
         limits:
@@ -93,7 +93,7 @@ services:
       retries: 5
       start_period: 5s
     networks:
-      - madrassa
+      - ilmi
     deploy:
       resources:
         limits:
@@ -104,7 +104,7 @@ services:
   # ──────────────────────────────────────────────
   api:
     <<: *backend-common
-    container_name: madrassa-api
+    container_name: django
     environment:
       <<: *backend-env
       COLLECT_STATIC: "1"
@@ -124,18 +124,18 @@ services:
   # ──────────────────────────────────────────────
   celery_worker:
     <<: *backend-common
-    container_name: madrassa-celery-worker
+    container_name: celery-worker
     environment:
       <<: *backend-env
       COLLECT_STATIC: "0"
     command: >
-      celery -A madrassa worker
+      celery -A ilmi worker
         -l info
         --concurrency=4
         -E
         -Q default,notifications,reports
     healthcheck:
-      test: ["CMD-SHELL", "celery -A madrassa inspect ping --timeout 10 || exit 1"]
+      test: ["CMD-SHELL", "celery -A ilmi inspect ping --timeout 10 || exit 1"]
       interval: 60s
       timeout: 15s
       retries: 3
@@ -150,12 +150,12 @@ services:
   # ──────────────────────────────────────────────
   celery_beat:
     <<: *backend-common
-    container_name: madrassa-celery-beat
+    container_name: celery-beat
     environment:
       <<: *backend-env
       COLLECT_STATIC: "0"
     command: >
-      celery -A madrassa beat
+      celery -A ilmi beat
         -l info
         --scheduler django_celery_beat.schedulers:DatabaseScheduler
         --pidfile /tmp/celerybeat.pid
@@ -171,7 +171,7 @@ services:
     build:
       context: ./admin
       dockerfile: Dockerfile
-    container_name: madrassa-admin
+    container_name: admin_panel
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost/ || exit 1"]
@@ -180,7 +180,7 @@ services:
       retries: 3
       start_period: 10s
     networks:
-      - madrassa
+      - ilmi
     deploy:
       resources:
         limits:
@@ -191,7 +191,7 @@ services:
   # ──────────────────────────────────────────────
   nginx:
     image: nginx:1.27-alpine
-    container_name: madrassa-nginx
+    container_name: nginx
     restart: unless-stopped
     ports:
       - "80:80"
@@ -213,7 +213,7 @@ services:
       retries: 3
       start_period: 10s
     networks:
-      - madrassa
+      - ilmi
     deploy:
       resources:
         limits:
@@ -236,5 +236,5 @@ volumes:
 # Network
 # ──────────────────────────────────────────────
 networks:
-  madrassa:
+  ilmi:
     driver: bridge

@@ -1,5 +1,5 @@
 /**
- * API service functions for Madrassa admin panel.
+ * API service functions for ILMI admin panel.
  * Each function wraps an apiClient call and returns typed data.
  */
 import apiClient from './client';

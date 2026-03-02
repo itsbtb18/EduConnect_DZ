@@ -1,5 +1,5 @@
 """
-Madrassa — URL Configuration
+ILMI — URL Configuration
 =======================================
 """
 

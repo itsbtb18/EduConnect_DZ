@@ -62,7 +62,7 @@ const Header: React.FC = () => {
   const unreadCount = notifData?.results?.filter((n: any) => !n.is_read).length || 0;
 
   const matchedPath = Object.keys(pageTitles).find((p) => location.pathname.startsWith(p));
-  const title = matchedPath ? pageTitles[matchedPath] : 'Madrassa';
+  const title = matchedPath ? pageTitles[matchedPath] : 'ILMI';
 
   useEffect(() => {
     const handleOutside = (e: MouseEvent) => {

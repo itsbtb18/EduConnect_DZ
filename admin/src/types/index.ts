@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════
-   Madrassa DZ — Admin Panel TypeScript Types
+   ILMI — Admin Panel TypeScript Types
    Matches backend Django serializers for type‑safe API calls
    ══════════════════════════════════════════════════════════════════════ */
 

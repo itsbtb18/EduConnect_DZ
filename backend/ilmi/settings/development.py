@@ -1,5 +1,5 @@
 """
-Madrassa — Development Settings
+ILMI — Development Settings
 ==========================================
 """
 

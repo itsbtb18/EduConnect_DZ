@@ -1,5 +1,5 @@
 """
-Tenant-aware base viewset for Madrassa.
+Tenant-aware base viewset for ILMI.
 All API viewsets that serve tenant-scoped data should inherit from
 TenantAwareViewSet instead of ModelViewSet.
 """

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Madrassa — System Health Check
+ILMI — System Health Check
 ==========================================
 Production-grade diagnostic script that validates every external service
 the platform depends on: Firebase, PostgreSQL, Redis, OpenAI, Pinecone,
@@ -10,7 +10,7 @@ Usage (from backend/):
     python system_health_check.py          # standalone (reads .env itself)
     python manage.py shell < system_health_check.py   # inside Django
 
-Author: Madrassa DevOps
+Author: ILMI DevOps
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ _PROJECT_ROOT = _BACKEND_DIR.parent
 os.chdir(_BACKEND_DIR)
 
 # If the user didn't export DJANGO_SETTINGS_MODULE, default to development
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "madrassa.settings.development")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ilmi.settings.development")
 
 # Append backend/ to sys.path so Django can find the project package
 if str(_BACKEND_DIR) not in sys.path:
@@ -359,7 +359,7 @@ def print_firewall_instructions() -> None:
   If the Flutter device cannot reach Django, open port 8001 in your firewall.
 
   {_BOLD}Windows (PowerShell as Administrator):{_RESET}
-    netsh advfirewall firewall add rule name="Madrassa Django" ^
+    netsh advfirewall firewall add rule name="ILMI Django" ^
         dir=in action=allow protocol=TCP localport=8001
 
   {_BOLD}macOS:{_RESET}
@@ -410,7 +410,7 @@ def main() -> None:
 
     print()
     print(
-        f"{_BOLD}Madrassa — System Health Check{_RESET}  "
+        f"{_BOLD}ILMI — System Health Check{_RESET}  "
         f"({time.strftime('%Y-%m-%d %H:%M:%S')})"
     )
 

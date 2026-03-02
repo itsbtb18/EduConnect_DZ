@@ -1,5 +1,5 @@
 """
-ASGI config for Madrassa.
+ASGI config for ILMI.
 Supports HTTP + WebSocket (Django Channels).
 """
 
@@ -10,7 +10,7 @@ from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.security.websocket import AllowedHostsOriginValidator
 from django.core.asgi import get_asgi_application
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "madrassa.settings.production")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ilmi.settings.production")
 
 # Initialize Django ASGI application early to ensure the AppRegistry
 # is populated before importing code that may import ORM models.

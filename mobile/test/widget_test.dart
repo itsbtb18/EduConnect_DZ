@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:madrassa_mobile/features/shared/presentation/widgets/grade_card.dart';
-import 'package:madrassa_mobile/features/shared/presentation/widgets/attendance_calendar.dart';
-import 'package:madrassa_mobile/features/shared/presentation/widgets/child_switcher.dart';
-import 'package:madrassa_mobile/core/utils/validators.dart';
+import 'package:ilmi_mobile/features/shared/presentation/widgets/grade_card.dart';
+import 'package:ilmi_mobile/features/shared/presentation/widgets/attendance_calendar.dart';
+import 'package:ilmi_mobile/features/shared/presentation/widgets/child_switcher.dart';
+import 'package:ilmi_mobile/core/utils/validators.dart';
 
 void main() {
   group('GradeCard Widget', () {

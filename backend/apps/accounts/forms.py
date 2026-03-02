@@ -1,5 +1,5 @@
 """
-Custom admin forms for the Madrassa User model.
+Custom admin forms for the ILMI User model.
 
 Django's built-in UserCreationForm/UserChangeForm are designed for models
 with a ``username`` field.  Since our User model uses ``phone_number`` as

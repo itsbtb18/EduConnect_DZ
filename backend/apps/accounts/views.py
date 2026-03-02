@@ -749,7 +749,7 @@ class SystemHealthView(APIView):
 
         # Celery
         try:
-            from madrassa.celery import app as celery_app
+            from ilmi.celery import app as celery_app
 
             insp = celery_app.control.inspect(timeout=2)
             active = insp.active()

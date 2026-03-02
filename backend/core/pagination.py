@@ -1,5 +1,5 @@
 """
-Standard pagination classes for Madrassa API.
+Standard pagination classes for ILMI API.
 """
 
 from rest_framework.pagination import PageNumberPagination

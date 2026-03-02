@@ -1,5 +1,5 @@
 # ============================================================
-# Madrassa Admin Panel — Multi-stage Docker Build
+# ILMI Admin Panel — Multi-stage Docker Build
 # ============================================================
 # Stage 1: Build the React app with Vite
 # Stage 2: Serve with nginx

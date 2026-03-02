@@ -1,4 +1,4 @@
-# madrassa_mobile
+# ilmi_mobile
 
 A new Flutter project.
 

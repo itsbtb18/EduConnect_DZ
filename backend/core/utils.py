@@ -1,5 +1,5 @@
 """
-Shared utility functions for Madrassa.
+Shared utility functions for ILMI.
 """
 
 import uuid

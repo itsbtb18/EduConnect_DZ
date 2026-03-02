@@ -1,5 +1,5 @@
 # ============================================================
-# Madrassa — Docker Build Ignore
+# ILMI — Docker Build Ignore
 # ============================================================
 # Keeps the build context small and fast.
 # ============================================================
@@ -8,8 +8,8 @@
 .git
 .gitignore
 
-# Stale config directory (replaced by madrassa/)
-educonnect/
+# Stale config directory (replaced by ilmi/)
+ilmi/
 
 # Python
 __pycache__

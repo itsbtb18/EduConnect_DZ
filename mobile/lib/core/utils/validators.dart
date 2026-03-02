@@ -1,4 +1,4 @@
-/// Form validation helpers for the Madrassa app.
+/// Form validation helpers for the ILMI app.
 class AppValidators {
   AppValidators._();
 

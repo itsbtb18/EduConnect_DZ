@@ -44,7 +44,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
           <Text style={styles.logoEmoji}>🎓</Text>
         </View>
 
-        <Text style={styles.appName}>EduConnect</Text>
+        <Text style={styles.appName}>ILMI</Text>
         <Text style={styles.appSub}>Espace Enseignant</Text>
       </View>
 

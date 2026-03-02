@@ -1,10 +1,10 @@
-# Madrassa (Madrassa-DZ)
+# ILMI (ILMI)
 
 **A comprehensive multi-tenant SaaS school management platform for Algerian private educational institutions**
 
-Madrassa is a full-stack platform (Django + React + Flutter) designed for Algeria's educational system, supporting the national curriculum structure (Primaire, Moyen, Secondaire), trimester grading, and Arabic RTL report cards.
+ILMI is a full-stack platform (Django + React + Flutter) designed for Algeria's educational system, supporting the national curriculum structure (Primaire, Moyen, Secondaire), trimester grading, and Arabic RTL report cards.
 
-> **Repository**: `itsbtb18/EduConnect_DZ` | **Branch**: `dev` (default: `main`)
+> **Repository**: `itsbtb18/ILMI` | **Branch**: `dev` (default: `main`)
 
 ---
 
@@ -98,7 +98,7 @@ ECOLE/
 │   │   ├── notifications/      # Push notification dispatch
 │   │   └── ai_chatbot/         # RAG-powered AI assistant (partial)
 │   ├── core/                   # Shared: models, permissions, mixins, validators
-│   ├── madrassa/             # Django settings, URLs, ASGI/WSGI
+│   ├── ilmi/             # Django settings, URLs, ASGI/WSGI
 │   └── templates/              # WeasyPrint HTML templates (grades, report cards)
 ├── admin/                      # React Admin Panel (TypeScript)
 │   └── src/
@@ -334,7 +334,7 @@ ECOLE/
 
 ```bash
 # Clone and start all services
-git clone https://github.com/itsbtb18/EduConnect_DZ.git
+git clone https://github.com/itsbtb18/ILMI.git
 cd ECOLE
 docker-compose up --build
 
@@ -437,4 +437,4 @@ All endpoints require `Authorization: Bearer <access_token>` header (except logi
 
 ## License
 
-This project is developed for educational purposes as part of the Madrassa initiative.
+This project is developed for educational purposes as part of the ILMI initiative.

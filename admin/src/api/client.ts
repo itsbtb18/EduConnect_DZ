@@ -1,5 +1,5 @@
 /**
- * Axios API client configured for Madrassa Django backend.
+ * Axios API client configured for ILMI Django backend.
  * All requests go through /api/v1/ which Vite proxies to Django in dev
  * and nginx routes to Django in production.
  */

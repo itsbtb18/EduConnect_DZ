@@ -281,7 +281,7 @@ def send_welcome_sms(
     TODO: Integrate with Algerian SMS gateway (Twilio, Infobip, local).
     """
     message = (
-        f"Madrassa — Bienvenue!\n"
+        f"ILMI — Bienvenue!\n"
         f"Élève: {student_name}\n"
         f"Mot de passe temporaire: {temp_password}\n"
         f"Veuillez changer le mot de passe à la première connexion."

@@ -54,7 +54,7 @@ const TeacherList: React.FC = () => {
       { key: 'subject', title: 'Matière' },
       { key: 'last_login', title: 'Dernière connexion' },
     ];
-    exportToPDF(data?.results || [], cols, 'enseignants', 'Liste des enseignants — Madrassa');
+    exportToPDF(data?.results || [], cols, 'enseignants', 'Liste des enseignants — ILMI');
   };
 
   const handleSubmit = async () => {

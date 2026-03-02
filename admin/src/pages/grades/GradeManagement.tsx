@@ -89,7 +89,7 @@ const GradeManagement: React.FC = () => {
       { key: 'score', title: 'Note /20' },
       { key: 'status', title: 'Statut' },
     ];
-    exportToPDF(data?.results || [], cols, 'notes', 'Notes & Bulletins — Madrassa');
+    exportToPDF(data?.results || [], cols, 'notes', 'Notes & Bulletins — ILMI');
   };
 
   // CSV Import for bulk grades

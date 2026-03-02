@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "EduConnect — Enseignant",
-    "slug": "educonnect-teacher",
-    "scheme": "educonnect",
+    "name": "ILMI — Enseignant",
+    "slug": "ilmi-teacher",
+    "scheme": "ilmi",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

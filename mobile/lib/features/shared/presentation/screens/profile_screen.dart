@@ -109,7 +109,7 @@ class ProfileScreen extends StatelessWidget {
                     onTap: () {
                       showAboutDialog(
                         context: context,
-                        applicationName: 'Madrassa',
+                        applicationName: 'ILMI',
                         applicationVersion: '1.0.0',
                         applicationIcon: const Icon(
                           Icons.school,

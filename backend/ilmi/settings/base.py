@@ -1,5 +1,5 @@
 """
-Madrassa — Base Django Settings
+ILMI — Base Django Settings
 ==========================================
 Settings common to all environments.
 """
@@ -19,7 +19,9 @@ SECRET_KEY = config("DJANGO_SECRET_KEY", default="insecure-dev-key-change-me")
 DEBUG = config("DJANGO_DEBUG", default=False, cast=bool)
 
 ALLOWED_HOSTS = config(
-    "DJANGO_ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv()
+    "DJANGO_ALLOWED_HOSTS",
+    default="localhost,127.0.0.1,0.0.0.0,api,ilmi-api",
+    cast=Csv(),
 )
 
 
@@ -85,7 +87,7 @@ MIDDLEWARE = [
     "core.middleware.tenant.TenantMiddleware",
 ]
 
-ROOT_URLCONF = "madrassa.urls"
+ROOT_URLCONF = "ilmi.urls"
 
 TEMPLATES = [
     {
@@ -103,8 +105,8 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "madrassa.wsgi.application"
-ASGI_APPLICATION = "madrassa.asgi.application"
+WSGI_APPLICATION = "ilmi.wsgi.application"
+ASGI_APPLICATION = "ilmi.asgi.application"
 
 
 # ===========================================================================
@@ -114,8 +116,8 @@ ASGI_APPLICATION = "madrassa.asgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("DB_NAME", default="madrassa_db"),
-        "USER": config("DB_USER", default="madrassa_user"),
+        "NAME": config("DB_NAME", default="ilmi_db"),
+        "USER": config("DB_USER", default="ilmi_user"),
         "PASSWORD": config("DB_PASSWORD", default="password"),
         "HOST": config("DB_HOST", default="localhost"),
         "PORT": config("DB_PORT", default="5432"),
@@ -290,7 +292,7 @@ MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50 MB for homework files
 # ===========================================================================
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Madrassa API",
+    "TITLE": "ILMI API",
     "DESCRIPTION": (
         "Complete E-Learning & School Management API for Private Schools in Algeria.\n\n"
         "## Authentication\n"
@@ -352,7 +354,7 @@ FIREBASE_SERVICE_ACCOUNT_PATH = os.path.join(
     BASE_DIR,
     config("FIREBASE_SERVICE_ACCOUNT_PATH", default="firebase-service-account.json"),
 )
-FIREBASE_PROJECT_ID = config("FIREBASE_PROJECT_ID", default="madrassadz")
+FIREBASE_PROJECT_ID = config("FIREBASE_PROJECT_ID", default="ilmidz")
 
 
 # ===========================================================================
@@ -362,4 +364,4 @@ FIREBASE_PROJECT_ID = config("FIREBASE_PROJECT_ID", default="madrassadz")
 OPENAI_API_KEY = config("OPENAI_API_KEY", default="")
 PINECONE_API_KEY = config("PINECONE_API_KEY", default="")
 PINECONE_ENVIRONMENT = config("PINECONE_ENVIRONMENT", default="")
-PINECONE_INDEX_NAME = config("PINECONE_INDEX_NAME", default="madrassa-knowledge")
+PINECONE_INDEX_NAME = config("PINECONE_INDEX_NAME", default="ilmi-knowledge")

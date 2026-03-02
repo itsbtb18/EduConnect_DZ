@@ -120,7 +120,7 @@ const SuperAdminDashboard: React.FC = () => {
           </Avatar>
           <div>
             <div className="sa-school-name">{name}</div>
-            <div className="sa-school-subdomain">{record.subdomain as string}.madrassa.dz</div>
+            <div className="sa-school-subdomain">{record.subdomain as string}.ilmi.dz</div>
           </div>
         </div>
       ),
@@ -234,7 +234,7 @@ const SuperAdminDashboard: React.FC = () => {
             <SafetyCertificateOutlined /> Super Admin
           </div>
           <h1>Tableau de bord plateforme</h1>
-          <p>Vue d&apos;ensemble de la plateforme Madrassa</p>
+          <p>Vue d&apos;ensemble de la plateforme ILMI</p>
         </div>
         <div className="sa-dashboard-header__actions">
           <Button
@@ -432,7 +432,7 @@ const SuperAdminDashboard: React.FC = () => {
         <div className="sa-platform-info__content">
           <GlobalOutlined className="sa-platform-info__icon" />
           <div>
-            <h3>Madrassa</h3>
+            <h3>ILMI</h3>
             <p>
               Plateforme de gestion scolaire multi-établissement — {totalSchools} école{totalSchools !== 1 ? 's' : ''},{' '}
               {totalUsers} utilisateur{totalUsers !== 1 ? 's' : ''}

@@ -1,5 +1,5 @@
 """
-Reusable mixins for Madrassa views and viewsets.
+Reusable mixins for ILMI views and viewsets.
 """
 
 from rest_framework import viewsets

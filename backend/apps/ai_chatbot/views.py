@@ -84,7 +84,7 @@ class ChatQueryView(APIView):
         # 6. Return response
 
         assistant_response = (
-            "I'm the Madrassa AI assistant. This feature is coming soon! "
+            "I'm the ILMI AI assistant. This feature is coming soon! "
             "I'll be able to answer questions about your school, grades, homework, and more."
         )
 

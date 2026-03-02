@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-import 'package:madrassa_mobile/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:madrassa_mobile/features/auth/data/models/user_model.dart';
-import 'package:madrassa_mobile/features/auth/data/repositories/auth_repository.dart';
+import 'package:ilmi_mobile/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:ilmi_mobile/features/auth/data/models/user_model.dart';
+import 'package:ilmi_mobile/features/auth/data/repositories/auth_repository.dart';
 
 // --- Mocks ---
 

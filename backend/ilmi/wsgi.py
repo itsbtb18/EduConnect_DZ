@@ -1,11 +1,11 @@
 """
-WSGI config for Madrassa.
+WSGI config for ILMI.
 """
 
 import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "madrassa.settings.production")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ilmi.settings.production")
 
 application = get_wsgi_application()

@@ -1,5 +1,5 @@
 # ============================================================
-# Madrassa — Production Dockerfile
+# ILMI — Production Dockerfile
 # ============================================================
 # Multi-stage build: deps → runtime (smaller final image)
 # Uses Daphne ASGI for HTTP + WebSocket support
@@ -30,14 +30,14 @@ RUN pip install --no-cache-dir --upgrade pip \
 # ---------- Stage 2: Runtime ----------
 FROM python:3.11-slim AS runtime
 
-LABEL maintainer="Madrassa DZ <admin@madrassa.dz>" \
-      description="Madrassa — Django ASGI Backend" \
+LABEL maintainer="ILMI <admin@ilmi.dz>" \
+      description="ILMI — Django ASGI Backend" \
       version="1.0.0"
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     DEBIAN_FRONTEND=noninteractive \
-    DJANGO_SETTINGS_MODULE=madrassa.settings.production \
+    DJANGO_SETTINGS_MODULE=ilmi.settings.production \
     APP_HOME=/app
 
 # Install runtime-only libs (no build tools → smaller image)
@@ -98,4 +98,4 @@ CMD ["daphne", \
      "--proxy-headers", \
      "--access-log", "-", \
      "-v", "1", \
-     "madrassa.asgi:application"]
+     "ilmi.asgi:application"]

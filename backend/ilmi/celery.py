@@ -1,5 +1,5 @@
 """
-Celery configuration for Madrassa.
+Celery configuration for ILMI.
 
 Broker/backend: Redis
 Timezone: Africa/Algiers
@@ -11,9 +11,9 @@ import os
 from celery import Celery
 from celery.schedules import crontab
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "madrassa.settings.production")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ilmi.settings.production")
 
-app = Celery("madrassa")
+app = Celery("ilmi")
 
 # ---------------------------------------------------------------------------
 # Core configuration

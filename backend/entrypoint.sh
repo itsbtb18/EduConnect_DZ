@@ -1,6 +1,6 @@
 #!/bin/sh
 # ============================================================
-# Madrassa — Docker Entrypoint
+# ILMI — Docker Entrypoint
 # ============================================================
 # Waits for PostgreSQL + Redis, runs migrations, then starts
 # the CMD passed by docker-compose / Dockerfile.
@@ -69,8 +69,8 @@ if not User.objects.filter(phone_number='${DJANGO_SUPERUSER_PHONE}').exists():
         phone_number='${DJANGO_SUPERUSER_PHONE}',
         password='${DJANGO_SUPERUSER_PASSWORD}',
         first_name='${DJANGO_SUPERUSER_FIRST_NAME:-Admin}',
-        last_name='${DJANGO_SUPERUSER_LAST_NAME:-Madrassa}',
-        email='${DJANGO_SUPERUSER_EMAIL:-admin@madrassa.dz}',
+        last_name='${DJANGO_SUPERUSER_LAST_NAME:-ILMI}',
+        email='${DJANGO_SUPERUSER_EMAIL:-admin@ilmi.dz}',
     )
     print('Superuser created.')
 else:

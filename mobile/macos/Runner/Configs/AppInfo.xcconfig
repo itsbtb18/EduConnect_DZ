@@ -5,10 +5,10 @@
 // 'flutter create' template.
 
 // The application's name. By default this is also the title of the Flutter window.
-PRODUCT_NAME = madrassa_mobile
+PRODUCT_NAME = ilmi_mobile
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.madrassa.dz.madrassaMobile
+PRODUCT_BUNDLE_IDENTIFIER = com.ilmi.dz.ilmiMobile
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.madrassa.dz. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 com.ilmi.dz. All rights reserved.

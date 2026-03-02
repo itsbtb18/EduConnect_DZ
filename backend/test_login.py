@@ -4,7 +4,7 @@ import os
 
 import django
 
-os.environ["DJANGO_SETTINGS_MODULE"] = "madrassa.settings.development"
+os.environ["DJANGO_SETTINGS_MODULE"] = "ilmi.settings.development"
 django.setup()
 
 from django.contrib.auth import get_user_model, authenticate  # noqa: E402

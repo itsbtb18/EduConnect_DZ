@@ -1,5 +1,5 @@
 """
-Custom User model for Madrassa.
+Custom User model for ILMI.
 Uses phone_number as USERNAME_FIELD.
 Supports roles: SUPER_ADMIN, ADMIN, SECTION_ADMIN, TEACHER, PARENT, STUDENT.
 """
@@ -50,7 +50,7 @@ class UserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     """
-    Custom User model for Madrassa.
+    Custom User model for ILMI.
     - Uses phone_number as the unique identifier (USERNAME_FIELD).
     - No username field.
     - SUPER_ADMIN has no school; all other roles belong to a school.
@@ -175,7 +175,7 @@ class ActivityLog(models.Model):
 class PlatformConfig(models.Model):
     """Singleton platform configuration (one row)."""
 
-    platform_name = models.CharField(max_length=100, default="Madrassa DZ")
+    platform_name = models.CharField(max_length=100, default="ILMI")
     default_language = models.CharField(max_length=10, default="fr")
     maintenance_mode = models.BooleanField(default=False)
     allow_registration = models.BooleanField(default=True)

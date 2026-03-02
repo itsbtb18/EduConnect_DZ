@@ -1,8 +1,8 @@
-# Madrassa Admin Panel — Implementation Summary
+# ILMI Admin Panel — Implementation Summary
 
 ## Overview
 
-This document describes all features implemented in the Madrassa admin panel, aligned with the product specification in `Reports/PRODUCT_FEATURES.md`. The admin panel is a React 18 + TypeScript + Ant Design application that serves as the complete management interface for Algerian schools.
+This document describes all features implemented in the ILMI admin panel, aligned with the product specification in `Reports/PRODUCT_FEATURES.md`. The admin panel is a React 18 + TypeScript + Ant Design application that serves as the complete management interface for Algerian schools.
 
 ---
 

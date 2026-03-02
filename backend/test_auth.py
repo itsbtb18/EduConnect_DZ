@@ -1,6 +1,6 @@
 import django, os
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "madrassa.settings.development")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ilmi.settings.development")
 django.setup()
 
 from django.contrib.auth import get_user_model, authenticate

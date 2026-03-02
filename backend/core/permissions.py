@@ -1,5 +1,5 @@
 """
-Custom DRF permission classes for Madrassa.
+Custom DRF permission classes for ILMI.
 All role checks compare against the User.Role TextChoices enum values.
 """
 

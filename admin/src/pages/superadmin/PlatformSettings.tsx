@@ -43,7 +43,7 @@ const DEFAULT_CONFIG: PlatformConfig = {
   alertDaysBeforeExpiry: 7,
 };
 
-const STORAGE_KEY = 'madrassa_platform_settings';
+const STORAGE_KEY = 'ilmi_platform_settings';
 
 function loadConfig(): PlatformConfig {
   try {
@@ -99,7 +99,7 @@ const PlatformSettings: React.FC = () => {
             <SettingOutlined style={{ marginRight: 10 }} />
             Paramètres de la plateforme
           </h1>
-          <p>Configuration globale de la plateforme Madrassa</p>
+          <p>Configuration globale de la plateforme ILMI</p>
         </div>
         <div className="page-header__actions">
           {dirty && (
@@ -294,7 +294,7 @@ const PlatformSettings: React.FC = () => {
           <div className="sa-setting-item">
             <div className="sa-setting-item__info">
               <h4>Version de la plateforme</h4>
-              <p>Madrassa v2.0.0</p>
+              <p>ILMI v2.0.0</p>
             </div>
             <Tag color="green" icon={<CheckCircleOutlined />}>Stable</Tag>
           </div>

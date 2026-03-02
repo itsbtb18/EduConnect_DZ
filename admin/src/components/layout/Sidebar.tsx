@@ -164,7 +164,7 @@ const Sidebar: React.FC = () => {
               <GlobalOutlined />
             </div>
             <div>
-              <div className="sidebar__school-name">Madrassa DZ</div>
+              <div className="sidebar__school-name">ILMI</div>
               <div className="sidebar__school-plan">Plateforme Multi-Écoles</div>
             </div>
           </div>

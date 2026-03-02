@@ -2,7 +2,7 @@
 class AppConstants {
   AppConstants._();
 
-  static const String appName = 'Madrassa';
+  static const String appName = 'ILMI';
   static const String appNameAr = 'مدرسة';
 
   // API Configuration

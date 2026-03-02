@@ -79,7 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Icon(Icons.school_rounded, size: 80, color: AppColors.primary),
                 const SizedBox(height: 16),
                 Text(
-                  'Madrassa',
+                  'ILMI',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                     fontWeight: FontWeight.bold,

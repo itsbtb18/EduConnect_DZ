@@ -63,7 +63,7 @@ export default function ProfileScreen() {
   const handleSupport = () => {
     Alert.alert(
       'Contacter le support',
-      'support@educonnect.dz\n+213 23 456 789',
+      'support@ilmi.dz\n+213 23 456 789',
       [{ text: 'OK' }],
     );
   };
@@ -249,7 +249,7 @@ export default function ProfileScreen() {
           <SupportRow
             icon="📋"
             label="Conditions d'utilisation"
-            onPress={() => Alert.alert("Conditions d'utilisation", 'En utilisant EduConnect, vous acceptez nos CGU disponibles sur educonnect.dz/cgu')}
+            onPress={() => Alert.alert("Conditions d'utilisation", 'En utilisant ILMI, vous acceptez nos CGU disponibles sur ilmi.dz/cgu')}
           />
         </Card>
 
@@ -259,7 +259,7 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
         {/* App version */}
-        <Text style={styles.version}>EduConnect Enseignant · v1.0.0</Text>
+        <Text style={styles.version}>ILMI Enseignant · v1.0.0</Text>
       </ScrollView>
     </View>
   );

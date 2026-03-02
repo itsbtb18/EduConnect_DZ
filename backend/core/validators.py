@@ -1,5 +1,5 @@
 """
-Custom validators for Madrassa.
+Custom validators for ILMI.
 """
 
 from django.core.exceptions import ValidationError

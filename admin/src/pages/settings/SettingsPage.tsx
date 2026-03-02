@@ -10,7 +10,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useUpdateProfile, useChangePassword } from '../../hooks/useApi';
 
-const NOTIF_STORAGE_KEY = 'madrassa_notification_prefs';
+const NOTIF_STORAGE_KEY = 'ilmi_notification_prefs';
 
 interface NotifPrefs {
   email: boolean;
@@ -28,7 +28,7 @@ const defaultNotifPrefs: NotifPrefs = {
   absences: true,
 };
 
-const GENERAL_STORAGE_KEY = 'madrassa_general_settings';
+const GENERAL_STORAGE_KEY = 'ilmi_general_settings';
 
 interface GeneralSettings {
   language: string;

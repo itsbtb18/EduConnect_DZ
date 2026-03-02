@@ -1,5 +1,5 @@
 # ========================
-# Madrassa
+# ILMI
 # ========================
 
 # ---- Python / Django ----
@@ -52,7 +52,7 @@ admin_panel/.next/
 admin_panel/dist/
 
 # ---- Legacy projects (not used) ----
-madrassa-admin/
+ilmi-admin/
 frontend/
 
 # ---- Environment & Secrets ----
