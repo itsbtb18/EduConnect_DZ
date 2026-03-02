@@ -10,19 +10,19 @@ import {
   Platform,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { StackNavigationProp } from '@react-navigation/stack';
 import Toast from 'react-native-toast-message';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Fonts, Radius, Shadow, Spacing } from '../../theme';
 import useStore from '../../store/useStore';
-import { GradesStackParamList } from '../../navigation';
+import { GradesStackParamList } from '../../navigation/AppNavigator';
 import ScreenHeader from '../../components/ui/ScreenHeader';
 import Avatar from '../../components/ui/Avatar';
 import { Grade } from '../../types';
 import { EXAM_LABELS } from './GradeListScreen';
 
 type Route = RouteProp<GradesStackParamList, 'GradeEntryScreen'>;
-type Nav   = NativeStackNavigationProp<GradesStackParamList>;
+type Nav   = StackNavigationProp<GradesStackParamList>;
 
 // ─── Grade border/bg logic ────────────────────────────────────────────────────
 function gradeStyle(value: number, maxValue: number, empty: boolean) {

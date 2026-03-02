@@ -11,18 +11,18 @@ import {
   TextInput,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { StackNavigationProp } from '@react-navigation/stack';
 import Toast from 'react-native-toast-message';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Fonts, Radius, Shadow, Spacing } from '../../theme';
 import useStore from '../../store/useStore';
-import { ClassesStackParamList } from '../../navigation';
+import { ClassesStackParamList } from '../../navigation/AppNavigator';
 import ScreenHeader from '../../components/ui/ScreenHeader';
 import Avatar from '../../components/ui/Avatar';
 import { AttendanceStatus, AttendanceRecord, Student } from '../../types';
 
 type Route = RouteProp<ClassesStackParamList, 'AttendanceScreen'>;
-type Nav   = NativeStackNavigationProp<ClassesStackParamList>;
+type Nav   = StackNavigationProp<ClassesStackParamList>;
 
 const DAYS_FR   = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'] as const;
 const MONTHS_FR = [

@@ -42,11 +42,11 @@ export const Colors = {
 };
 
 export const Fonts = {
-  regular:    undefined,
-  medium:     undefined,
-  semiBold:   undefined,
-  bold:       undefined,
-  extraBold:  undefined,
+  regular:   'System',
+  medium:    'System',
+  semiBold:  'System',
+  bold:      'System',
+  extraBold: 'System',
 };
 
 export const Spacing = {

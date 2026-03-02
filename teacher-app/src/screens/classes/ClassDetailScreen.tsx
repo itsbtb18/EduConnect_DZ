@@ -12,11 +12,11 @@ import {
   SectionList,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Fonts, Radius, Shadow, Spacing } from '../../theme';
 import useStore from '../../store/useStore';
-import { ClassesStackParamList } from '../../navigation';
+import { ClassesStackParamList } from '../../navigation/AppNavigator';
 import Avatar from '../../components/ui/Avatar';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -27,7 +27,7 @@ import EmptyState from '../../components/ui/EmptyState';
 import { Student, HomeworkPost, Resource, AttendanceSession, AttendanceRecord } from '../../types';
 
 type Route = RouteProp<ClassesStackParamList, 'ClassDetailScreen'>;
-type Nav   = NativeStackNavigationProp<ClassesStackParamList>;
+type Nav   = StackNavigationProp<ClassesStackParamList>;
 
 const TABS = ['Élèves', 'Devoirs', 'Ressources', 'Présences'] as const;
 

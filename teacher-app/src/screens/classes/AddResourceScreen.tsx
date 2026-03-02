@@ -10,20 +10,20 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { StackNavigationProp } from '@react-navigation/stack';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import Toast from 'react-native-toast-message';
 import { Colors, Fonts, Radius, Shadow, Spacing } from '../../theme';
 import useStore from '../../store/useStore';
-import { ClassesStackParamList } from '../../navigation';
+import { ClassesStackParamList } from '../../navigation/AppNavigator';
 import ScreenHeader from '../../components/ui/ScreenHeader';
 import Input from '../../components/ui/Input';
 import FileTypeIcon from '../../components/ui/FileTypeIcon';
 import { Resource } from '../../types';
 
 type Route = RouteProp<ClassesStackParamList, 'AddResourceScreen'>;
-type Nav   = NativeStackNavigationProp<ClassesStackParamList>;
+type Nav   = StackNavigationProp<ClassesStackParamList>;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 type FileTypeOption = Resource['fileType'];

@@ -11,18 +11,18 @@ import {
   Platform,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Fonts, Radius, Shadow, Spacing } from '../../theme';
 import useStore from '../../store/useStore';
-import { MessagesStackParamList } from '../../navigation';
+import { MessagesStackParamList } from '../../navigation/AppNavigator';
 import Avatar from '../../components/ui/Avatar';
 import FileTypeIcon from '../../components/ui/FileTypeIcon';
 import { ChatMessage } from '../../types';
 import { messageTemplates } from '../../data/mockData';
 
 type Route = RouteProp<MessagesStackParamList, 'ChatScreen'>;
-type Nav   = NativeStackNavigationProp<MessagesStackParamList>;
+type Nav   = StackNavigationProp<MessagesStackParamList>;
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 function formatMsgTime(iso: string) {

@@ -8,15 +8,15 @@ import {
   TextInput,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { Colors, Fonts, Radius, Spacing } from '../../theme';
 import useStore from '../../store/useStore';
-import { MessagesStackParamList } from '../../navigation';
+import { MessagesStackParamList } from '../../navigation/AppNavigator';
 import ScreenHeader from '../../components/ui/ScreenHeader';
 import Avatar from '../../components/ui/Avatar';
 import { Student } from '../../types';
 
-type Nav = NativeStackNavigationProp<MessagesStackParamList>;
+type Nav = StackNavigationProp<MessagesStackParamList>;
 
 interface Section {
   className: string;
