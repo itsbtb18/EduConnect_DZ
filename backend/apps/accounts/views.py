@@ -202,6 +202,47 @@ class TokenRefreshAPIView(TokenRefreshView):
 
 
 # ---------------------------------------------------------------------------
+# Logout (blacklist refresh token)
+# ---------------------------------------------------------------------------
+
+
+@extend_schema(
+    tags=["auth"],
+    summary="Logout — blacklist refresh token",
+    description="Blacklists the given refresh token so it can no longer be used.",
+    request=inline_serializer(
+        "LogoutRequest",
+        fields={"refresh": serializers.CharField()},
+    ),
+    responses={
+        205: OpenApiResponse(description="Token blacklisted."),
+        400: OpenApiResponse(description="Invalid token."),
+    },
+)
+class LogoutView(APIView):
+    """POST /api/v1/auth/logout/"""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        from rest_framework_simplejwt.tokens import RefreshToken
+        from rest_framework_simplejwt.exceptions import TokenError
+
+        refresh = request.data.get("refresh")
+        if not refresh:
+            return Response(
+                {"detail": "Refresh token is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            token = RefreshToken(refresh)
+            token.blacklist()
+        except TokenError:
+            pass  # Token already expired / blacklisted — that's fine
+        return Response(status=status.HTTP_205_RESET_CONTENT)
+
+
+# ---------------------------------------------------------------------------
 # User management (school admin or superadmin)
 # ---------------------------------------------------------------------------
 

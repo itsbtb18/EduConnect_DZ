@@ -73,9 +73,9 @@ COPY --chown=django:django . .
 RUN mkdir -p $APP_HOME/staticfiles $APP_HOME/media $APP_HOME/logs \
     && chown -R django:django $APP_HOME
 
-# Copy and set entrypoint
+# Copy and set entrypoint (sed fixes Windows CRLF → LF)
 COPY --chown=django:django entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
 
 # Collect static files (uses dummy SECRET_KEY if not set)
 RUN DJANGO_SECRET_KEY=build-placeholder python manage.py collectstatic --noinput 2>/dev/null || true
