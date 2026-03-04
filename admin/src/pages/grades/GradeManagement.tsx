@@ -11,7 +11,9 @@ import {
   UploadOutlined,
   FilePdfOutlined,
   TrophyOutlined,
+  HistoryOutlined,
 } from '@ant-design/icons';
+import GradeAuditTimeline from '../../components/ui/GradeAuditTimeline';
 import { useGrades, useCreateGrade, useUpdateGrade, useDeleteGrade, useStudents, useSubjects, useReportCards, useGenerateReportCard } from '../../hooks/useApi';
 import { useDebounce } from '../../hooks/useDebounce';
 import { exportToCSV, exportToPDF } from '../../hooks/useExport';
@@ -28,6 +30,11 @@ const GradeManagement: React.FC = () => {
   const [csvGrades, setCsvGrades] = useState<Record<string, string>[]>([]);
   const [csvImporting, setCsvImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Audit drawer state
+  const [auditDrawerOpen, setAuditDrawerOpen] = useState(false);
+  const [auditStudentId, setAuditStudentId] = useState<string | null>(null);
+  const [auditStudentName, setAuditStudentName] = useState('');
 
   const { data, isLoading, refetch } = useGrades({ page, page_size: 20, search: debouncedSearch || undefined });
   const createGrade = useCreateGrade();
@@ -208,11 +215,23 @@ const GradeManagement: React.FC = () => {
     {
       title: 'Actions',
       key: 'actions',
-      width: 120,
+      width: 160,
       render: (_: unknown, r: Record<string, unknown>) => (
         <Space>
           <Tooltip title="Modifier">
             <Button type="text" icon={<EditOutlined />} size="small" onClick={() => openEdit(r)} />
+          </Tooltip>
+          <Tooltip title="Historique">
+            <Button
+              type="text"
+              icon={<HistoryOutlined />}
+              size="small"
+              onClick={() => {
+                setAuditStudentId((r.student as string) || (r.id as string));
+                setAuditStudentName((r.student_name as string) || '');
+                setAuditDrawerOpen(true);
+              }}
+            />
           </Tooltip>
           <Popconfirm title="Supprimer cette note ?" onConfirm={() => deleteGrade.mutate(r.id as string)} okText="Oui" cancelText="Non">
             <Tooltip title="Supprimer">
@@ -448,6 +467,14 @@ const GradeManagement: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* Audit Timeline Drawer */}
+      <GradeAuditTimeline
+        open={auditDrawerOpen}
+        onClose={() => setAuditDrawerOpen(false)}
+        studentId={auditStudentId}
+        studentName={auditStudentName}
+      />
 
       {/* CSV Import Modal for Grades */}
       <Modal

@@ -8,6 +8,7 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Fonts, Radius, Spacing } from '../../theme';
@@ -37,12 +38,12 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
     <View style={styles.root}>
       {/* ── Top section ──────────────────────────────────────────────── */}
       <View style={[styles.topSection, { paddingTop: insets.top + 20 }]}>
-        {/* Logo box — gradient simulation (primary → accent diagonal split) */}
-        <View style={styles.logoBox}>
-          <View style={styles.logoGradientLeft} />
-          <View style={styles.logoGradientRight} />
-          <Text style={styles.logoEmoji}>🎓</Text>
-        </View>
+        {/* Logo */}
+        <Image
+          source={require('../../../assets/ilmi-logo.png')}
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
 
         <Text style={styles.appName}>ILMI</Text>
         <Text style={styles.appSub}>Espace Enseignant</Text>
@@ -129,34 +130,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl,
   },
 
-  // Logo box with gradient simulation
-  logoBox: {
-    width: 80,
-    height: 80,
-    borderRadius: 20,
-    overflow: 'hidden',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  logoGradientLeft: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: Colors.primary,
-  },
-  logoGradientRight: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 80,
-    height: 80,
-    backgroundColor: Colors.accent,
-    opacity: 0.55,
-    borderRadius: 20,
-    transform: [{ rotate: '45deg' }, { translateX: 20 }],
-  },
-  logoEmoji: {
-    fontSize: 40,
-    zIndex: 1,
+  // Logo image
+  logoImage: {
+    width: 160,
+    height: 64,
+    marginBottom: 4,
   },
 
   appName: {

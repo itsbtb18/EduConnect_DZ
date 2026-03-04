@@ -1,52 +1,85 @@
 """
-Grades models: Subject (per-school), TrimesterConfig, Grade with full
-draft → submitted → published/returned workflow.
+╔══════════════════════════════════════════════════════════════════════════╗
+║  Grades — Complete grade management system for Algerian schools (ILMI) ║
+║                                                                        ║
+║  Models:                                                               ║
+║    ExamType          Type d'examen par matière/classe/trimestre        ║
+║    Grade             Note d'un élève à un examen                       ║
+║    SubjectAverage    Moyenne matière par trimestre                      ║
+║    TrimesterAverage  Moyenne générale du trimestre + classements       ║
+║    AnnualAverage     Moyenne annuelle                                  ║
+║    GradeAppeal       Recours d'un élève                                ║
+║    ReportCard        Bulletin PDF généré                                ║
+║                                                                        ║
+║  Calcul:                                                               ║
+║    moyenne_matière = Σ(score × percentage) / 100                       ║
+║    moyenne_trimestre = Σ(moyenne_matière × coeff) / Σ(coeffs)          ║
+║    moyenne_annuelle = (T1 + T2 + T3) / 3                              ║
+╚══════════════════════════════════════════════════════════════════════════╝
 """
 
 import uuid
 
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
 
 
-# ---------------------------------------------------------------------------
-# Subject (school-scoped)
-# ---------------------------------------------------------------------------
+# ═══════════════════════════════════════════════════════════════════════════
+# 1. EXAM TYPE — defines exam structure per subject/class/trimester
+# ═══════════════════════════════════════════════════════════════════════════
 
 
-class Subject(models.Model):
-    """A subject offered by a school within a specific section and class."""
+class ExamType(models.Model):
+    """
+    Définit les types d'examens pour une matière dans une classe.
+    Ex: Examen 1 (60%), Examen 2 (20%), Contrôle Continu (20%)
+
+    La somme des percentages pour un même (subject, classroom, academic_year,
+    trimester) doit être exactement 100.  Vérifié dans clean() et serializer.
+    """
+
+    TRIMESTER_CHOICES = [
+        (1, "Trimestre 1"),
+        (2, "Trimestre 2"),
+        (3, "Trimestre 3"),
+    ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    school = models.ForeignKey(
-        "schools.School",
+
+    subject = models.ForeignKey(
+        "academics.Subject",
         on_delete=models.CASCADE,
-        related_name="subjects",
+        related_name="exam_types",
     )
-    section = models.ForeignKey(
-        "schools.Section",
-        on_delete=models.CASCADE,
-        related_name="subjects",
-    )
-    class_obj = models.ForeignKey(
+    classroom = models.ForeignKey(
         "academics.Class",
         on_delete=models.CASCADE,
-        related_name="subjects",
-        db_column="class_id",
+        related_name="exam_types",
     )
-    name = models.CharField(max_length=100)
-    coefficient = models.DecimalField(max_digits=4, decimal_places=2, default=1)
-    teacher = models.ForeignKey(
-        "accounts.User",
+    academic_year = models.ForeignKey(
+        "schools.AcademicYear",
         on_delete=models.CASCADE,
-        related_name="taught_subjects",
-        limit_choices_to={"role": "TEACHER"},
+        related_name="exam_types",
     )
-    is_mandatory = models.BooleanField(default=True)
+    trimester = models.IntegerField(choices=TRIMESTER_CHOICES)
 
-    # Soft delete
-    is_deleted = models.BooleanField(default=False)
-    deleted_at = models.DateTimeField(blank=True, null=True)
+    name = models.CharField(
+        max_length=100,
+        help_text='Ex: "Examen 1", "Contrôle Continu", "Devoir Surveillé"',
+    )
+    percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        help_text="Pourcentage de cet examen dans la moyenne (ex: 60.00)",
+    )
+    max_score = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=20,
+        help_text="Barème de l'examen (/20, /10, etc.)",
+    )
 
     # Audit
     created_by = models.ForeignKey(
@@ -54,108 +87,258 @@ class Subject(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="created_subjects",
+        related_name="created_exam_types",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = "grade_subjects"
-        ordering = ["name"]
+        db_table = "exam_types"
+        ordering = ["trimester", "name"]
+        verbose_name = "Type d'examen"
+        verbose_name_plural = "Types d'examens"
 
     def __str__(self):
-        return f"{self.name} ({self.class_obj.name})"
-
-    def soft_delete(self):
-        from django.utils import timezone
-
-        self.is_deleted = True
-        self.deleted_at = timezone.now()
-        self.save(update_fields=["is_deleted", "deleted_at", "updated_at"])
-
-
-# ---------------------------------------------------------------------------
-# TrimesterConfig (weight distribution per school/section)
-# ---------------------------------------------------------------------------
-
-
-class TrimesterConfig(models.Model):
-    """
-    Defines the weight distribution for a school-section pair.
-    Constraint: continuous + test1 + test2 + final = 1.00
-    """
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    school = models.ForeignKey(
-        "schools.School",
-        on_delete=models.CASCADE,
-        related_name="trimester_configs",
-    )
-    section = models.ForeignKey(
-        "schools.Section",
-        on_delete=models.CASCADE,
-        related_name="trimester_configs",
-    )
-
-    continuous_weight = models.DecimalField(
-        max_digits=4, decimal_places=2, default="0.20"
-    )
-    test1_weight = models.DecimalField(max_digits=4, decimal_places=2, default="0.20")
-    test2_weight = models.DecimalField(max_digits=4, decimal_places=2, default="0.20")
-    final_weight = models.DecimalField(max_digits=4, decimal_places=2, default="0.40")
-
-    class Meta:
-        db_table = "trimester_configs"
-        unique_together = ("school", "section")
-
-    def __str__(self):
-        return f"TrimesterConfig: {self.school.name} — {self.section.name}"
+        return (
+            f"{self.name} ({self.percentage}%) - {self.subject.name} T{self.trimester}"
+        )
 
     def clean(self):
-        total = (
-            self.continuous_weight
-            + self.test1_weight
-            + self.test2_weight
-            + self.final_weight
-        )
-        from decimal import Decimal
-
-        if total != Decimal("1.00"):
-            raise ValidationError(f"Weights must sum to 1.00 (currently {total}).")
-
-    def save(self, *args, **kwargs):
-        self.full_clean()
-        super().save(*args, **kwargs)
+        """Validate that percentage is between 0 and 100 and max_score > 0."""
+        if self.percentage is not None and (
+            self.percentage < 0 or self.percentage > 100
+        ):
+            raise ValidationError(
+                {"percentage": "Le pourcentage doit être entre 0 et 100."}
+            )
+        if self.max_score is not None and self.max_score <= 0:
+            raise ValidationError({"max_score": "Le barème doit être supérieur à 0."})
 
 
-# ---------------------------------------------------------------------------
-# Grade
-# ---------------------------------------------------------------------------
+# ═══════════════════════════════════════════════════════════════════════════
+# 2. GRADE — individual exam score for a student
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 class Grade(models.Model):
     """
-    A single grade for a student in a subject.
-    Immutable once PUBLISHED — save() raises ValidationError if the value
-    is changed after publish.
+    Note d'un élève pour un type d'examen spécifique.
+    Si is_absent=True, le score est considéré comme 0 pour le calcul.
     """
 
-    class ExamType(models.TextChoices):
-        CONTINUOUS = "CONTINUOUS", "Continuous Assessment"
-        TEST_1 = "TEST_1", "Test 1"
-        TEST_2 = "TEST_2", "Test 2"
-        FINAL = "FINAL", "Final Exam"
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
-    class Status(models.TextChoices):
-        DRAFT = "DRAFT", "Draft"
-        SUBMITTED = "SUBMITTED", "Submitted for Review"
-        PUBLISHED = "PUBLISHED", "Published"
-        RETURNED = "RETURNED", "Returned"
+    student = models.ForeignKey(
+        "academics.StudentProfile",
+        on_delete=models.CASCADE,
+        related_name="grades",
+    )
+    exam_type = models.ForeignKey(
+        ExamType,
+        on_delete=models.CASCADE,
+        related_name="grades",
+    )
 
-    TRIMESTER_CHOICES = [
-        (1, "Trimester 1"),
-        (2, "Trimester 2"),
-        (3, "Trimester 3"),
+    score = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Note obtenue (null = pas encore saisie)",
+    )
+    is_absent = models.BooleanField(
+        default=False,
+        help_text="Absent = note comptée comme 0",
+    )
+
+    # Publication control
+    is_published = models.BooleanField(
+        default=False,
+        help_text="Publié aux élèves/parents",
+    )
+    published_at = models.DateTimeField(null=True, blank=True)
+    published_by = models.ForeignKey(
+        "accounts.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="published_grades",
+    )
+
+    # Audit
+    entered_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="entered_grades",
+        help_text="Enseignant ou admin ayant saisi la note",
+    )
+    entered_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "student_grades"
+        unique_together = ["student", "exam_type"]
+        ordering = ["exam_type__trimester", "exam_type__name"]
+        verbose_name = "Note"
+        verbose_name_plural = "Notes"
+
+    def __str__(self):
+        val = "ABS" if self.is_absent else (self.score or "—")
+        return (
+            f"{self.student} — {self.exam_type.subject.name} "
+            f"{self.exam_type.name}: {val}/{self.exam_type.max_score}"
+        )
+
+    def clean(self):
+        """Validate score is within bounds."""
+        if self.score is not None and self.exam_type_id:
+            if self.score < 0:
+                raise ValidationError({"score": "La note ne peut pas être négative."})
+            if self.score > self.exam_type.max_score:
+                raise ValidationError(
+                    {
+                        "score": f"La note ne peut pas dépasser {self.exam_type.max_score}."
+                    }
+                )
+
+    @property
+    def effective_score(self):
+        """Return 0 if absent, else the score (or None if not entered)."""
+        if self.is_absent:
+            return 0
+        return self.score
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 3. SUBJECT AVERAGE — per student/subject/trimester
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class SubjectAverage(models.Model):
+    """
+    Moyenne calculée d'un élève pour une matière sur un trimestre.
+
+    Formule: Σ(score_examen × percentage_examen) / 100
+    Le résultat est ramené sur le barème du niveau (max_grade).
+
+    Si manual_override est défini, il remplace calculated_average.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    student = models.ForeignKey(
+        "academics.StudentProfile",
+        on_delete=models.CASCADE,
+        related_name="subject_averages",
+    )
+    subject = models.ForeignKey(
+        "academics.Subject",
+        on_delete=models.CASCADE,
+        related_name="subject_averages",
+    )
+    classroom = models.ForeignKey(
+        "academics.Class",
+        on_delete=models.CASCADE,
+        related_name="subject_averages",
+    )
+    academic_year = models.ForeignKey(
+        "schools.AcademicYear",
+        on_delete=models.CASCADE,
+        related_name="subject_averages",
+    )
+    trimester = models.IntegerField(
+        choices=ExamType.TRIMESTER_CHOICES,
+    )
+
+    calculated_average = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Moyenne calculée automatiquement",
+    )
+    manual_override = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Moyenne saisie manuellement (remplace la calculée)",
+    )
+
+    # Publication (admin only)
+    is_published = models.BooleanField(default=False)
+    published_at = models.DateTimeField(null=True, blank=True)
+    published_by = models.ForeignKey(
+        "accounts.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="published_subject_avgs",
+    )
+
+    # Lock (prevents further edits)
+    is_locked = models.BooleanField(default=False)
+    locked_at = models.DateTimeField(null=True, blank=True)
+    locked_by = models.ForeignKey(
+        "accounts.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="locked_subject_avgs",
+    )
+
+    last_calculated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "subject_averages"
+        unique_together = [
+            "student",
+            "subject",
+            "classroom",
+            "academic_year",
+            "trimester",
+        ]
+        ordering = ["trimester", "subject__name"]
+        verbose_name = "Moyenne matière"
+        verbose_name_plural = "Moyennes matières"
+
+    def __str__(self):
+        avg = self.effective_average
+        return f"{self.student} — {self.subject.name} T{self.trimester}: {avg or '—'}"
+
+    @property
+    def effective_average(self):
+        """Return manual_override if set, else calculated_average."""
+        if self.manual_override is not None:
+            return self.manual_override
+        return self.calculated_average
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 4. TRIMESTER AVERAGE — general average + rankings
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class TrimesterAverage(models.Model):
+    """
+    Moyenne générale d'un élève sur un trimestre.
+
+    Formule: Σ(moyenne_matière × coefficient) / Σ(coefficients)
+    Classements calculés automatiquement par rang dans classe/filière/niveau/section.
+
+    Appréciations:
+        ≥16 Excellent | ≥14 Très Bien | ≥12 Bien |
+        ≥10 Assez Bien | ≥8 Passable | <8 Insuffisant
+    """
+
+    APPRECIATION_THRESHOLDS = [
+        (16, "Excellent"),
+        (14, "Très Bien"),
+        (12, "Bien"),
+        (10, "Assez Bien"),
+        (8, "Passable"),
+        (0, "Insuffisant"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -163,101 +346,334 @@ class Grade(models.Model):
     student = models.ForeignKey(
         "academics.StudentProfile",
         on_delete=models.CASCADE,
-        related_name="grades",
+        related_name="trimester_averages",
     )
-    subject = models.ForeignKey(
-        Subject,
+    classroom = models.ForeignKey(
+        "academics.Class",
         on_delete=models.CASCADE,
-        related_name="grades",
+        related_name="trimester_averages",
     )
-    trimester = models.IntegerField(choices=TRIMESTER_CHOICES)
     academic_year = models.ForeignKey(
         "schools.AcademicYear",
         on_delete=models.CASCADE,
-        related_name="grades",
+        related_name="trimester_averages",
     )
-    exam_type = models.CharField(max_length=12, choices=ExamType.choices)
+    trimester = models.IntegerField(
+        choices=ExamType.TRIMESTER_CHOICES,
+    )
 
-    # Score
-    value = models.DecimalField(max_digits=4, decimal_places=2)
-    max_value = models.DecimalField(max_digits=4, decimal_places=2, default="20.00")
-
-    # Workflow
-    status = models.CharField(
-        max_length=12, choices=Status.choices, default=Status.DRAFT
-    )
-    submitted_by = models.ForeignKey(
-        "accounts.User",
-        on_delete=models.CASCADE,
-        related_name="submitted_grades",
-    )
-    submitted_at = models.DateTimeField(blank=True, null=True)
-    reviewed_by = models.ForeignKey(
-        "accounts.User",
-        on_delete=models.SET_NULL,
+    calculated_average = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
         null=True,
         blank=True,
-        related_name="reviewed_grades",
     )
-    published_at = models.DateTimeField(blank=True, null=True)
-    admin_comment = models.TextField(blank=True)
+    manual_override = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
 
-    # Soft delete
-    is_deleted = models.BooleanField(default=False)
-    deleted_at = models.DateTimeField(blank=True, null=True)
+    # Rankings (calculated automatically)
+    rank_in_class = models.IntegerField(null=True, blank=True)
+    rank_in_stream = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Rang dans la filière (lycée uniquement)",
+    )
+    rank_in_level = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Rang dans le niveau (ex: tous les 1AM)",
+    )
+    rank_in_section = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Rang dans la section (Primaire/CEM/Lycée)",
+    )
+
+    appreciation = models.CharField(max_length=20, blank=True)
+
+    # Publication (admin only)
+    is_published = models.BooleanField(default=False)
+    published_at = models.DateTimeField(null=True, blank=True)
+    published_by = models.ForeignKey(
+        "accounts.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="published_trim_avgs",
+    )
+
+    # Lock (directeur)
+    is_locked = models.BooleanField(default=False)
+    locked_at = models.DateTimeField(null=True, blank=True)
+    locked_by = models.ForeignKey(
+        "accounts.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="locked_trim_avgs",
+    )
 
     # Audit
-    created_by = models.ForeignKey(
-        "accounts.User",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="created_grades",
-    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = "grades"
-        ordering = ["-created_at"]
+        db_table = "trimester_averages"
+        unique_together = ["student", "classroom", "academic_year", "trimester"]
+        ordering = ["trimester", "rank_in_class"]
+        verbose_name = "Moyenne trimestrielle"
+        verbose_name_plural = "Moyennes trimestrielles"
 
     def __str__(self):
-        return (
-            f"{self.student.user.full_name} — {self.subject.name} "
-            f"T{self.trimester} {self.exam_type}: {self.value}/{self.max_value}"
-        )
+        avg = self.effective_average
+        return f"{self.student} — T{self.trimester}: {avg or '—'} (#{self.rank_in_class or '?'})"
 
-    def save(self, *args, **kwargs):
-        """Prevent value changes once grade is PUBLISHED."""
-        if self.pk:
-            try:
-                old = Grade.objects.get(pk=self.pk)
-            except Grade.DoesNotExist:
-                old = None
-            if old and old.status == self.Status.PUBLISHED and old.value != self.value:
-                raise ValidationError("Cannot change the value of a published grade.")
-        super().save(*args, **kwargs)
+    @property
+    def effective_average(self):
+        if self.manual_override is not None:
+            return self.manual_override
+        return self.calculated_average
 
-    def soft_delete(self):
-        from django.utils import timezone
+    def compute_appreciation(self):
+        """Calculate appreciation based on effective_average and /20 scale."""
+        avg = self.effective_average
+        if avg is None:
+            self.appreciation = ""
+            return
+        from decimal import Decimal
 
-        self.is_deleted = True
-        self.deleted_at = timezone.now()
-        self.save(update_fields=["is_deleted", "deleted_at", "updated_at"])
+        for threshold, label in self.APPRECIATION_THRESHOLDS:
+            if avg >= Decimal(str(threshold)):
+                self.appreciation = label
+                return
+        self.appreciation = "Insuffisant"
 
 
-# ---------------------------------------------------------------------------
-# ReportCard — stores a generated PDF bulletin for one student/trimester
-# ---------------------------------------------------------------------------
+# ═══════════════════════════════════════════════════════════════════════════
+# 5. ANNUAL AVERAGE — yearly average across 3 trimesters
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class AnnualAverage(models.Model):
+    """
+    Moyenne annuelle d'un élève = (T1 + T2 + T3) / 3
+
+    Calculée automatiquement à partir des TrimesterAverage.
+    """
+
+    APPRECIATION_THRESHOLDS = TrimesterAverage.APPRECIATION_THRESHOLDS
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    student = models.ForeignKey(
+        "academics.StudentProfile",
+        on_delete=models.CASCADE,
+        related_name="annual_averages",
+    )
+    classroom = models.ForeignKey(
+        "academics.Class",
+        on_delete=models.CASCADE,
+        related_name="annual_averages",
+    )
+    academic_year = models.ForeignKey(
+        "schools.AcademicYear",
+        on_delete=models.CASCADE,
+        related_name="annual_averages",
+    )
+
+    calculated_average = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    manual_override = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
+    rank_in_class = models.IntegerField(null=True, blank=True)
+    rank_in_level = models.IntegerField(null=True, blank=True)
+    appreciation = models.CharField(max_length=20, blank=True)
+
+    is_published = models.BooleanField(default=False)
+    is_locked = models.BooleanField(default=False)
+
+    # Audit
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "annual_averages"
+        unique_together = ["student", "classroom", "academic_year"]
+        ordering = ["rank_in_class"]
+        verbose_name = "Moyenne annuelle"
+        verbose_name_plural = "Moyennes annuelles"
+
+    def __str__(self):
+        avg = self.effective_average
+        return f"{self.student} — Annuel: {avg or '—'} (#{self.rank_in_class or '?'})"
+
+    @property
+    def effective_average(self):
+        if self.manual_override is not None:
+            return self.manual_override
+        return self.calculated_average
+
+    def compute_appreciation(self):
+        avg = self.effective_average
+        if avg is None:
+            self.appreciation = ""
+            return
+        from decimal import Decimal
+
+        for threshold, label in self.APPRECIATION_THRESHOLDS:
+            if avg >= Decimal(str(threshold)):
+                self.appreciation = label
+                return
+        self.appreciation = "Insuffisant"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 6. GRADE APPEAL — student/parent recours
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class GradeAppeal(models.Model):
+    """
+    Recours d'un élève/parent sur une note ou une moyenne.
+    Peut cibler :
+      - une note d'examen (Grade)
+      - une moyenne de matière (SubjectAverage)
+      - une moyenne de trimestre (TrimesterAverage)
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "En attente"
+        UNDER_REVIEW = "UNDER_REVIEW", "En cours de traitement"
+        ACCEPTED = "ACCEPTED", "Accepté"
+        REJECTED = "REJECTED", "Rejeté"
+
+    class AppealType(models.TextChoices):
+        EXAM_GRADE = "EXAM_GRADE", "Note d'examen"
+        SUBJECT_AVERAGE = "SUBJECT_AVERAGE", "Moyenne de matière"
+        TRIMESTER_AVERAGE = "TRIMESTER_AVERAGE", "Moyenne de trimestre"
+        ANNUAL_AVERAGE = "ANNUAL_AVERAGE", "Moyenne annuelle"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    student = models.ForeignKey(
+        "academics.StudentProfile",
+        on_delete=models.CASCADE,
+        related_name="grade_appeals",
+    )
+    appeal_type = models.CharField(
+        max_length=20,
+        choices=AppealType.choices,
+    )
+
+    # Flexible reference depending on appeal_type
+    grade = models.ForeignKey(
+        Grade,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="appeals",
+    )
+    subject_average = models.ForeignKey(
+        SubjectAverage,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="appeals",
+    )
+    trimester_average = models.ForeignKey(
+        TrimesterAverage,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="appeals",
+    )
+
+    reason = models.TextField(
+        help_text="Raison du recours saisie par l'élève/parent",
+    )
+    student_comment = models.TextField(blank=True)
+
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+
+    # Assignment
+    assigned_to_teacher = models.ForeignKey(
+        "academics.TeacherProfile",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="assigned_appeals",
+        help_text="Pour notes/moyennes matière",
+    )
+    assigned_to_admin = models.BooleanField(
+        default=False,
+        help_text="Pour moyennes générales",
+    )
+
+    # Response
+    response = models.TextField(blank=True)
+    responded_by = models.ForeignKey(
+        "accounts.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="appeal_responses",
+    )
+    responded_at = models.DateTimeField(null=True, blank=True)
+
+    # Correction
+    original_value = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    corrected_value = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
+    # Audit
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "grade_appeals"
+        ordering = ["-created_at"]
+        verbose_name = "Recours"
+        verbose_name_plural = "Recours"
+
+    def __str__(self):
+        return f"Recours {self.get_appeal_type_display()} — {self.student} ({self.get_status_display()})"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 7. REPORT CARD — generated PDF bulletin
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 class ReportCard(models.Model):
     """
     Stores a generated PDF report card (bulletin scolaire) for one student
     in a given trimester of an academic year.
-
-    The PDF is generated via a Celery task (WeasyPrint), uploaded to S3/R2,
-    and the signed URL stored here.
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -272,7 +688,7 @@ class ReportCard(models.Model):
         on_delete=models.CASCADE,
         related_name="report_cards",
         db_column="class_id",
-        help_text="Class at the time the report was generated (historical record).",
+        help_text="Class at the time the report was generated.",
     )
     academic_year = models.ForeignKey(
         "schools.AcademicYear",
@@ -280,7 +696,7 @@ class ReportCard(models.Model):
         related_name="report_cards",
     )
     trimester = models.IntegerField(
-        choices=Grade.TRIMESTER_CHOICES,
+        choices=ExamType.TRIMESTER_CHOICES,
     )
 
     # Computed aggregates (snapshot)
@@ -314,9 +730,94 @@ class ReportCard(models.Model):
         db_table = "report_cards"
         unique_together = ("student", "academic_year", "trimester")
         ordering = ["-created_at"]
+        verbose_name = "Bulletin scolaire"
+        verbose_name_plural = "Bulletins scolaires"
 
     def __str__(self):
         return (
-            f"ReportCard: {self.student.user.full_name} — "
-            f"T{self.trimester} ({self.academic_year.name})"
+            f"Bulletin: {self.student} — T{self.trimester} ({self.academic_year.name})"
         )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 8. GRADE AUDIT LOG — full history of every grade-related modification
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class GradeAuditLog(models.Model):
+    """
+    Journal d'audit pour toutes les opérations liées aux notes.
+    Utilisé dans le panel recours pour voir l'historique complet.
+    """
+
+    class Action(models.TextChoices):
+        GRADE_ENTERED = "GRADE_ENTERED", "Note saisie"
+        GRADE_CORRECTED = "GRADE_CORRECTED", "Note corrigée"
+        GRADE_PUBLISHED = "GRADE_PUBLISHED", "Notes publiées"
+        AVERAGE_CALCULATED = "AVERAGE_CALCULATED", "Moyenne calculée"
+        AVERAGE_OVERRIDDEN = "AVERAGE_OVERRIDDEN", "Moyenne modifiée manuellement"
+        AVERAGE_PUBLISHED = "AVERAGE_PUBLISHED", "Moyenne publiée"
+        TRIMESTER_LOCKED = "TRIMESTER_LOCKED", "Trimestre verrouillé"
+        TRIMESTER_UNLOCKED = "TRIMESTER_UNLOCKED", "Trimestre déverrouillé"
+        APPEAL_CREATED = "APPEAL_CREATED", "Recours créé"
+        APPEAL_ACCEPTED = "APPEAL_ACCEPTED", "Recours accepté"
+        APPEAL_REJECTED = "APPEAL_REJECTED", "Recours rejeté"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    action = models.CharField(max_length=30, choices=Action.choices)
+    performed_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="grade_audit_logs",
+    )
+
+    # Generic FK — points to any model (Grade, SubjectAverage, …)
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        related_name="grade_audit_logs",
+    )
+    object_id = models.UUIDField()
+    content_object = GenericForeignKey("content_type", "object_id")
+
+    # Student for easy filtering
+    student = models.ForeignKey(
+        "academics.StudentProfile",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="grade_audit_logs",
+    )
+
+    # Snapshot values
+    old_value = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True
+    )
+    new_value = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True
+    )
+    reason = models.TextField(blank=True)
+
+    # Context fields
+    subject_name = models.CharField(max_length=200, blank=True)
+    exam_name = models.CharField(max_length=200, blank=True)
+    trimester = models.IntegerField(null=True, blank=True)
+
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "grade_audit_logs"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["student", "-created_at"]),
+            models.Index(fields=["content_type", "object_id"]),
+        ]
+        verbose_name = "Journal d'audit notes"
+        verbose_name_plural = "Journaux d'audit notes"
+
+    def __str__(self):
+        return f"{self.get_action_display()} — {self.performed_by} — {self.created_at:%d/%m/%Y %H:%M}"

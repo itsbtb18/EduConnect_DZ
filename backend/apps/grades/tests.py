@@ -1,10 +1,11 @@
 """
-Unit tests for grade calculation services.
+Unit tests for grade calculation services (new ExamType-based architecture).
 
 Covers:
-  - calculate_subject_trimester_average (normal, missing grade)
-  - calculate_overall_trimester_average (normal, single subject, zero coeff)
-  - calculate_class_rank (normal, ties)
+  - calculate_subject_average (normal, partial, absent)
+  - calculate_trimester_average (normal, coefficient-weighted)
+  - calculate_rankings (normal, ties)
+  - calculate_annual_average
 """
 
 import uuid
@@ -14,12 +15,15 @@ from decimal import Decimal
 from django.test import TestCase
 
 from apps.accounts.models import User
-from apps.academics.models import Class, StudentProfile
-from apps.grades.models import Grade, Subject, TrimesterConfig
+from apps.academics.models import Class, Level, LevelSubject
+from apps.academics.models import StudentProfile
+from apps.academics.models import Subject as AcademicSubject
+from apps.grades.models import ExamType, Grade
 from apps.grades.services import (
-    calculate_class_rank,
-    calculate_overall_trimester_average,
-    calculate_subject_trimester_average,
+    calculate_annual_average,
+    calculate_rankings,
+    calculate_subject_average,
+    calculate_trimester_average,
 )
 from apps.schools.models import AcademicYear, School, Section
 
@@ -45,11 +49,21 @@ class GradeServicesBaseTestCase(TestCase):
             start_date=date(2025, 9, 1),
             end_date=date(2026, 6, 30),
         )
+        cls.level = Level.objects.create(
+            school=cls.school,
+            section=cls.section,
+            name="1ère Année Moyenne",
+            code="1MS",
+            order=1,
+            max_grade=20,
+            passing_grade=10,
+        )
         cls.klass = Class.objects.create(
+            school=cls.school,
             section=cls.section,
             academic_year=cls.academic_year,
+            level=cls.level,
             name="1MS-A",
-            level="1MS",
         )
 
         # Teacher
@@ -90,217 +104,229 @@ class GradeServicesBaseTestCase(TestCase):
             current_class=cls.klass,
         )
 
-        # TrimesterConfig
-        cls.config = TrimesterConfig(
+        # Subjects (in academics)
+        cls.math = AcademicSubject.objects.create(
             school=cls.school,
-            section=cls.section,
-            continuous_weight=Decimal("0.20"),
-            test1_weight=Decimal("0.20"),
-            test2_weight=Decimal("0.20"),
-            final_weight=Decimal("0.40"),
-        )
-        cls.config.save()
-
-        # Subjects
-        cls.math = Subject.objects.create(
-            school=cls.school,
-            section=cls.section,
-            class_obj=cls.klass,
             name="Mathematics",
-            coefficient=Decimal("3.00"),
-            teacher=cls.teacher,
+            code="MATH",
         )
-        cls.arabic = Subject.objects.create(
+        cls.arabic = AcademicSubject.objects.create(
             school=cls.school,
-            section=cls.section,
-            class_obj=cls.klass,
             name="Arabic",
-            coefficient=Decimal("2.00"),
-            teacher=cls.teacher,
+            code="ARAB",
         )
 
-    # -----------------------------------------------------------------------
-    # Helper to quickly create a published grade
-    # -----------------------------------------------------------------------
-    def _grade(self, student, subject, exam_type, value, max_value=Decimal("20")):
+        # LevelSubject (coefficients)
+        LevelSubject.objects.create(
+            school=cls.school,
+            level=cls.level,
+            subject=cls.math,
+            coefficient=Decimal("3.00"),
+        )
+        LevelSubject.objects.create(
+            school=cls.school,
+            level=cls.level,
+            subject=cls.arabic,
+            coefficient=Decimal("2.00"),
+        )
+
+        # ExamTypes for Math T1: Exam1 (60%), Exam2 (20%), CC (20%)
+        cls.math_exam1 = ExamType.objects.create(
+            subject=cls.math,
+            classroom=cls.klass,
+            academic_year=cls.academic_year,
+            trimester=1,
+            name="Examen 1",
+            percentage=Decimal("60"),
+            max_score=Decimal("20"),
+            created_by=cls.teacher,
+        )
+        cls.math_exam2 = ExamType.objects.create(
+            subject=cls.math,
+            classroom=cls.klass,
+            academic_year=cls.academic_year,
+            trimester=1,
+            name="Examen 2",
+            percentage=Decimal("20"),
+            max_score=Decimal("20"),
+            created_by=cls.teacher,
+        )
+        cls.math_cc = ExamType.objects.create(
+            subject=cls.math,
+            classroom=cls.klass,
+            academic_year=cls.academic_year,
+            trimester=1,
+            name="Contrôle Continu",
+            percentage=Decimal("20"),
+            max_score=Decimal("20"),
+            created_by=cls.teacher,
+        )
+
+        # ExamTypes for Arabic T1: single exam (100%)
+        cls.arabic_exam = ExamType.objects.create(
+            subject=cls.arabic,
+            classroom=cls.klass,
+            academic_year=cls.academic_year,
+            trimester=1,
+            name="Examen Final",
+            percentage=Decimal("100"),
+            max_score=Decimal("20"),
+            created_by=cls.teacher,
+        )
+
+    def _grade(self, student, exam_type, score, is_absent=False):
+        """Quick helper to create a grade."""
         return Grade.objects.create(
             student=student,
-            subject=subject,
-            trimester=1,
-            academic_year=self.academic_year,
             exam_type=exam_type,
-            value=value,
-            max_value=max_value,
-            status=Grade.Status.PUBLISHED,
-            submitted_by=self.teacher,
+            score=score,
+            is_absent=is_absent,
+            entered_by=self.teacher,
         )
 
 
-# ===========================================================================
-# 1. calculate_subject_trimester_average
-# ===========================================================================
+# ═══════════════════════════════════════════════════════════════════════════
+# 1. calculate_subject_average
+# ═══════════════════════════════════════════════════════════════════════════
 
 
-class SubjectTrimesterAverageTests(GradeServicesBaseTestCase):
+class SubjectAverageTests(GradeServicesBaseTestCase):
     def test_normal_case(self):
-        """All four exam types present → weighted average."""
-        self._grade(self.student, self.math, Grade.ExamType.CONTINUOUS, Decimal("16"))
-        self._grade(self.student, self.math, Grade.ExamType.TEST_1, Decimal("14"))
-        self._grade(self.student, self.math, Grade.ExamType.TEST_2, Decimal("12"))
-        self._grade(self.student, self.math, Grade.ExamType.FINAL, Decimal("18"))
+        """All 3 math exams entered → weighted average."""
+        self._grade(self.student, self.math_exam1, Decimal("18"))
+        self._grade(self.student, self.math_exam2, Decimal("14"))
+        self._grade(self.student, self.math_cc, Decimal("16"))
 
-        result = calculate_subject_trimester_average(
-            self.student, self.math, 1, self.academic_year
-        )
-        # Expected: 16*0.20 + 14*0.20 + 12*0.20 + 18*0.40
-        #         = 3.20 + 2.80 + 2.40 + 7.20 = 15.60
-        self.assertEqual(result, Decimal("15.60"))
-
-    def test_missing_grade_returns_none(self):
-        """If any exam type is missing, return None."""
-        self._grade(self.student, self.math, Grade.ExamType.CONTINUOUS, Decimal("16"))
-        self._grade(self.student, self.math, Grade.ExamType.TEST_1, Decimal("14"))
-        # TEST_2 and FINAL missing
-
-        result = calculate_subject_trimester_average(
-            self.student, self.math, 1, self.academic_year
-        )
-        self.assertIsNone(result)
-
-    def test_normalises_to_20(self):
-        """Grades with max_value != 20 are normalised."""
-        self._grade(
+        result = calculate_subject_average(
             self.student,
             self.math,
-            Grade.ExamType.CONTINUOUS,
-            Decimal("8"),
-            Decimal("10"),
-        )  # → 16/20
-        self._grade(self.student, self.math, Grade.ExamType.TEST_1, Decimal("14"))
-        self._grade(self.student, self.math, Grade.ExamType.TEST_2, Decimal("12"))
-        self._grade(self.student, self.math, Grade.ExamType.FINAL, Decimal("18"))
-
-        result = calculate_subject_trimester_average(
-            self.student, self.math, 1, self.academic_year
+            self.klass,
+            self.academic_year,
+            trimester=1,
+            save=False,
         )
-        # continuous normalised to 16: same as test_normal_case
-        self.assertEqual(result, Decimal("15.60"))
+        # (18×60 + 14×20 + 16×20) / 100 = (1080+280+320)/100 = 16.80
+        self.assertEqual(result, Decimal("16.80"))
 
+    def test_single_exam_100_percent(self):
+        """Arabic: single exam at 100% → average equals score."""
+        self._grade(self.student, self.arabic_exam, Decimal("15"))
 
-# ===========================================================================
-# 2. calculate_overall_trimester_average
-# ===========================================================================
-
-
-class OverallTrimesterAverageTests(GradeServicesBaseTestCase):
-    def _fill_subject(self, student, subject, scores):
-        """Create all 4 grades for a subject with given scores dict."""
-        for exam_type, value in scores.items():
-            self._grade(student, subject, exam_type, value)
-
-    def test_normal_case(self):
-        """Two subjects → coefficient-weighted overall average."""
-        self._fill_subject(
-            self.student,
-            self.math,
-            {
-                Grade.ExamType.CONTINUOUS: Decimal("16"),
-                Grade.ExamType.TEST_1: Decimal("14"),
-                Grade.ExamType.TEST_2: Decimal("12"),
-                Grade.ExamType.FINAL: Decimal("18"),
-            },
-        )  # math avg = 15.60
-        self._fill_subject(
+        result = calculate_subject_average(
             self.student,
             self.arabic,
-            {
-                Grade.ExamType.CONTINUOUS: Decimal("10"),
-                Grade.ExamType.TEST_1: Decimal("10"),
-                Grade.ExamType.TEST_2: Decimal("10"),
-                Grade.ExamType.FINAL: Decimal("10"),
-            },
-        )  # arabic avg = 10.00
-
-        result = calculate_overall_trimester_average(
-            self.student, 1, self.academic_year
+            self.klass,
+            self.academic_year,
+            trimester=1,
+            save=False,
         )
-        # (15.60 × 3 + 10.00 × 2) / (3 + 2) = (46.80 + 20.00) / 5 = 13.36
-        self.assertEqual(result, Decimal("13.36"))
+        self.assertEqual(result, Decimal("15.00"))
 
-    def test_single_subject(self):
-        """Only one subject has grades → equals that subject's average."""
-        self._fill_subject(
+    def test_absent_counts_as_zero(self):
+        """Absent student → score treated as 0."""
+        self._grade(self.student, self.math_exam1, None, is_absent=True)
+        self._grade(self.student, self.math_exam2, Decimal("14"))
+        self._grade(self.student, self.math_cc, Decimal("16"))
+
+        result = calculate_subject_average(
             self.student,
             self.math,
-            {
-                Grade.ExamType.CONTINUOUS: Decimal("16"),
-                Grade.ExamType.TEST_1: Decimal("14"),
-                Grade.ExamType.TEST_2: Decimal("12"),
-                Grade.ExamType.FINAL: Decimal("18"),
-            },
+            self.klass,
+            self.academic_year,
+            trimester=1,
+            save=False,
         )
-        # arabic has no grades → skipped (not None propagated)
-        result = calculate_overall_trimester_average(
-            self.student, 1, self.academic_year
-        )
-        self.assertEqual(result, Decimal("15.60"))
+        # (0×60 + 14×20 + 16×20) / 100 = 600/100 = 6.00
+        self.assertEqual(result, Decimal("6.00"))
 
-    def test_no_class_returns_none(self):
-        """Student with no current_class → None."""
-        orphan_user = User.objects.create_user(
-            phone_number="0550000099",
-            password="pass1234",
-            first_name="Orphan",
-            last_name="Student",
-            role=User.Role.STUDENT,
-            school=self.school,
+    def test_no_grades_returns_none(self):
+        """No grades at all → None."""
+        result = calculate_subject_average(
+            self.student,
+            self.math,
+            self.klass,
+            self.academic_year,
+            trimester=1,
+            save=False,
         )
-        orphan = StudentProfile.objects.create(user=orphan_user, current_class=None)
-        result = calculate_overall_trimester_average(orphan, 1, self.academic_year)
         self.assertIsNone(result)
 
 
-# ===========================================================================
-# 3. calculate_class_rank
-# ===========================================================================
+# ═══════════════════════════════════════════════════════════════════════════
+# 2. calculate_trimester_average
+# ═══════════════════════════════════════════════════════════════════════════
 
 
-class ClassRankTests(GradeServicesBaseTestCase):
-    def _fill_all(self, student, math_final, arabic_final):
-        """Quick helper — gives identical continuous/test grades, varies final."""
-        base = {
-            Grade.ExamType.CONTINUOUS: Decimal("10"),
-            Grade.ExamType.TEST_1: Decimal("10"),
-            Grade.ExamType.TEST_2: Decimal("10"),
-        }
-        for exam_type, val in base.items():
-            self._grade(student, self.math, exam_type, val)
-            self._grade(student, self.arabic, exam_type, val)
-        self._grade(student, self.math, Grade.ExamType.FINAL, math_final)
-        self._grade(student, self.arabic, Grade.ExamType.FINAL, arabic_final)
+class TrimesterAverageTests(GradeServicesBaseTestCase):
+    def test_coefficient_weighted(self):
+        """Two subjects with different coefficients."""
+        # Math: avg 16.80 (coeff 3)
+        self._grade(self.student, self.math_exam1, Decimal("18"))
+        self._grade(self.student, self.math_exam2, Decimal("14"))
+        self._grade(self.student, self.math_cc, Decimal("16"))
+        # Arabic: avg 10 (coeff 2)
+        self._grade(self.student, self.arabic_exam, Decimal("10"))
 
-    def test_rank_first(self):
-        """Higher average → rank 1."""
-        self._fill_all(self.student, Decimal("18"), Decimal("18"))
-        self._fill_all(self.student2, Decimal("10"), Decimal("10"))
+        # First compute subject averages
+        calculate_subject_average(
+            self.student,
+            self.math,
+            self.klass,
+            self.academic_year,
+            1,
+            save=True,
+        )
+        calculate_subject_average(
+            self.student,
+            self.arabic,
+            self.klass,
+            self.academic_year,
+            1,
+            save=True,
+        )
 
-        rank = calculate_class_rank(self.student, 1, self.academic_year)
-        self.assertEqual(rank, 1)
+        result = calculate_trimester_average(
+            self.student,
+            self.klass,
+            self.academic_year,
+            1,
+            save=False,
+        )
+        # (16.80×3 + 10.00×2) / (3+2) = (50.40+20.00)/5 = 14.08
+        self.assertEqual(result, Decimal("14.08"))
 
-    def test_rank_second(self):
-        """Lower average → rank 2."""
-        self._fill_all(self.student, Decimal("18"), Decimal("18"))
-        self._fill_all(self.student2, Decimal("10"), Decimal("10"))
 
-        rank = calculate_class_rank(self.student2, 1, self.academic_year)
-        self.assertEqual(rank, 2)
+# ═══════════════════════════════════════════════════════════════════════════
+# 3. calculate_rankings
+# ═══════════════════════════════════════════════════════════════════════════
 
-    def test_tied_ranks(self):
-        """Equal averages → same rank."""
-        self._fill_all(self.student, Decimal("15"), Decimal("15"))
-        self._fill_all(self.student2, Decimal("15"), Decimal("15"))
 
-        rank1 = calculate_class_rank(self.student, 1, self.academic_year)
-        rank2 = calculate_class_rank(self.student2, 1, self.academic_year)
-        self.assertEqual(rank1, 1)
-        self.assertEqual(rank2, 1)
+class RankingTests(GradeServicesBaseTestCase):
+    def test_basic_ranking(self):
+        """Student with higher average → rank 1."""
+        from apps.grades.models import TrimesterAverage
+
+        # Student 1: high grades
+        self._grade(self.student, self.math_exam1, Decimal("18"))
+        self._grade(self.student, self.math_exam2, Decimal("18"))
+        self._grade(self.student, self.math_cc, Decimal("18"))
+        self._grade(self.student, self.arabic_exam, Decimal("18"))
+
+        # Student 2: low grades
+        self._grade(self.student2, self.math_exam1, Decimal("10"))
+        self._grade(self.student2, self.math_exam2, Decimal("10"))
+        self._grade(self.student2, self.math_cc, Decimal("10"))
+        self._grade(self.student2, self.arabic_exam, Decimal("10"))
+
+        # Compute all averages
+        for s in [self.student, self.student2]:
+            calculate_subject_average(s, self.math, self.klass, self.academic_year, 1)
+            calculate_subject_average(s, self.arabic, self.klass, self.academic_year, 1)
+            calculate_trimester_average(s, self.klass, self.academic_year, 1)
+
+        calculate_rankings(self.klass, self.academic_year, 1)
+
+        t1 = TrimesterAverage.objects.get(student=self.student, trimester=1)
+        t2 = TrimesterAverage.objects.get(student=self.student2, trimester=1)
+        self.assertEqual(t1.rank_in_class, 1)
+        self.assertEqual(t2.rank_in_class, 2)

@@ -114,27 +114,44 @@ def parent_user(db, school):
 
 
 @pytest.fixture
-def level(db, school):
+def section(db, school):
+    """Create a test section (cycle)."""
+    from apps.schools.models import Section
+
+    return Section.objects.create(
+        school=school,
+        section_type=Section.SectionType.MIDDLE,
+        name="Moyen",
+    )
+
+
+@pytest.fixture
+def level(db, school, section):
     """Create a test level."""
     from apps.academics.models import Level
 
     return Level.objects.create(
         school=school,
+        section=section,
         name="1ère Année Moyenne",
         code="1AM",
         order=1,
+        max_grade=20,
+        passing_grade=10,
     )
 
 
 @pytest.fixture
-def classroom(db, school, level):
+def classroom(db, school, section, level, academic_year):
     """Create a test classroom."""
     from apps.academics.models import Classroom
 
     return Classroom.objects.create(
         school=school,
-        name="1AM - A",
+        section=section,
+        academic_year=academic_year,
         level=level,
+        name="1AM - A",
         capacity=35,
     )
 
@@ -147,32 +164,37 @@ def subject(db, school):
     return Subject.objects.create(
         school=school,
         name="Mathématiques",
-        coefficient=5,
+        code="MATH",
     )
 
 
 @pytest.fixture
-def teacher_assignment(db, school, teacher_user, classroom, subject):
+def teacher_assignment(db, school, teacher_user, classroom, subject, academic_year):
     """Create a teacher assignment (teacher → classroom + subject)."""
     from apps.academics.models import TeacherAssignment
 
     return TeacherAssignment.objects.create(
         school=school,
         teacher=teacher_user,
-        classroom=classroom,
+        assigned_class=classroom,
         subject=subject,
+        academic_year=academic_year,
     )
 
 
 @pytest.fixture
-def exam_type(db, school):
-    """Create a test exam type."""
+def exam_type(db, subject, classroom, academic_year):
+    """Create a test exam type (needs subject, classroom, academic_year)."""
     from apps.grades.models import ExamType
 
     return ExamType.objects.create(
-        school=school,
+        subject=subject,
+        classroom=classroom,
+        academic_year=academic_year,
+        trimester=1,
         name="Composition",
-        weight=50,
+        percentage=100,
+        max_score=20,
     )
 
 

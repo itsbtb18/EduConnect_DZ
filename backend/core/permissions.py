@@ -24,13 +24,13 @@ class IsSuperAdmin(BasePermission):
 
 
 class IsSchoolAdmin(BasePermission):
-    """Allow access only to ADMIN or SECTION_ADMIN roles."""
+    """Allow access to SUPER_ADMIN, ADMIN, or SECTION_ADMIN roles."""
 
     def has_permission(self, request, view):
         return (
             request.user
             and request.user.is_authenticated
-            and request.user.role in ("ADMIN", "SECTION_ADMIN")
+            and request.user.role in ("SUPER_ADMIN", "ADMIN", "SECTION_ADMIN")
         )
 
 
@@ -68,13 +68,13 @@ class IsStudent(BasePermission):
 
 
 class IsAdminOrTeacher(BasePermission):
-    """Allow access to ADMIN, SECTION_ADMIN, or TEACHER roles."""
+    """Allow access to SUPER_ADMIN, ADMIN, SECTION_ADMIN, or TEACHER roles."""
 
     def has_permission(self, request, view):
         return (
             request.user
             and request.user.is_authenticated
-            and request.user.role in ("ADMIN", "SECTION_ADMIN", "TEACHER")
+            and request.user.role in ("SUPER_ADMIN", "ADMIN", "SECTION_ADMIN", "TEACHER")
         )
 
 

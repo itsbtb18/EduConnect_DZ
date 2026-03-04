@@ -1,8 +1,10 @@
 """
-Celery tasks for the Finance app.
-Handles payment reminders and receipt generation.
+Celery tasks for the Finance (Payments) app.
+- Daily: check for newly expired payments and notify school admins.
+- Weekly: send payment reminders to parents.
 """
 
+import datetime
 import logging
 
 from celery import shared_task
@@ -11,119 +13,112 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task
-def send_payment_reminders():
+def check_expired_payments():
     """
-    Send payment reminders to parents whose children have unpaid fees.
-    Meant to be run as a weekly Celery Beat task.
+    Daily task (8:00 AM): refresh statuses and notify school admins
+    of any payments that just expired.
     """
-    from django.db.models import Sum
-
-    from apps.accounts.models import StudentProfile
-    from apps.finance.models import FeeStructure, Payment
-    from apps.notifications.tasks import send_push_notification
+    from apps.accounts.models import User
+    from apps.finance.models import StudentPayment
+    from apps.notifications.models import Notification
     from apps.schools.models import School
 
-    schools = School.objects.filter(is_active=True)
-    total_reminders = 0
+    today = datetime.date.today()
+    total_notifications = 0
 
-    for school in schools:
-        # Get current academic year fees
-        from apps.schools.models import AcademicYear
-
-        current_year = AcademicYear.objects.filter(
-            school=school, is_current=True
-        ).first()
-
-        if not current_year:
+    for school in School.objects.filter(is_active=True):
+        # Refresh statuses: mark expired
+        newly_expired = StudentPayment.objects.filter(
+            school=school,
+            is_deleted=False,
+            period_end__lt=today,
+            status=StudentPayment.Status.ACTIF,
+        )
+        count = newly_expired.count()
+        if count == 0:
             continue
 
-        fees = FeeStructure.objects.filter(school=school, academic_year=current_year)
+        # Collect student names
+        names = list(
+            newly_expired.select_related("student").values_list(
+                "student__first_name", "student__last_name"
+            )[:5]
+        )
+        name_list = ", ".join(f"{fn} {ln}" for fn, ln in names)
+        if count > 5:
+            name_list += f" et {count - 5} autres"
 
-        for fee in fees:
-            # Find students with incomplete payments
-            students = StudentProfile.objects.filter(
-                user__school=school,
-                user__is_active=True,
-                classroom__level=fee.level,
-            ).select_related("user")
+        # Update statuses
+        newly_expired.update(
+            status=StudentPayment.Status.EXPIRE,
+        )
 
-            for profile in students:
-                paid = (
-                    Payment.objects.filter(
-                        student=profile.user,
-                        fee=fee,
-                        status="completed",
-                    ).aggregate(total=Sum("amount"))["total"]
-                    or 0
-                )
+        # Notify school admins
+        admins = User.objects.filter(
+            school=school, role__in=["ADMIN", "SECTION_ADMIN"], is_active=True
+        )
+        for admin_user in admins:
+            Notification.objects.create(
+                user=admin_user,
+                school=school,
+                title="Paiements expirés",
+                body=(
+                    f"{count} élève(s) ont un paiement expiré aujourd'hui — {name_list}"
+                ),
+                notification_type="PAYMENT",
+                related_object_type="payment_expired",
+            )
+            total_notifications += 1
 
-                remaining = fee.amount - paid
-                if remaining > 0:
-                    # Notify parents
-                    parents = profile.user.parents.all()
-                    for parent_user in parents:
-                        send_push_notification.delay(
-                            user_id=str(parent_user.id),
-                            title="💰 Payment Reminder",
-                            body=(
-                                f"{fee.name} for {profile.user.first_name}: "
-                                f"{remaining:,.0f} DZD remaining"
-                            ),
-                            data={
-                                "type": "payment_reminder",
-                                "student_id": str(profile.user.id),
-                                "fee_id": str(fee.id),
-                                "amount_remaining": str(remaining),
-                            },
-                        )
-                        total_reminders += 1
-
-    logger.info(f"Payment reminders sent: {total_reminders}")
-    return {"status": "complete", "reminders_sent": total_reminders}
+    logger.info(f"check_expired_payments: {total_notifications} notifications created")
+    return {"status": "complete", "notifications": total_notifications}
 
 
 @shared_task
-def generate_payment_receipt(payment_id: str):
+def send_payment_reminders():
     """
-    Generate a PDF receipt for a completed payment.
+    Weekly: send reminders to parents whose children have payments
+    expiring within 7 days.
     """
-    from apps.finance.models import Payment
+    from apps.academics.models import ParentProfile
+    from apps.finance.models import StudentPayment
+    from apps.notifications.models import Notification
+    from apps.schools.models import School
 
-    try:
-        payment = Payment.objects.select_related(
-            "student", "fee", "fee__academic_year"
-        ).get(id=payment_id)
+    today = datetime.date.today()
+    cutoff = today + datetime.timedelta(days=7)
+    total = 0
 
-        if payment.status != "completed":
-            return {"status": "skipped", "reason": "Payment not completed"}
+    for school in School.objects.filter(is_active=True):
+        expiring = StudentPayment.objects.filter(
+            school=school,
+            is_deleted=False,
+            status="actif",
+            period_end__gte=today,
+            period_end__lte=cutoff,
+        ).select_related("student", "student__student_profile")
 
-        # Generate receipt using WeasyPrint
-        try:
-            from django.core.files.base import ContentFile
-            from django.template.loader import render_to_string
-            from weasyprint import HTML
+        for payment in expiring:
+            student = payment.student
+            sp = getattr(student, "student_profile", None)
+            if not sp:
+                continue
+            parents = ParentProfile.objects.filter(children=sp).select_related("user")
+            for pp in parents:
+                Notification.objects.create(
+                    user=pp.user,
+                    school=school,
+                    title="Rappel de paiement",
+                    body=(
+                        f"Le paiement de {student.full_name} expire "
+                        f"le {payment.period_end.strftime('%d/%m/%Y')}. "
+                        f"Montant: {payment.amount_paid} DA."
+                    ),
+                    notification_type="PAYMENT",
+                    related_object_id=payment.id,
+                    related_object_type="StudentPayment",
+                )
+                total += 1
 
-            context = {
-                "payment": payment,
-                "student": payment.student,
-                "school": payment.student.school,
-                "fee": payment.fee,
-            }
-
-            html = render_to_string("finance/receipt.html", context)
-            pdf_bytes = HTML(string=html).write_pdf()
-
-            filename = f"receipt_{payment.reference_number or payment.id}.pdf"
-            payment.receipt_file.save(filename, ContentFile(pdf_bytes))
-            payment.save(update_fields=["receipt_file"])
-
-            logger.info(f"Receipt generated for payment {payment.id}")
-            return {"status": "success", "payment_id": str(payment.id)}
-
-        except ImportError:
-            logger.warning("WeasyPrint not installed. Skipping receipt generation.")
-            return {"status": "skipped", "reason": "WeasyPrint not available"}
-
-    except Payment.DoesNotExist:
-        logger.error(f"Payment {payment_id} not found")
-        return {"status": "failed", "reason": "Payment not found"}
+    logger.info(f"send_payment_reminders: {total} reminders sent")
+    return {"status": "complete", "reminders_sent": total}

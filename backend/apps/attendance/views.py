@@ -2,21 +2,31 @@
 Attendance views — teachers mark, admins review, parents/students view.
 """
 
+import csv
+import io
+from datetime import timedelta
+
+from django.db.models import Count, Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
 from rest_framework import permissions, serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.academics.models import Class, StudentProfile
+from apps.academics.models import Class, StudentProfile, TeacherAssignment
+from apps.accounts.models import User
 from core.permissions import IsParent, IsSchoolAdmin, IsTeacher
 
 from .models import AbsenceExcuse, AttendanceRecord
 from .serializers import (
     AbsenceExcuseSerializer,
+    AbsenceStatsSerializer,
     AttendanceRecordSerializer,
     ExcuseReviewSerializer,
     ExcuseSubmitSerializer,
+    JustifyAbsenceSerializer,
     MarkAttendanceSerializer,
 )
 
@@ -68,7 +78,9 @@ class MarkAttendanceView(APIView):
 
         # Resolve class
         try:
-            klass = Class.objects.select_related("section").get(pk=data["class_id"])
+            klass = Class.objects.select_related("section", "level").get(
+                pk=data["class_id"]
+            )
         except Class.DoesNotExist:
             return Response(
                 {"detail": "Class not found."},
@@ -76,7 +88,7 @@ class MarkAttendanceView(APIView):
             )
 
         # Verify class belongs to the teacher's school
-        if klass.section.school_id != user.school_id:
+        if klass.school_id != user.school_id:
             return Response(
                 {"detail": "Class does not belong to your school."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -136,39 +148,108 @@ class MarkAttendanceView(APIView):
 class AttendanceListView(APIView):
     """
     GET /api/v1/attendance/
-    Admin views attendance records, filterable by class, date, section.
+    Admin views attendance records with rich filtering, search, ordering
+    and pagination.
+
+    Query params
+    ------------
+    class_id, section_id, date, date_from, date_to, status,
+    is_justified (true/false), student (UUID), teacher (UUID),
+    search (student name substring), period (MORNING/AFTERNOON),
+    ordering (-date default), page, page_size (default 50, max 200).
     """
 
     permission_classes = [permissions.IsAuthenticated, IsSchoolAdmin]
+
+    DEFAULT_PAGE_SIZE = 50
+    MAX_PAGE_SIZE = 200
 
     @extend_schema(
         tags=["attendance"],
         summary="List attendance records (admin)",
         description=(
             "List attendance records for the admin's school. "
-            "Filterable by **class_id**, **date**, and **section_id** query params."
+            "Supports class_id, section_id, date, date_from, date_to, "
+            "status, is_justified, student, teacher, search, period, "
+            "ordering, page, page_size query params."
         ),
         responses={200: AttendanceRecordSerializer(many=True)},
     )
     def get(self, request):
         qs = AttendanceRecord.objects.filter(school=request.user.school)
+        params = request.query_params
 
-        # Filters
-        class_id = request.query_params.get("class_id")
-        if class_id:
-            qs = qs.filter(class_obj_id=class_id)
+        # --- Filters ---
+        if params.get("class_id"):
+            qs = qs.filter(class_obj_id=params["class_id"])
+        if params.get("section_id"):
+            qs = qs.filter(class_obj__section_id=params["section_id"])
+        if params.get("date"):
+            qs = qs.filter(date=params["date"])
+        if params.get("date_from"):
+            qs = qs.filter(date__gte=params["date_from"])
+        if params.get("date_to"):
+            qs = qs.filter(date__lte=params["date_to"])
+        if params.get("status"):
+            qs = qs.filter(status=params["status"].upper())
+        if params.get("is_justified") in ("true", "false"):
+            qs = qs.filter(is_justified=params["is_justified"] == "true")
+        if params.get("student"):
+            qs = qs.filter(student_id=params["student"])
+        if params.get("teacher"):
+            qs = qs.filter(marked_by_id=params["teacher"])
+        if params.get("period"):
+            qs = qs.filter(period=params["period"].upper())
+        if params.get("search"):
+            qs = qs.filter(
+                Q(student__user__first_name__icontains=params["search"])
+                | Q(student__user__last_name__icontains=params["search"])
+            )
 
-        date_param = request.query_params.get("date")
-        if date_param:
-            qs = qs.filter(date=date_param)
+        # --- Ordering ---
+        ordering = params.get("ordering", "-date")
+        allowed = {
+            "date",
+            "-date",
+            "student__user__last_name",
+            "-student__user__last_name",
+        }
+        if ordering in allowed:
+            qs = qs.order_by(ordering, "-created_at")
+        else:
+            qs = qs.order_by("-date", "-created_at")
 
-        section_id = request.query_params.get("section_id")
-        if section_id:
-            qs = qs.filter(class_obj__section_id=section_id)
+        # --- Eager loading ---
+        qs = qs.select_related(
+            "student__user", "class_obj", "marked_by", "justified_by"
+        )
 
-        qs = qs.select_related("student__user", "class_obj", "marked_by")
-        serializer = AttendanceRecordSerializer(qs, many=True)
-        return Response(serializer.data)
+        # --- Pagination ---
+        try:
+            page = max(int(params.get("page", 1)), 1)
+        except (ValueError, TypeError):
+            page = 1
+        try:
+            page_size = min(
+                max(int(params.get("page_size", self.DEFAULT_PAGE_SIZE)), 1),
+                self.MAX_PAGE_SIZE,
+            )
+        except (ValueError, TypeError):
+            page_size = self.DEFAULT_PAGE_SIZE
+
+        total = qs.count()
+        start = (page - 1) * page_size
+        page_qs = qs[start : start + page_size]
+
+        serializer = AttendanceRecordSerializer(page_qs, many=True)
+        return Response(
+            {
+                "count": total,
+                "page": page,
+                "page_size": page_size,
+                "results": serializer.data,
+            }
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -325,7 +406,11 @@ class ExcuseReviewView(APIView):
         serializer = ExcuseReviewSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        excuse = get_object_or_404(AbsenceExcuse, pk=pk)
+        excuse = get_object_or_404(
+            AbsenceExcuse,
+            pk=pk,
+            attendance_record__school=request.user.school,
+        )
 
         if excuse.status != AbsenceExcuse.Status.PENDING:
             return Response(
@@ -341,6 +426,237 @@ class ExcuseReviewView(APIView):
         _notify_parent_excuse_reviewed(excuse)
 
         return Response(AbsenceExcuseSerializer(excuse).data)
+
+
+# ---------------------------------------------------------------------------
+# 6. AbsenceStatsView — dashboard stats for admin
+# ---------------------------------------------------------------------------
+
+
+class AbsenceStatsView(APIView):
+    """
+    GET /api/v1/attendance/stats/
+    Dashboard statistics: today, week, month absence counts,
+    at-risk students, teachers who haven't marked today.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsSchoolAdmin]
+
+    AT_RISK_THRESHOLD = 5  # unjustified absences this month
+
+    @extend_schema(
+        tags=["attendance"],
+        summary="Absence dashboard stats (admin)",
+        responses={200: AbsenceStatsSerializer},
+    )
+    def get(self, request):
+        school = request.user.school
+        today = timezone.localdate()
+        week_start = today - timedelta(days=today.weekday())  # Monday
+        month_start = today.replace(day=1)
+
+        base = AttendanceRecord.objects.filter(
+            school=school, status=AttendanceRecord.Status.ABSENT
+        )
+
+        today_count = base.filter(date=today).count()
+        week_count = base.filter(date__gte=week_start).count()
+        month_count = base.filter(date__gte=month_start).count()
+
+        # At-risk students (≥ threshold unjustified absences this month)
+        at_risk_qs = (
+            base.filter(date__gte=month_start, is_justified=False)
+            .values(
+                "student__id", "student__user__first_name", "student__user__last_name"
+            )
+            .annotate(absence_count=Count("id"))
+            .filter(absence_count__gte=self.AT_RISK_THRESHOLD)
+            .order_by("-absence_count")[:20]
+        )
+        at_risk_students = [
+            {
+                "student_id": str(row["student__id"]),
+                "student_name": f"{row['student__user__first_name']} {row['student__user__last_name']}".strip(),
+                "absence_count": row["absence_count"],
+            }
+            for row in at_risk_qs
+        ]
+
+        # Teachers who haven't marked attendance today
+        all_teacher_ids = set(
+            User.objects.filter(
+                school=school, role="TEACHER", is_active=True
+            ).values_list("id", flat=True)
+        )
+        marked_teacher_ids = set(
+            AttendanceRecord.objects.filter(school=school, date=today)
+            .values_list("marked_by_id", flat=True)
+            .distinct()
+        )
+        not_marked_ids = all_teacher_ids - marked_teacher_ids
+        teachers_not_marked = list(
+            User.objects.filter(id__in=not_marked_ids).values_list(
+                "first_name", "last_name"
+            )
+        )
+        teachers_not_marked = [f"{fn} {ln}".strip() for fn, ln in teachers_not_marked]
+
+        data = {
+            "today_count": today_count,
+            "week_count": week_count,
+            "month_count": month_count,
+            "at_risk_students": at_risk_students,
+            "teachers_not_marked": teachers_not_marked,
+        }
+        return Response(data)
+
+
+# ---------------------------------------------------------------------------
+# 7. JustifyAbsenceView — admin justifies an absence
+# ---------------------------------------------------------------------------
+
+
+class JustifyAbsenceView(APIView):
+    """
+    PATCH /api/v1/attendance/<id>/justify/
+    Admin marks an absence as justified with a note.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsSchoolAdmin]
+
+    @extend_schema(
+        tags=["attendance"],
+        summary="Justify an absence (admin)",
+        request=JustifyAbsenceSerializer,
+        responses={
+            200: AttendanceRecordSerializer,
+            400: OpenApiResponse(description="Record is not an absence."),
+            404: OpenApiResponse(description="Record not found."),
+        },
+    )
+    def patch(self, request, pk):
+        record = get_object_or_404(AttendanceRecord, pk=pk, school=request.user.school)
+        if record.status != AttendanceRecord.Status.ABSENT:
+            return Response(
+                {"detail": "Only absences can be justified."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        ser = JustifyAbsenceSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+
+        record.justify(
+            user=request.user,
+            note=ser.validated_data["justification_note"],
+        )
+        return Response(AttendanceRecordSerializer(record).data)
+
+
+# ---------------------------------------------------------------------------
+# 8. CancelAbsenceView — admin deletes an attendance record
+# ---------------------------------------------------------------------------
+
+
+class CancelAbsenceView(APIView):
+    """
+    DELETE /api/v1/attendance/<id>/cancel/
+    Admin deletes an attendance record (e.g. erroneous entry).
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsSchoolAdmin]
+
+    @extend_schema(
+        tags=["attendance"],
+        summary="Cancel/delete attendance record (admin)",
+        responses={
+            204: OpenApiResponse(description="Deleted."),
+            404: OpenApiResponse(description="Record not found."),
+        },
+    )
+    def delete(self, request, pk):
+        record = get_object_or_404(AttendanceRecord, pk=pk, school=request.user.school)
+        record.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ---------------------------------------------------------------------------
+# 9. AbsenceReportView — CSV export
+# ---------------------------------------------------------------------------
+
+
+class AbsenceReportView(APIView):
+    """
+    GET /api/v1/attendance/report/
+    Export attendance data as CSV.
+    Supports same filters as AttendanceListView.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsSchoolAdmin]
+
+    @extend_schema(
+        tags=["attendance"],
+        summary="Export attendance report (admin)",
+        responses={200: OpenApiResponse(description="CSV file download.")},
+    )
+    def get(self, request):
+        school = request.user.school
+        params = request.query_params
+
+        qs = AttendanceRecord.objects.filter(school=school)
+
+        if params.get("class_id"):
+            qs = qs.filter(class_obj_id=params["class_id"])
+        if params.get("section_id"):
+            qs = qs.filter(class_obj__section_id=params["section_id"])
+        if params.get("date"):
+            qs = qs.filter(date=params["date"])
+        if params.get("date_from"):
+            qs = qs.filter(date__gte=params["date_from"])
+        if params.get("date_to"):
+            qs = qs.filter(date__lte=params["date_to"])
+        if params.get("status"):
+            qs = qs.filter(status=params["status"].upper())
+        if params.get("is_justified") in ("true", "false"):
+            qs = qs.filter(is_justified=params["is_justified"] == "true")
+
+        qs = qs.select_related("student__user", "class_obj", "marked_by").order_by(
+            "-date", "student__user__last_name"
+        )
+
+        # Build CSV
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow(
+            [
+                "Élève",
+                "Classe",
+                "Date",
+                "Période",
+                "Statut",
+                "Justifié",
+                "Note",
+                "Marqué par",
+            ]
+        )
+        for r in qs:
+            writer.writerow(
+                [
+                    r.student.user.full_name if r.student and r.student.user else "",
+                    str(r.class_obj) if r.class_obj else "",
+                    str(r.date),
+                    r.period or "",
+                    r.get_status_display(),
+                    "Oui" if r.is_justified else "Non",
+                    r.note or "",
+                    r.marked_by.full_name if r.marked_by else "",
+                ]
+            )
+
+        response = HttpResponse(buf.getvalue(), content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = (
+            f'attachment; filename="attendance_report_{timezone.localdate()}.csv"'
+        )
+        return response
 
 
 # ===========================================================================

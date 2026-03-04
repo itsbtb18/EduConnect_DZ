@@ -1,0 +1,475 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Timetable Page — Premium Image-Upload Design
+   prefix: tt-
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Page layout ───────────────────────────────────────────────────── */
+.tt-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 0;
+}
+
+/* ── Header ────────────────────────────────────────────────────────── */
+.tt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.tt-header__info h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0F2044;
+  margin: 0;
+}
+.tt-header__subtitle {
+  color: #64748B;
+  font-size: 0.875rem;
+  margin-top: 4px;
+}
+.tt-header__actions {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* ── Classes status row ────────────────────────────────────────────── */
+.tt-classes-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 4px 0;
+  scrollbar-width: thin;
+  scrollbar-color: #CBD5E1 transparent;
+}
+.tt-classes-row::-webkit-scrollbar {
+  height: 6px;
+}
+.tt-classes-row::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+
+.tt-class-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1.5px solid #E2E8F0;
+  background: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 0;
+}
+.tt-class-chip:hover {
+  border-color: #00C9A7;
+  box-shadow: 0 2px 8px rgba(0, 201, 167, 0.10);
+}
+.tt-class-chip--active {
+  border-color: #00C9A7;
+  background: rgba(0, 201, 167, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 201, 167, 0.12);
+}
+.tt-class-chip__name {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #0F2044;
+}
+.tt-class-chip__status {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.tt-class-chip__status--ok {
+  color: #16A34A;
+}
+.tt-class-chip__status--empty {
+  color: #EA580C;
+}
+.tt-class-chip__icon--ok {
+  color: #16A34A;
+  font-size: 14px;
+}
+.tt-class-chip__icon--empty {
+  color: #EA580C;
+  font-size: 14px;
+}
+
+/* All classes chip */
+.tt-class-chip--all {
+  background: #F7F9FC;
+  border-color: #CBD5E1;
+}
+.tt-class-chip--all.tt-class-chip--active {
+  background: #0F2044;
+  border-color: #0F2044;
+}
+.tt-class-chip--all.tt-class-chip--active .tt-class-chip__name {
+  color: #FFFFFF;
+}
+
+/* ── Table wrapper ─────────────────────────────────────────────────── */
+.tt-table-wrap {
+  background: #FFFFFF;
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+  overflow: hidden;
+}
+.tt-table-wrap .ant-table {
+  background: transparent;
+}
+.tt-table-wrap .ant-table-thead > tr > th {
+  background: #F7F9FC !important;
+  color: #64748B;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid #E2E8F0 !important;
+  padding: 12px 16px;
+}
+.tt-table-wrap .ant-table-tbody > tr > td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #F1F5F9;
+  vertical-align: middle;
+}
+.tt-table-wrap .ant-table-tbody > tr:hover > td {
+  background: #F7FDFB !important;
+}
+
+/* ── Thumbnail ─────────────────────────────────────────────────────── */
+.tt-thumb {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1.5px solid #E2E8F0;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background: #F7F9FC;
+}
+.tt-thumb:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+.tt-thumb-pdf {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  border: 1.5px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #FEF2F2;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  color: #DC2626;
+  font-size: 24px;
+}
+.tt-thumb-pdf:hover {
+  transform: scale(1.05);
+}
+
+/* ── Title link ────────────────────────────────────────────────────── */
+.tt-title-link {
+  color: #0F2044;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.tt-title-link:hover {
+  color: #00C9A7;
+}
+
+/* ── Lightbox / Fullscreen viewer ──────────────────────────────────── */
+.tt-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.85);
+  animation: tt-fade-in 0.2s ease;
+}
+.tt-lightbox__header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.6), transparent);
+  z-index: 2;
+}
+.tt-lightbox__title {
+  color: #FFFFFF;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+.tt-lightbox__actions {
+  display: flex;
+  gap: 8px;
+}
+.tt-lightbox__btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: #FFFFFF;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-size: 18px;
+}
+.tt-lightbox__btn:hover {
+  background: rgba(255, 255, 255, 0.30);
+}
+.tt-lightbox__image {
+  max-width: 90vw;
+  max-height: 85vh;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+  z-index: 1;
+}
+.tt-lightbox__pdf-frame {
+  width: 90vw;
+  height: 85vh;
+  border: none;
+  border-radius: 8px;
+  z-index: 1;
+  background: #FFFFFF;
+}
+
+/* ── Upload zone ───────────────────────────────────────────────────── */
+.tt-upload-zone {
+  border: 2px dashed #00C9A7;
+  border-radius: 12px;
+  padding: 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: rgba(0, 201, 167, 0.03);
+  position: relative;
+}
+.tt-upload-zone:hover {
+  background: rgba(0, 201, 167, 0.06);
+  border-color: #00B894;
+}
+.tt-upload-zone--drag {
+  background: rgba(0, 201, 167, 0.10);
+  border-color: #00B894;
+}
+.tt-upload-zone__icon {
+  font-size: 40px;
+  color: #00C9A7;
+  margin-bottom: 12px;
+}
+.tt-upload-zone__text {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0F2044;
+  margin-bottom: 4px;
+}
+.tt-upload-zone__hint {
+  font-size: 0.8rem;
+  color: #94A3B8;
+}
+.tt-upload-zone__error {
+  color: #DC2626;
+  font-size: 0.8rem;
+  margin-top: 8px;
+  font-weight: 500;
+}
+
+/* upload preview */
+.tt-upload-preview {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: #F7F9FC;
+  border-radius: 10px;
+  border: 1.5px solid #E2E8F0;
+  margin-top: 12px;
+}
+.tt-upload-preview__img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+}
+.tt-upload-preview__pdf-icon {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #FEF2F2;
+  border-radius: 8px;
+  color: #DC2626;
+  font-size: 28px;
+}
+.tt-upload-preview__info {
+  flex: 1;
+  min-width: 0;
+}
+.tt-upload-preview__name {
+  font-weight: 600;
+  color: #0F2044;
+  font-size: 0.875rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tt-upload-preview__size {
+  color: #94A3B8;
+  font-size: 0.75rem;
+}
+.tt-upload-preview__remove {
+  color: #DC2626;
+  cursor: pointer;
+  font-size: 16px;
+  transition: opacity 0.15s;
+}
+.tt-upload-preview__remove:hover {
+  opacity: 0.7;
+}
+
+/* ── Modal ─────────────────────────────────────────────────────────── */
+.tt-modal .ant-modal-header {
+  border-bottom: 1px solid #E2E8F0;
+  padding: 16px 24px;
+}
+.tt-modal .ant-modal-title {
+  font-weight: 700;
+  color: #0F2044;
+}
+.tt-modal .ant-modal-body {
+  padding: 24px;
+}
+.tt-modal .ant-modal-footer {
+  border-top: 1px solid #E2E8F0;
+  padding: 12px 24px;
+}
+.tt-modal .ant-form-item-label > label {
+  font-weight: 600;
+  color: #334155;
+}
+.tt-modal .tt-readonly-field {
+  padding: 8px 12px;
+  background: #F7F9FC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  color: #64748B;
+  font-size: 0.875rem;
+}
+
+/* ── Empty state ───────────────────────────────────────────────────── */
+.tt-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px;
+  text-align: center;
+}
+.tt-empty__icon {
+  font-size: 48px;
+  color: #CBD5E1;
+  margin-bottom: 16px;
+}
+.tt-empty__title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0F2044;
+  margin-bottom: 8px;
+}
+.tt-empty__subtitle {
+  font-size: 0.875rem;
+  color: #94A3B8;
+  margin-bottom: 24px;
+  max-width: 380px;
+}
+
+/* ── Action buttons ────────────────────────────────────────────────── */
+.tt-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 15px;
+  background: transparent;
+  color: #64748B;
+}
+.tt-action-btn:hover {
+  background: #F1F5F9;
+  color: #0F2044;
+}
+.tt-action-btn--danger:hover {
+  background: #FEF2F2;
+  color: #DC2626;
+}
+
+/* ── Animations ────────────────────────────────────────────────────── */
+@keyframes tt-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.tt-animate {
+  animation: tt-fade-in 0.3s ease forwards;
+}
+.tt-animate:nth-child(1) { animation-delay: 0.02s; }
+.tt-animate:nth-child(2) { animation-delay: 0.04s; }
+.tt-animate:nth-child(3) { animation-delay: 0.06s; }
+.tt-animate:nth-child(4) { animation-delay: 0.08s; }
+.tt-animate:nth-child(5) { animation-delay: 0.10s; }
+
+/* ── Current image preview in edit modal ───────────────────────────── */
+.tt-current-image {
+  margin-bottom: 12px;
+}
+.tt-current-image__label {
+  font-size: 0.75rem;
+  color: #94A3B8;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+.tt-current-image__img {
+  width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+  border-radius: 10px;
+  border: 1.5px solid #E2E8F0;
+  background: #F7F9FC;
+}
+
+/* ── Loading overlay for class chips ───────────────────────────────── */
+.tt-classes-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  color: #94A3B8;
+  gap: 8px;
+  font-size: 0.85rem;
+}

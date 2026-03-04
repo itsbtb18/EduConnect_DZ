@@ -1,18 +1,29 @@
 import React, { useState } from 'react';
 import {
-  Table, Button, Modal, Form, Input, Select, Tag, Space,
-  Card, Tooltip, Popconfirm, Badge, Typography,
+  Table, Button, Modal, Form, Input, Select, Tag,
+  Typography, Tooltip, Popconfirm, Row, Col,
+  message as antMsg,
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, KeyOutlined,
   SearchOutlined, UserOutlined, ReloadOutlined,
+  MailOutlined, PhoneOutlined,
 } from '@ant-design/icons';
+import type { ColumnsType } from 'antd/es/table';
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, useResetUserPassword, useSchools } from '../../hooks/useApi';
 import { useAuth } from '../../context/AuthContext';
+import {
+  PageHeader,
+  StatusBadge,
+  DataCard,
+  EmptyState,
+  LoadingSkeleton,
+} from '../../components/ui';
 import './UserManagement.css';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
+/* ── Constants ── */
 const ROLE_OPTIONS = [
   { value: 'ADMIN', label: 'Admin' },
   { value: 'SECTION_ADMIN', label: 'Chef de Section' },
@@ -30,7 +41,14 @@ const ROLE_COLORS: Record<string, string> = {
   STUDENT: 'cyan',
 };
 
-
+const ROLE_GRADIENTS: Record<string, string> = {
+  SUPER_ADMIN: 'linear-gradient(135deg, #EF4444, #DC2626)',
+  ADMIN: 'linear-gradient(135deg, #3B82F6, #2563EB)',
+  SECTION_ADMIN: 'linear-gradient(135deg, #8B5CF6, #7C3AED)',
+  TEACHER: 'linear-gradient(135deg, #10B981, #059669)',
+  PARENT: 'linear-gradient(135deg, #F59E0B, #D97706)',
+  STUDENT: 'linear-gradient(135deg, #06B6D4, #0891B2)',
+};
 
 interface UserRecord {
   id: string;
@@ -127,22 +145,20 @@ const UserManagement: React.FC = () => {
     setIsResetPwOpen(true);
   };
 
-  const columns = [
+  /* ── Table columns ── */
+  const columns: ColumnsType<UserRecord> = [
     {
       title: 'Utilisateur',
       key: 'user',
-      render: (_: unknown, record: UserRecord) => (
-        <div className="user-management__user-cell">
-          <div
-            className={`user-management__user-avatar user-management__user-avatar--${record.role.toLowerCase().replace('_', '-')}`}
-          >
+      sorter: (a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`),
+      render: (_, record) => (
+        <div className="um-cell">
+          <div className="um-cell__avatar" style={{ background: ROLE_GRADIENTS[record.role] || ROLE_GRADIENTS.STUDENT }}>
             {record.first_name?.[0]}{record.last_name?.[0]}
           </div>
-          <div className="user-management__user-info">
-            <span className="user-management__user-name">
-              {record.first_name} {record.last_name}
-            </span>
-            <span className="user-management__user-phone">{record.phone_number}</span>
+          <div className="um-cell__info">
+            <span className="um-cell__name">{record.first_name} {record.last_name}</span>
+            <span className="um-cell__sub">{record.phone_number}</span>
           </div>
         </div>
       ),
@@ -151,48 +167,51 @@ const UserManagement: React.FC = () => {
       title: 'Email',
       dataIndex: 'email',
       key: 'email',
-      render: (email: string) => email || '—',
+      render: (email: string) => email || <span className="um-text-muted">—</span>,
     },
     {
       title: 'Role',
       dataIndex: 'role',
       key: 'role',
+      filters: roleOptions.map(r => ({ text: r.label, value: r.value })),
+      onFilter: (value, record) => record.role === value,
       render: (role: string) => (
-        <Tag color={ROLE_COLORS[role] || 'default'} className="user-management__role-tag">
+        <Tag color={ROLE_COLORS[role] || 'default'} style={{ borderRadius: 12, fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 }}>
           {role.replace('_', ' ')}
         </Tag>
       ),
     },
     ...(isSuperAdmin
-      ? [
-          {
-            title: 'Ecole',
-            key: 'school',
-            render: (_: unknown, record: UserRecord) =>
-              record.school_detail?.name || (record.role === 'SUPER_ADMIN' ? '—' : 'Non assignee'),
-          },
-        ]
+      ? [{
+          title: 'Ecole',
+          key: 'school',
+          render: (_: unknown, record: UserRecord) =>
+            record.school_detail?.name || (record.role === 'SUPER_ADMIN' ? <span className="um-text-muted">—</span> : <span className="um-text-muted">Non assignee</span>),
+        }]
       : []),
     {
       title: 'Statut',
       key: 'status',
-      render: (_: unknown, record: UserRecord) => (
-        <Space>
-          <Badge status={record.is_active ? 'success' : 'error'} text={record.is_active ? 'Actif' : 'Inactif'} />
-          {record.is_first_login && <Tag color="warning">1ere connexion</Tag>}
-        </Space>
+      filters: [{ text: 'Actif', value: true }, { text: 'Inactif', value: false }],
+      onFilter: (value, record) => record.is_active === value,
+      render: (_, record) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <StatusBadge status={record.is_active ? 'active' : 'inactive'} label={record.is_active ? 'Actif' : 'Inactif'} dot size="sm" />
+          {record.is_first_login && <Tag color="warning" style={{ borderRadius: 12 }}>1ere connexion</Tag>}
+        </div>
       ),
     },
     {
       title: 'Actions',
       key: 'actions',
-      render: (_: unknown, record: UserRecord) => (
-        <div className="user-management__actions">
+      width: 140,
+      render: (_, record) => (
+        <div className="um-actions-row">
           <Tooltip title="Modifier">
-            <Button type="text" icon={<EditOutlined />} onClick={() => openEdit(record)} />
+            <Button type="text" size="small" icon={<EditOutlined />} onClick={() => openEdit(record)} />
           </Tooltip>
           <Tooltip title="Reinitialiser mot de passe">
-            <Button type="text" icon={<KeyOutlined />} onClick={() => openResetPw(record)} />
+            <Button type="text" size="small" icon={<KeyOutlined />} onClick={() => openResetPw(record)} />
           </Tooltip>
           {record.id !== currentUser?.id && (
             <Popconfirm
@@ -202,7 +221,7 @@ const UserManagement: React.FC = () => {
               cancelText="Non"
             >
               <Tooltip title="Desactiver">
-                <Button type="text" danger icon={<DeleteOutlined />} />
+                <Button type="text" size="small" danger icon={<DeleteOutlined />} />
               </Tooltip>
             </Popconfirm>
           )}
@@ -212,48 +231,46 @@ const UserManagement: React.FC = () => {
   ];
 
   return (
-    <div className="user-management">
-      <div className="user-management__header">
-        <div>
-          <Title level={3} className="user-management__title">
-            <UserOutlined /> Gestion des Utilisateurs
-          </Title>
-          <Text className="user-management__subtitle">
-            {data?.count ?? 0} utilisateur{(data?.count ?? 0) > 1 ? 's' : ''} au total
-          </Text>
-        </div>
-        <Space>
-          <Button icon={<ReloadOutlined />} onClick={() => refetch()}>
-            Actualiser
-          </Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsCreateOpen(true)}>
-            Nouvel Utilisateur
-          </Button>
-        </Space>
-      </div>
+    <div className="um-page">
+      <PageHeader
+        title="Gestion des Utilisateurs"
+        subtitle={`${data?.count ?? 0} utilisateur${(data?.count ?? 0) > 1 ? 's' : ''} au total`}
+        icon={<UserOutlined />}
+        actions={
+          <div className="um-header-actions">
+            <Button icon={<ReloadOutlined />} onClick={() => refetch()}>Actualiser</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsCreateOpen(true)}>
+              Nouvel Utilisateur
+            </Button>
+          </div>
+        }
+      />
 
-      {/* Filters */}
-      <Card size="small">
-        <div className="user-management__filters">
+      {/* ── Toolbar ── */}
+      <div className="um-toolbar">
+        <div className="um-toolbar__search">
           <Input
-            placeholder="Rechercher..."
-            prefix={<SearchOutlined />}
+            placeholder="Rechercher par nom, telephone..."
+            prefix={<SearchOutlined style={{ color: 'var(--text-tertiary)' }} />}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             allowClear
-            className="user-management__filter-search"
+            size="large"
           />
+        </div>
+        <div className="um-toolbar__filters">
           <Select
-            placeholder="Filtrer par role"
+            placeholder="Role"
             allowClear
             value={roleFilter}
             onChange={setRoleFilter}
             options={roleOptions}
-            className="user-management__filter-role"
+            className="um-toolbar__select"
+            style={{ minWidth: 160 }}
           />
           {isSuperAdmin && (
             <Select
-              placeholder="Filtrer par ecole"
+              placeholder="Ecole"
               allowClear
               value={schoolFilter}
               onChange={setSchoolFilter}
@@ -261,7 +278,8 @@ const UserManagement: React.FC = () => {
                 value: s.id as string,
                 label: s.name as string,
               }))}
-              className="user-management__filter-school"
+              className="um-toolbar__select"
+              style={{ minWidth: 200 }}
               showSearch
               filterOption={(input, option) =>
                 (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
@@ -269,126 +287,155 @@ const UserManagement: React.FC = () => {
             />
           )}
         </div>
-      </Card>
+      </div>
 
-      {/* Table */}
-      <Card>
-        <Table
-          dataSource={(data?.results || []) as unknown as UserRecord[]}
-          columns={columns}
-          loading={isLoading}
-          rowKey="id"
-          pagination={{ pageSize: 20, showTotal: (t) => `${t} utilisateur(s)` }}
+      {/* ── Table ── */}
+      {isLoading ? (
+        <LoadingSkeleton variant="table" rows={8} />
+      ) : !data?.results?.length ? (
+        <EmptyState
+          icon={<UserOutlined />}
+          title="Aucun utilisateur"
+          description="Aucun utilisateur ne correspond aux filtres."
+          action={<Button type="primary" icon={<PlusOutlined />} onClick={() => setIsCreateOpen(true)}>Creer un utilisateur</Button>}
         />
-      </Card>
+      ) : (
+        <DataCard noPadding>
+          <div className="um-dark-table">
+            <Table
+              dataSource={data.results as unknown as UserRecord[]}
+              columns={columns}
+              rowKey="id"
+              pagination={{ pageSize: 20, showTotal: (t) => `${t} utilisateur(s)`, showSizeChanger: true }}
+            />
+          </div>
+        </DataCard>
+      )}
 
-      {/* ── Create User Modal ── */}
+      {/* ════════════════════════════════════════════════════════════════
+           CREATE USER MODAL
+         ════════════════════════════════════════════════════════════════ */}
       <Modal
-        title="Creer un Utilisateur"
+        title={<span className="um-modal__title"><UserOutlined /> Creer un Utilisateur</span>}
         open={isCreateOpen}
         onCancel={() => { setIsCreateOpen(false); createForm.resetFields(); }}
         footer={null}
         width={560}
         destroyOnClose
+        className="um-modal"
       >
         <Form form={createForm} layout="vertical" onFinish={handleCreate}>
-          <Form.Item name="first_name" label="Prenom" rules={[{ required: true, message: 'Prenom requis' }]}>
-            <Input placeholder="Prenom" />
-          </Form.Item>
-          <Form.Item name="last_name" label="Nom" rules={[{ required: true, message: 'Nom requis' }]}>
-            <Input placeholder="Nom de famille" />
-          </Form.Item>
-          <Form.Item
-            name="phone_number"
-            label="Numero de telephone"
-            rules={[{ required: true, message: 'Telephone requis' }]}
-          >
-            <Input placeholder="05XXXXXXXX" />
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="first_name" label="Prenom" rules={[{ required: true, message: 'Requis' }]}>
+                <Input placeholder="Prenom" size="large" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="last_name" label="Nom" rules={[{ required: true, message: 'Requis' }]}>
+                <Input placeholder="Nom de famille" size="large" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="phone_number" label="Telephone" rules={[{ required: true, message: 'Requis' }]}>
+            <Input placeholder="05XXXXXXXX" prefix={<PhoneOutlined />} size="large" />
           </Form.Item>
           <Form.Item name="email" label="Email">
-            <Input placeholder="email@example.com" type="email" />
+            <Input placeholder="email@example.com" type="email" prefix={<MailOutlined />} size="large" />
           </Form.Item>
-          <Form.Item name="role" label="Role" rules={[{ required: true, message: 'Role requis' }]}>
-            <Select placeholder="Choisir un role" options={roleOptions} />
-          </Form.Item>
-          {isSuperAdmin && (
-            <Form.Item
-              noStyle
-              shouldUpdate={(prev, cur) => prev.role !== cur.role}
-            >
-              {({ getFieldValue }) => {
-                const role = getFieldValue('role');
-                if (role === 'SUPER_ADMIN') return null;
-                return (
-                  <Form.Item
-                    name="school"
-                    label="Ecole"
-                    rules={[{ required: true, message: 'Ecole requise pour ce role' }]}
-                  >
-                    <Select
-                      placeholder="Choisir une ecole"
-                      showSearch
-                      filterOption={(input, option) =>
-                        (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
-                      }
-                      options={schools.map((s: Record<string, unknown>) => ({
-                        value: s.id as string,
-                        label: s.name as string,
-                      }))}
-                    />
-                  </Form.Item>
-                );
-              }}
-            </Form.Item>
-          )}
-          <Form.Item
-            name="password"
-            label="Mot de passe"
-            rules={[
-              { required: true, message: 'Mot de passe requis' },
-              { min: 8, message: '8 caracteres minimum' },
-            ]}
-          >
-            <Input.Password placeholder="Minimum 8 caracteres" />
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="role" label="Role" rules={[{ required: true, message: 'Requis' }]}>
+                <Select placeholder="Choisir un role" options={roleOptions} size="large" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              {isSuperAdmin && (
+                <Form.Item noStyle shouldUpdate={(prev, cur) => prev.role !== cur.role}>
+                  {({ getFieldValue }) => {
+                    const role = getFieldValue('role');
+                    if (role === 'SUPER_ADMIN') return null;
+                    return (
+                      <Form.Item name="school" label="Ecole" rules={[{ required: true, message: 'Requis' }]}>
+                        <Select
+                          placeholder="Choisir une ecole"
+                          showSearch
+                          size="large"
+                          filterOption={(input, option) =>
+                            (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
+                          }
+                          options={schools.map((s: Record<string, unknown>) => ({
+                            value: s.id as string,
+                            label: s.name as string,
+                          }))}
+                        />
+                      </Form.Item>
+                    );
+                  }}
+                </Form.Item>
+              )}
+            </Col>
+          </Row>
+          <Form.Item name="password" label="Mot de passe" rules={[{ required: true, message: 'Requis' }, { min: 8, message: '8 caracteres minimum' }]}>
+            <Input.Password placeholder="Minimum 8 caracteres" size="large" />
           </Form.Item>
           <Form.Item>
-            <Button type="primary" htmlType="submit" loading={createUser.isPending} block>
+            <Button type="primary" htmlType="submit" loading={createUser.isPending} block size="large">
               Creer l'utilisateur
             </Button>
           </Form.Item>
         </Form>
       </Modal>
 
-      {/* ── Edit User Modal ── */}
+      {/* ════════════════════════════════════════════════════════════════
+           EDIT USER MODAL
+         ════════════════════════════════════════════════════════════════ */}
       <Modal
-        title={`Modifier: ${editingUser?.first_name} ${editingUser?.last_name}`}
+        title={<span className="um-modal__title"><EditOutlined /> Modifier: {editingUser?.first_name} {editingUser?.last_name}</span>}
         open={isEditOpen}
         onCancel={() => { setIsEditOpen(false); setEditingUser(null); editForm.resetFields(); }}
         footer={null}
         width={560}
         destroyOnClose
+        className="um-modal"
       >
         <Form form={editForm} layout="vertical" onFinish={handleEdit}>
-          <Form.Item name="first_name" label="Prenom" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="last_name" label="Nom" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="first_name" label="Prenom" rules={[{ required: true }]}>
+                <Input size="large" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="last_name" label="Nom" rules={[{ required: true }]}>
+                <Input size="large" />
+              </Form.Item>
+            </Col>
+          </Row>
           <Form.Item name="phone_number" label="Telephone" rules={[{ required: true }]}>
-            <Input />
+            <Input prefix={<PhoneOutlined />} size="large" />
           </Form.Item>
           <Form.Item name="email" label="Email">
-            <Input type="email" />
+            <Input type="email" prefix={<MailOutlined />} size="large" />
           </Form.Item>
-          <Form.Item name="role" label="Role" rules={[{ required: true }]}>
-            <Select options={roleOptions} />
-          </Form.Item>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="role" label="Role" rules={[{ required: true }]}>
+                <Select options={roleOptions} size="large" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="is_active" label="Statut">
+                <Select size="large" options={[{ value: true, label: 'Actif' }, { value: false, label: 'Inactif' }]} />
+              </Form.Item>
+            </Col>
+          </Row>
           {isSuperAdmin && (
             <Form.Item name="school" label="Ecole">
               <Select
                 allowClear
                 showSearch
+                size="large"
                 filterOption={(input, option) =>
                   (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
                 }
@@ -399,47 +446,35 @@ const UserManagement: React.FC = () => {
               />
             </Form.Item>
           )}
-          <Form.Item name="is_active" label="Statut">
-            <Select
-              options={[
-                { value: true, label: 'Actif' },
-                { value: false, label: 'Inactif' },
-              ]}
-            />
-          </Form.Item>
           <Form.Item>
-            <Button type="primary" htmlType="submit" loading={updateUser.isPending} block>
+            <Button type="primary" htmlType="submit" loading={updateUser.isPending} block size="large">
               Enregistrer
             </Button>
           </Form.Item>
         </Form>
       </Modal>
 
-      {/* ── Reset Password Modal ── */}
+      {/* ════════════════════════════════════════════════════════════════
+           RESET PASSWORD MODAL
+         ════════════════════════════════════════════════════════════════ */}
       <Modal
-        title={`Reinitialiser: ${editingUser?.first_name} ${editingUser?.last_name}`}
+        title={<span className="um-modal__title"><KeyOutlined /> Reinitialiser: {editingUser?.first_name} {editingUser?.last_name}</span>}
         open={isResetPwOpen}
         onCancel={() => { setIsResetPwOpen(false); setEditingUser(null); resetPwForm.resetFields(); }}
         footer={null}
         width={420}
         destroyOnClose
+        className="um-modal"
       >
-        <Text type="secondary" className="user-management__reset-hint">
+        <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
           L'utilisateur devra changer son mot de passe a la prochaine connexion.
         </Text>
         <Form form={resetPwForm} layout="vertical" onFinish={handleResetPassword}>
-          <Form.Item
-            name="new_password"
-            label="Nouveau mot de passe"
-            rules={[
-              { required: true, message: 'Mot de passe requis' },
-              { min: 8, message: '8 caracteres minimum' },
-            ]}
-          >
-            <Input.Password placeholder="Minimum 8 caracteres" />
+          <Form.Item name="new_password" label="Nouveau mot de passe" rules={[{ required: true, message: 'Requis' }, { min: 8, message: '8 caracteres minimum' }]}>
+            <Input.Password placeholder="Minimum 8 caracteres" size="large" />
           </Form.Item>
           <Form.Item>
-            <Button type="primary" htmlType="submit" loading={resetPassword.isPending} block>
+            <Button type="primary" htmlType="submit" loading={resetPassword.isPending} block size="large">
               Reinitialiser
             </Button>
           </Form.Item>

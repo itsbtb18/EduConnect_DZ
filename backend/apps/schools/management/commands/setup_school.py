@@ -128,18 +128,33 @@ class Command(BaseCommand):
             self.style.SUCCESS(f"  ✅ Academic year created: {academic_year.name}")
         )
 
-        # 4. Create default exam types
-        from apps.grades.models import ExamType
+        # 4. Exam types are now per-subject/class/trimester — created via admin panel
+        self.stdout.write(
+            self.style.NOTICE(
+                "  ℹ️  Exam types will be configured per subject/class in the admin panel"
+            )
+        )
 
-        for name, weight in [("Devoir 1", 25), ("Devoir 2", 25), ("Composition", 50)]:
-            ExamType.objects.create(school=school, name=name, weight=weight)
-        self.stdout.write(self.style.SUCCESS("  ✅ Default exam types created"))
-
-        # 5. Create default levels based on school type
+        # 5. Create section + default levels based on school type
         from apps.academics.models import Level
+        from apps.schools.models import Section
+
+        type_map = {
+            "primary": (Section.SectionType.PRIMARY, "Primaire"),
+            "middle": (Section.SectionType.MIDDLE, "Moyen"),
+            "secondary": (Section.SectionType.HIGH, "Lycée"),
+        }
+        section_type, section_name = type_map[options["type"]]
+        section = Section.objects.create(
+            school=school,
+            section_type=section_type,
+            name=section_name,
+        )
 
         if options["type"] == "primary":
+            max_g, pass_g = 10, 5
             levels_data = [
+                ("Préparatoire", "PREP", 0),
                 ("1ère Année Primaire", "1AP", 1),
                 ("2ème Année Primaire", "2AP", 2),
                 ("3ème Année Primaire", "3AP", 3),
@@ -147,6 +162,7 @@ class Command(BaseCommand):
                 ("5ème Année Primaire", "5AP", 5),
             ]
         elif options["type"] == "middle":
+            max_g, pass_g = 20, 10
             levels_data = [
                 ("1ère Année Moyenne", "1AM", 1),
                 ("2ème Année Moyenne", "2AM", 2),
@@ -154,6 +170,7 @@ class Command(BaseCommand):
                 ("4ème Année Moyenne", "4AM", 4),
             ]
         else:  # secondary
+            max_g, pass_g = 20, 10
             levels_data = [
                 ("1ère Année Secondaire", "1AS", 1),
                 ("2ème Année Secondaire", "2AS", 2),
@@ -161,7 +178,21 @@ class Command(BaseCommand):
             ]
 
         for name, code, order in levels_data:
-            Level.objects.create(school=school, name=name, code=code, order=order)
+            has_streams = options["type"] == "secondary" and code in (
+                "1AS",
+                "2AS",
+                "3AS",
+            )
+            Level.objects.create(
+                school=school,
+                section=section,
+                name=name,
+                code=code,
+                order=order,
+                max_grade=max_g,
+                passing_grade=pass_g,
+                has_streams=has_streams,
+            )
         self.stdout.write(
             self.style.SUCCESS(f"  ✅ {len(levels_data)} default levels created")
         )

@@ -125,17 +125,15 @@ def notify_grade_published(grade_id: str):
     from apps.grades.models import Grade
 
     try:
-        grade = Grade.objects.select_related("student__user", "subject").get(
+        grade = Grade.objects.select_related("student__user", "exam_type__subject").get(
             pk=grade_id
         )
     except Grade.DoesNotExist:
         return {"status": "failed", "reason": "Grade not found"}
 
     title = "New grade published"
-    body = (
-        f"{grade.subject.name} T{grade.trimester} "
-        f"{grade.exam_type}: {grade.value}/{grade.max_value}"
-    )
+    et = grade.exam_type
+    body = f"{et.subject.name} T{et.trimester} {et.name}: {grade.score}/{et.max_score}"
 
     # Notify student
     send_notification.delay(

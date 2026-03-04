@@ -1,58 +1,109 @@
-/* ── School Management Page ── */
-.school-management {
+/* ══════════════════════════════════════════════════════════════════════
+   School Management — Dark Premium Theme
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Page ── */
+.sm-page {
   display: flex;
   flex-direction: column;
   gap: 24px;
 }
 
-.school-management__header {
+/* ── Header actions ── */
+.sm-header-actions {
   display: flex;
-  justify-content: space-between;
+  gap: 10px;
+}
+
+/* ── Toolbar ── */
+.sm-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  background: var(--bg-surface-1, #FFFFFF);
+  border: 1px solid var(--border-default, rgba(255,255,255,.06));
+  border-radius: 14px;
+}
+
+.sm-toolbar__search {
+  min-width: 260px;
+  flex: 1;
+}
+.sm-toolbar__search .ant-input-affix-wrapper {
+  background: var(--bg-surface-2, #F0F2F5) !important;
+  border-color: var(--border-default, rgba(255,255,255,.06)) !important;
+  border-radius: 10px !important;
+}
+
+.sm-toolbar__filters {
+  display: flex;
+  gap: 10px;
   align-items: center;
   flex-wrap: wrap;
-  gap: 16px;
 }
 
-.school-management__title {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--text-primary, #1F2937);
+.sm-toolbar__select .ant-select-selector {
+  background: var(--bg-surface-2, #F0F2F5) !important;
+  border-color: var(--border-default, rgba(255,255,255,.06)) !important;
+  border-radius: 10px !important;
+  min-width: 150px;
 }
 
-.school-management__subtitle {
-  margin: 4px 0 0;
-  font-size: 14px;
-  color: var(--text-secondary, #6B7280);
+.sm-toolbar__toggle .ant-segmented {
+  background: var(--bg-surface-2, #F0F2F5);
+  border-radius: 10px;
+}
+.sm-toolbar__toggle .ant-segmented-item-selected {
+  background: var(--accent, #00C9A7) !important;
+  color: #fff !important;
+  border-radius: 8px !important;
 }
 
-.school-management__grid {
+/* ── Loading skeleton grid ── */
+.sm-skeleton-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
   gap: 20px;
 }
 
-.school-card {
-  border-radius: 14px;
-  transition: box-shadow 0.2s;
+/* ── Grid view ── */
+.sm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 20px;
 }
 
-.school-card:hover {
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+/* ══════════════════════════════════════════════════════════════════════
+   School Card (Grid)
+   ══════════════════════════════════════════════════════════════════════ */
+.sm-card {
+  background: var(--bg-surface-1, #FFFFFF);
+  border: 1px solid var(--border-default, rgba(255,255,255,.06));
+  border-radius: 16px;
+  padding: 20px;
+  transition: all 0.25s ease;
+  cursor: default;
+}
+.sm-card:hover {
+  border-color: var(--border-hover, rgba(255,255,255,.12));
+  box-shadow: 0 8px 32px rgba(0,0,0,.25);
+  transform: translateY(-2px);
 }
 
-.school-card__header {
+.sm-card__header {
   display: flex;
   align-items: center;
   gap: 14px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
-.school-card__avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #1A6BFF 0%, #6366F1 100%);
+.sm-card__avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #00C9A7, #00AEEF);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -60,87 +111,516 @@
   font-weight: 700;
   font-size: 18px;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
-.school-card__name {
+.sm-card__logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sm-card__identity {
+  flex: 1;
+  min-width: 0;
+}
+
+.sm-card__name {
   font-size: 16px;
   font-weight: 700;
-  color: var(--text-primary, #1F2937);
+  color: var(--text-primary, #F0F2F5);
   margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.school-card__subdomain {
+.sm-card__subdomain {
   font-size: 12px;
-  color: var(--text-secondary, #6B7280);
+  color: var(--text-tertiary, rgba(255,255,255,.35));
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
 }
 
-.school-card__details {
+/* Tags row */
+.sm-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+/* Section badges */
+.sm-card__sections {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.sm-card__section-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 20px;
+  background: rgba(0, 201, 167, 0.08);
+  color: var(--accent, #00C9A7);
+  border: 1px solid rgba(0, 201, 167, 0.15);
+}
+
+/* Details */
+.sm-card__details {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
+  gap: 6px;
+  margin-bottom: 14px;
 }
 
-.school-card__detail-row {
+.sm-card__detail {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: var(--text-secondary, #6B7280);
+  color: var(--text-secondary, rgba(255,255,255,.55));
 }
-
-.school-card__detail-row .anticon {
-  color: #1A6BFF;
+.sm-card__detail .anticon {
+  color: var(--accent, #00C9A7);
   font-size: 14px;
   min-width: 18px;
 }
 
-.school-card__actions {
+/* Actions */
+.sm-card__actions {
   display: flex;
   gap: 8px;
   padding-top: 12px;
-  border-top: 1px solid var(--border-color, #F1F5F9);
+  border-top: 1px solid var(--border-default, rgba(255,255,255,.06));
 }
 
-/* Search input */
-.school-management__search-input {
-  max-width: 400px;
+/* ══════════════════════════════════════════════════════════════════════
+   List View — Dark Table
+   ══════════════════════════════════════════════════════════════════════ */
+.sm-list-wrap {
+  overflow: hidden;
 }
 
-/* Loading spinner container */
-.school-management__loading {
-  text-align: center;
-  padding: 60px;
+.sm-dark-table .ant-table {
+  background: transparent !important;
+}
+.sm-dark-table .ant-table-thead > tr > th {
+  background: var(--bg-surface-2, #F0F2F5) !important;
+  color: var(--text-secondary, rgba(255,255,255,.55)) !important;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border-default, rgba(255,255,255,.06)) !important;
+}
+.sm-dark-table .ant-table-tbody > tr > td {
+  border-bottom: 1px solid var(--border-default, rgba(255,255,255,.04)) !important;
+  color: var(--text-primary, #F0F2F5);
+  padding: 12px 16px;
+}
+.sm-dark-table .ant-table-tbody > tr:hover > td {
+  background: var(--bg-surface-2, #F0F2F5) !important;
+}
+.sm-dark-table .ant-table-pagination {
+  margin: 16px 0 0 !important;
 }
 
-/* Card header status badge (right-aligned) */
-.school-card__status {
-  margin-left: auto;
+.sm-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-/* Admin list in modal */
-.school-management__admin-section {
+.sm-cell__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #00C9A7, #00AEEF);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.sm-cell__logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sm-cell__info {
+  display: flex;
+  flex-direction: column;
+}
+
+.sm-cell__name {
+  font-weight: 600;
+  font-size: 13.5px;
+}
+
+.sm-cell__sub {
+  font-size: 11.5px;
+  color: var(--text-tertiary, rgba(255,255,255,.35));
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+}
+
+/* Utility */
+.sm-text-muted {
+  color: var(--text-tertiary, rgba(255,255,255,.35));
+  font-size: 12px;
+}
+
+.sm-actions-row {
+  display: flex;
+  gap: 4px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Modal — Dark Premium
+   ══════════════════════════════════════════════════════════════════════ */
+.sm-modal .ant-modal-content {
+  background: var(--bg-surface-1, #FFFFFF) !important;
+  border: 1px solid var(--border-default, rgba(255,255,255,.06));
+  border-radius: 20px;
+  padding: 32px;
+}
+.sm-modal .ant-modal-header {
+  background: transparent !important;
+  border-bottom: 1px solid var(--border-default, rgba(255,255,255,.06));
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+}
+.sm-modal .ant-modal-title {
+  color: var(--text-primary, #F0F2F5) !important;
+}
+.sm-modal .ant-modal-close {
+  color: var(--text-secondary, rgba(255,255,255,.55));
+}
+.sm-modal .ant-modal-body {
+  padding: 0;
+}
+
+/* Modal header (create wizard) */
+.sm-modal__header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.sm-modal__icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--accent, #00C9A7), #00AEEF);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.sm-modal__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary, #F0F2F5);
+  font-family: var(--font-display, 'Inter', sans-serif);
+}
+
+.sm-modal__subtitle {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--text-secondary, rgba(255,255,255,.55));
+}
+
+.sm-modal__edit-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary, #F0F2F5);
+}
+
+/* Steps */
+.sm-modal__steps {
+  margin-bottom: 28px !important;
+}
+.sm-modal__steps .ant-steps-item-process .ant-steps-item-icon {
+  background: var(--accent, #00C9A7) !important;
+  border-color: var(--accent, #00C9A7) !important;
+}
+.sm-modal__steps .ant-steps-item-finish .ant-steps-item-icon {
+  border-color: var(--accent, #00C9A7) !important;
+}
+.sm-modal__steps .ant-steps-item-finish .ant-steps-item-icon .ant-steps-icon {
+  color: var(--accent, #00C9A7) !important;
+}
+.sm-modal__steps .ant-steps-item-finish .ant-steps-item-tail::after {
+  background-color: var(--accent, #00C9A7) !important;
+}
+
+/* Footer */
+.sm-modal__footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-default, rgba(255,255,255,.06));
+}
+
+/* Success state */
+.sm-modal__success {
+  padding: 8px 0;
+}
+.sm-modal__success .ant-result-title {
+  color: var(--text-primary, #F0F2F5) !important;
+}
+.sm-modal__success .ant-result-subtitle {
+  color: var(--text-secondary, rgba(255,255,255,.55)) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Step Content
+   ══════════════════════════════════════════════════════════════════════ */
+.sm-step {
+  min-height: 280px;
+}
+
+.sm-step__section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary, #F0F2F5);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sm-step__section-title .anticon {
+  color: var(--accent, #00C9A7);
+}
+
+/* Logo upload */
+.sm-logo-area {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.sm-logo-upload .ant-upload {
+  width: 100px !important;
+  height: 100px !important;
+  border-radius: 16px !important;
+  border: 2px dashed var(--border-default, rgba(255,255,255,.12)) !important;
+  background: var(--bg-surface-2, #F0F2F5) !important;
+  transition: all 0.3s;
+}
+.sm-logo-upload .ant-upload:hover {
+  border-color: var(--accent, #00C9A7) !important;
+}
+
+.sm-logo-upload__placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary, rgba(255,255,255,.55));
+}
+
+.sm-logo-upload__ok {
+  font-size: 13px;
+  color: var(--accent, #00C9A7);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Category radio */
+.sm-category-radios {
+  display: flex !important;
+  gap: 16px !important;
+  width: 100%;
+}
+
+.sm-category-btn {
+  flex: 1 !important;
+  height: 72px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 14px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  border: 2px solid var(--border-default, rgba(255,255,255,.08)) !important;
+  background: var(--bg-surface-2, #F0F2F5) !important;
+  color: var(--text-primary, #F0F2F5) !important;
+  transition: all 0.2s !important;
+}
+.sm-category-btn::before { display: none !important; }
+.sm-category-btn.ant-radio-button-wrapper-checked {
+  background: rgba(0, 201, 167, 0.08) !important;
+  border-color: var(--accent, #00C9A7) !important;
+  color: var(--accent, #00C9A7) !important;
+}
+
+.sm-category-btn__icon {
+  margin-right: 10px;
+  font-size: 20px;
+}
+
+/* Section checkboxes */
+.sm-section-checks {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sm-section-checks__item {
+  margin-bottom: 0 !important;
+}
+
+.sm-section-check {
+  padding: 12px 20px !important;
+  border: 2px solid var(--border-default, rgba(255,255,255,.08));
+  border-radius: 12px;
+  background: var(--bg-surface-2, #F0F2F5);
+  transition: all 0.2s;
+}
+.sm-section-check:hover {
+  border-color: var(--accent, #00C9A7);
+}
+.ant-checkbox-wrapper-checked .sm-section-check,
+.sm-section-check.ant-checkbox-wrapper-checked {
+  border-color: var(--accent, #00C9A7);
+  background: rgba(0, 201, 167, 0.06);
+}
+
+.sm-section-check__icon {
+  margin-right: 8px;
+  font-size: 18px;
+}
+
+/* Plan radio */
+.sm-plan-radios {
+  display: flex !important;
+  gap: 12px !important;
+  width: 100%;
+}
+
+.sm-plan-btn {
+  flex: 1 !important;
+  height: auto !important;
+  padding: 16px !important;
+  border-radius: 14px !important;
+  border: 2px solid var(--border-default, rgba(255,255,255,.08)) !important;
+  background: var(--bg-surface-2, #F0F2F5) !important;
+  color: var(--text-primary, #F0F2F5) !important;
+  text-align: center !important;
+}
+.sm-plan-btn::before { display: none !important; }
+.sm-plan-btn.ant-radio-button-wrapper-checked {
+  background: rgba(0, 201, 167, 0.08) !important;
+  border-color: var(--accent, #00C9A7) !important;
+  color: var(--accent, #00C9A7) !important;
+}
+
+.sm-plan-btn__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Credentials Display
+   ══════════════════════════════════════════════════════════════════════ */
+.sm-creds {
+  background: var(--bg-surface-2, #F0F2F5);
+  border-radius: 14px;
+  padding: 20px;
+  border: 1px solid var(--border-default, rgba(255,255,255,.06));
+}
+
+.sm-creds__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-default, rgba(255,255,255,.04));
+}
+.sm-creds__row:last-child {
+  border-bottom: none;
+}
+
+.sm-creds__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary, rgba(255,255,255,.55));
+  min-width: 100px;
+}
+
+.sm-creds__value {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary, #F0F2F5);
+}
+
+.sm-creds__value--mono {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  letter-spacing: 1px;
+  background: rgba(0, 201, 167, 0.1);
+  padding: 2px 10px;
+  border-radius: 6px;
+  color: var(--accent, #00C9A7);
+}
+
+/* Admin section in modals */
+.sm-admin-existing {
   margin-bottom: 16px;
+  padding: 12px 16px;
+  background: var(--bg-surface-2, #F0F2F5);
+  border-radius: 12px;
+  border: 1px solid var(--border-default, rgba(255,255,255,.06));
 }
 
-.school-management__admin-tags {
+.sm-admin-existing__tags {
   margin-top: 8px;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
-.school-card__admins {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border-color, #F1F5F9);
-}
-
-.school-card__admins-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary, #6B7280);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .sm-grid {
+    grid-template-columns: 1fr;
+  }
+  .sm-skeleton-grid {
+    grid-template-columns: 1fr;
+  }
+  .sm-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .sm-toolbar__search {
+    min-width: unset;
+  }
+  .sm-category-radios,
+  .sm-plan-radios {
+    flex-direction: column !important;
+  }
+  .sm-modal .ant-modal-content {
+    padding: 20px;
+  }
+  .sm-section-checks {
+    flex-direction: column;
+  }
 }

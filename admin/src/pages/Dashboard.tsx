@@ -17,7 +17,7 @@ import {
   FileTextOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
-import { useDashboardStats, useClasses, useNotifications, useAnnouncements, useAttendance, useChatRooms } from '../hooks/useApi';
+import { useDashboardStats, useClasses, useNotifications, useAnnouncements, useAttendance, useConversations } from '../hooks/useApi';
 import './Dashboard.css';
 
 const REFRESH_INTERVAL = 60_000; // Auto-refresh every 60 seconds
@@ -28,7 +28,7 @@ const Dashboard: React.FC = () => {
   const { data: classData, isLoading: classesLoading } = useClasses({ page_size: 5 });
   const { data: notifData } = useNotifications({ page_size: 5 });
   const { data: announcementData } = useAnnouncements({ page_size: 5 });
-  const { data: chatData } = useChatRooms();
+  const { data: chatData } = useConversations();
 
   // Today's attendance for the attendance rate stat — auto-refresh every 60s
   const today = new Date().toISOString().split('T')[0];
@@ -42,8 +42,8 @@ const Dashboard: React.FC = () => {
 
   // Unread messages count
   const unreadMessages = useMemo(() => {
-    const rooms = (chatData?.results || []) as Record<string, unknown>[];
-    return rooms.reduce((sum, r) => sum + ((r.unread_count as number) || 0), 0);
+    const convs = (Array.isArray(chatData) ? chatData : chatData?.results || []) as Record<string, unknown>[];
+    return convs.reduce((sum, c) => sum + ((c.unread_count_admin as number) || 0), 0);
   }, [chatData]);
 
   // Today's announcements count
@@ -175,7 +175,7 @@ const Dashboard: React.FC = () => {
       {/* Header with greeting */}
       <div className="page-header">
         <div className="page-header__info">
-          <h1>{greeting} 👋</h1>
+          <h1>{greeting}</h1>
           <p className="dashboard__date">
             <CalendarOutlined /> {formattedDate}
             <span className="dashboard__auto-refresh">

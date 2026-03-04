@@ -1,14 +1,23 @@
-import React from 'react';
-import { Card, Spin, Tag, Progress, Table, Empty } from 'antd';
+import React, { useState, useMemo } from 'react';
+import { Table, Tag } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import {
   BarChartOutlined,
   RiseOutlined,
   TeamOutlined,
   BankOutlined,
   CrownOutlined,
-  GlobalOutlined,
+  CalendarOutlined,
 } from '@ant-design/icons';
 import { usePlatformStats, useSchools } from '../../hooks/useApi';
+import {
+  PageHeader,
+  StatCard,
+  DataCard,
+  LoadingSkeleton,
+  EmptyState,
+  SectionHeader,
+} from '../../components/ui';
 import {
   BarChart,
   Bar,
@@ -21,11 +30,27 @@ import {
   Pie,
   Cell,
   Legend,
+  LineChart,
+  Line,
   AreaChart,
   Area,
 } from 'recharts';
+import './SuperAdmin.css';
 
-const COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#10b981', '#f59e0b', '#ef4444'];
+const PLAN_COLORS: Record<string, string> = {
+  STARTER: '#3B82F6',
+  PRO: '#F59E0B',
+  PRO_AI: '#A855F7',
+  FREE: '#6B7280',
+};
+const PLAN_LABELS: Record<string, string> = {
+  STARTER: 'Starter',
+  PRO: 'Pro',
+  PRO_AI: 'Pro + AI',
+  FREE: 'Gratuit',
+};
+
+type RangePreset = '7d' | '30d' | '3m' | '1y' | 'all';
 
 interface SchoolRecord {
   id: string;
@@ -35,364 +60,341 @@ interface SchoolRecord {
   student_count?: number;
   teacher_count?: number;
   created_at?: string;
+  wilaya?: string;
 }
 
 const SuperAdminAnalytics: React.FC = () => {
   const { data: stats, isLoading: statsLoading } = usePlatformStats();
   const { data: schoolsData, isLoading: schoolsLoading } = useSchools({ page_size: 100 });
+  const [rangePreset, setRangePreset] = useState<RangePreset>('all');
 
   const isLoading = statsLoading || schoolsLoading;
   const schools = (schoolsData?.results || []) as unknown as SchoolRecord[];
 
-  // Plan distribution data
+  /* ── Date filtering ── */
+  const filteredSchools = useMemo(() => {
+    if (rangePreset === 'all') return schools;
+    const now = new Date();
+    const cutoff = new Date(now);
+    if (rangePreset === '7d') cutoff.setDate(now.getDate() - 7);
+    else if (rangePreset === '30d') cutoff.setDate(now.getDate() - 30);
+    else if (rangePreset === '3m') cutoff.setMonth(now.getMonth() - 3);
+    else if (rangePreset === '1y') cutoff.setFullYear(now.getFullYear() - 1);
+    return schools.filter((s) => s.created_at && new Date(s.created_at) >= cutoff);
+  }, [schools, rangePreset]);
+
+  /* ── Plan distribution ── */
   const planCounts: Record<string, number> = {};
   schools.forEach((s) => {
-    const plan = s.subscription_plan || 'FREE';
+    const plan = s.subscription_plan || 'STARTER';
     planCounts[plan] = (planCounts[plan] || 0) + 1;
   });
-  const planData = Object.entries(planCounts).map(([name, value]) => ({ name, value }));
+  const planData = Object.entries(planCounts).map(([name, value]) => ({
+    name: PLAN_LABELS[name] || name,
+    value,
+    fill: PLAN_COLORS[name] || '#6B7280',
+  }));
 
-  // Active vs inactive
+  /* ── Active vs inactive ── */
   const activeCount = schools.filter((s) => s.is_active !== false).length;
-  const inactiveCount = schools.length - activeCount;
-  const statusData = [
-    { name: 'Actives', value: activeCount },
-    { name: 'Inactives', value: inactiveCount },
-  ];
+  const activePct = schools.length ? Math.round((activeCount / schools.length) * 100) : 0;
 
-  // Schools by month (from created_at)
-  const monthMap: Record<string, number> = {};
+  /* ── Growth by month — two lines: schools and users ── */
+  const monthMap: Record<string, { schools: number; users: number }> = {};
   schools.forEach((s) => {
     if (s.created_at) {
       const d = new Date(s.created_at);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      monthMap[key] = (monthMap[key] || 0) + 1;
+      if (!monthMap[key]) monthMap[key] = { schools: 0, users: 0 };
+      monthMap[key].schools += 1;
+      monthMap[key].users += (s.student_count || 0) + (s.teacher_count || 0);
     }
   });
   const growthData = Object.entries(monthMap)
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([month, count]) => ({
+    .map(([month, counts]) => ({
       month: new Date(month + '-01').toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' }),
-      schools: count,
+      écoles: counts.schools,
+      utilisateurs: counts.users,
     }));
 
-  // Student/Teacher distribution
-  const sizeData = schools
-    .filter((s) => s.student_count || s.teacher_count)
-    .slice(0, 15)
-    .map((s) => ({
-      name: s.name?.slice(0, 15) || 'Ecole',
-      étudiants: s.student_count || 0,
-      enseignants: s.teacher_count || 0,
-    }));
+  /* ── Schools by wilaya (horizontal bar) ── */
+  const wilayaMap: Record<string, number> = {};
+  schools.forEach((s) => {
+    const w = s.wilaya || 'Non spécifiée';
+    wilayaMap[w] = (wilayaMap[w] || 0) + 1;
+  });
+  const wilayaData = Object.entries(wilayaMap)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 10)
+    .map(([name, count]) => ({ name, count }));
 
-  // Role breakdown from stats
-  const roleBreakdown = stats?.role_breakdown || stats?.roles || {};
-  const roleData = Object.entries(roleBreakdown).map(([name, value]) => ({
-    name: name.replace('_', ' ').replace(/^\w/, (c: string) => c.toUpperCase()),
-    value: value as number,
+  /* ── Subscription lifecycle (stacked area) ── */
+  const lifecycleData = growthData.map((d, i) => ({
+    month: d.month,
+    actives: d.écoles + (i > 0 ? (growthData[i - 1]?.écoles || 0) : 0),
+    nouvelles: d.écoles,
+    désactivées: 0,
   }));
 
-  // Top schools by student count
+  /* ── Top schools table ── */
   const topSchools = [...schools]
     .sort((a, b) => (b.student_count || 0) - (a.student_count || 0))
     .slice(0, 10);
 
-  if (isLoading) {
+  const topColumns: ColumnsType<SchoolRecord> = [
+    { title: '#', width: 50, render: (_: unknown, __: unknown, i: number) => <span className="an-rank">{i + 1}</span> },
+    {
+      title: 'École',
+      dataIndex: 'name',
+      key: 'name',
+      render: (n: string) => <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{n}</span>,
+    },
+    {
+      title: 'Plan',
+      dataIndex: 'subscription_plan',
+      key: 'plan',
+      render: (p: string) => (
+        <Tag color={p === 'PRO_AI' ? 'purple' : p === 'PRO' ? 'gold' : 'blue'}>
+          {PLAN_LABELS[p] || p || 'Starter'}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Étudiants',
+      dataIndex: 'student_count',
+      key: 'students',
+      render: (v: number) => v ?? 0,
+      sorter: (a, b) => (a.student_count || 0) - (b.student_count || 0),
+    },
+    {
+      title: 'Enseignants',
+      dataIndex: 'teacher_count',
+      key: 'teachers',
+      render: (v: number) => v ?? 0,
+    },
+    {
+      title: 'Statut',
+      dataIndex: 'is_active',
+      key: 'active',
+      render: (v: boolean) => (
+        <span className={`ui-status-badge ui-status-badge--${v !== false ? 'success' : 'danger'}`}>
+          {v !== false ? 'Active' : 'Inactive'}
+        </span>
+      ),
+    },
+  ];
+
+  /* ── Custom dark tooltip ── */
+  const DarkTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null;
     return (
-      <div className="page sa-analytics-loading">
-        <Spin size="large" />
+      <div className="an-tooltip">
+        <div className="an-tooltip__label">{label}</div>
+        {payload.map((p: any, i: number) => (
+          <div key={i} className="an-tooltip__row">
+            <span className="an-tooltip__dot" style={{ background: p.color || p.stroke }} />
+            <span>{p.name}: <strong>{p.value}</strong></span>
+          </div>
+        ))}
       </div>
     );
-  }
+  };
+
+  if (isLoading) return <LoadingSkeleton variant="table" rows={8} />;
 
   return (
-    <div className="page animate-fade-in">
-      <div className="page-header">
-        <div className="page-header__info">
-          <h1>
-            <BarChartOutlined style={{ marginRight: 10 }} />
-            Analytiques Plateforme
-          </h1>
-          <p>Vue d'ensemble des métriques de la plateforme ILMI</p>
-        </div>
-      </div>
-
-      {/* KPI row */}
-      <div className="stat-grid">
-        <Card size="small" className="stat-card">
-          <BankOutlined style={{ fontSize: 28, color: 'var(--primary)', marginBottom: 8 }} />
-          <div className="stat-value">{stats?.total_schools ?? schools.length}</div>
-          <div className="stat-label">Écoles</div>
-        </Card>
-        <Card size="small" className="stat-card">
-          <TeamOutlined style={{ fontSize: 28, color: 'var(--secondary)', marginBottom: 8 }} />
-          <div className="stat-value">{stats?.total_users ?? '—'}</div>
-          <div className="stat-label">Utilisateurs</div>
-        </Card>
-        <Card size="small" className="stat-card">
-          <CrownOutlined style={{ fontSize: 28, color: '#f59e0b', marginBottom: 8 }} />
-          <div className="stat-value">{stats?.active_subscriptions ?? activeCount}</div>
-          <div className="stat-label">Abonnements actifs</div>
-        </Card>
-        <Card size="small" className="stat-card">
-          <RiseOutlined style={{ fontSize: 28, color: 'var(--success)', marginBottom: 8 }} />
-          <div className="stat-value">
-            {stats?.growth_rate ? `${stats.growth_rate}%` : growthData.length > 1 ? `+${growthData[growthData.length - 1]?.schools || 0}` : '—'}
+    <div className="sa-page an-page">
+      <PageHeader
+        title="Analytiques Plateforme"
+        subtitle="Vue d'ensemble des métriques et tendances"
+        icon={<BarChartOutlined />}
+        actions={
+          <div className="an-date-bar">
+            {(['7d', '30d', '3m', '1y', 'all'] as RangePreset[]).map((p) => (
+              <button
+                key={p}
+                className={`an-date-btn ${rangePreset === p ? 'an-date-btn--active' : ''}`}
+                onClick={() => setRangePreset(p)}
+              >
+                {p === '7d' ? '7 jours' : p === '30d' ? '30 jours' : p === '3m' ? '3 mois' : p === '1y' ? 'Cette année' : 'Tout'}
+              </button>
+            ))}
           </div>
-          <div className="stat-label">Croissance récente</div>
-        </Card>
+        }
+      />
+
+      {/* ── Row 1: KPI Cards ── */}
+      <div className="sa-stats-grid an-stats-5">
+        <StatCard
+          label="Total inscriptions"
+          value={stats?.total_schools ?? schools.length}
+          icon={<BankOutlined />}
+          variant="info"
+        />
+        <StatCard
+          label="Nouveaux ce mois"
+          value={filteredSchools.length}
+          icon={<CalendarOutlined />}
+          variant="success"
+          sub={rangePreset !== 'all' ? `(${rangePreset})` : undefined}
+        />
+        <StatCard
+          label="Abonnements actifs"
+          value={`${activePct}%`}
+          icon={<CrownOutlined />}
+          variant="warning"
+          sub={`${activeCount}/${schools.length}`}
+        />
+        <StatCard
+          label="Élèves totaux"
+          value={stats?.total_students ?? schools.reduce((acc, s) => acc + (s.student_count || 0), 0)}
+          icon={<TeamOutlined />}
+          variant="pink"
+        />
+        <StatCard
+          label="Croissance récente"
+          value={stats?.growth_rate ? `${stats.growth_rate}%` : growthData.length > 1 ? `+${growthData[growthData.length - 1]?.écoles || 0}` : '—'}
+          icon={<RiseOutlined />}
+          variant="info"
+        />
       </div>
 
-      {/* Charts row 1: Growth + Plan Pie */}
-      <div className="sa-grid-2-1">
-        <Card title={<><GlobalOutlined style={{ marginRight: 8 }} />Croissance des inscriptions</>}>
-          {growthData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={280}>
-              <AreaChart data={growthData}>
+      {/* ── Row 2: Growth Chart ── */}
+      <DataCard title="Croissance mensuelle" icon={<RiseOutlined />} className="" >
+        {growthData.length > 0 ? (
+          <div className="an-chart-wrap">
+            <ResponsiveContainer width="100%" height={320}>
+              <LineChart data={growthData}>
                 <defs>
-                  <linearGradient id="colorSchools" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                  <linearGradient id="gradSchools" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#00C9A7" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#00C9A7" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="gradUsers" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--gray-200)" />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Area
-                  type="monotone"
-                  dataKey="schools"
-                  name="Écoles inscrites"
-                  stroke="#6366f1"
-                  fillOpacity={1}
-                  fill="url(#colorSchools)"
-                />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                <XAxis dataKey="month" tick={{ fill: '#5A6A85', fontSize: 12 }} axisLine={{ stroke: 'rgba(255,255,255,0.06)' }} />
+                <YAxis yAxisId="left" tick={{ fill: '#5A6A85', fontSize: 12 }} axisLine={{ stroke: 'rgba(255,255,255,0.06)' }} allowDecimals={false} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fill: '#5A6A85', fontSize: 12 }} axisLine={{ stroke: 'rgba(255,255,255,0.06)' }} allowDecimals={false} />
+                <Tooltip content={<DarkTooltip />} />
+                <Legend wrapperStyle={{ color: '#94A3B8', fontSize: 13, paddingTop: 8 }} />
+                <Line yAxisId="left" type="monotone" dataKey="écoles" name="Nouvelles écoles" stroke="#00C9A7" strokeWidth={2.5} dot={{ r: 4, fill: '#00C9A7' }} activeDot={{ r: 6 }} />
+                <Line yAxisId="right" type="monotone" dataKey="utilisateurs" name="Nouveaux utilisateurs" stroke="#3B82F6" strokeWidth={2.5} dot={{ r: 4, fill: '#3B82F6' }} activeDot={{ r: 6 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <EmptyState icon={<BarChartOutlined />} title="Pas encore de données" description="Les tendances apparaîtront ici." />
+        )}
+      </DataCard>
+
+      {/* ── Row 3: Wilaya bar + Plan donut ── */}
+      <div className="an-grid-60-40">
+        <DataCard title="Écoles par wilaya" icon={<BankOutlined />}>
+          {wilayaData.length > 0 ? (
+            <div className="an-chart-wrap">
+              <ResponsiveContainer width="100%" height={340}>
+                <BarChart data={wilayaData} layout="vertical" barSize={18}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
+                  <XAxis type="number" tick={{ fill: '#5A6A85', fontSize: 12 }} axisLine={{ stroke: 'rgba(255,255,255,0.06)' }} allowDecimals={false} />
+                  <YAxis type="category" dataKey="name" tick={{ fill: '#94A3B8', fontSize: 12 }} axisLine={false} width={120} />
+                  <Tooltip content={<DarkTooltip />} />
+                  <Bar dataKey="count" name="Écoles" fill="#00C9A7" radius={[0, 6, 6, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <EmptyState icon={<BarChartOutlined />} title="Aucune donnée wilaya" />
+          )}
+        </DataCard>
+
+        <DataCard title="Répartition des plans" icon={<CrownOutlined />}>
+          {planData.length > 0 ? (
+            <div className="an-chart-wrap an-donut-wrap">
+              <ResponsiveContainer width="100%" height={340}>
+                <PieChart>
+                  <Pie data={planData} cx="50%" cy="45%" innerRadius={65} outerRadius={100} paddingAngle={4} dataKey="value">
+                    {planData.map((entry, i) => (
+                      <Cell key={i} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<DarkTooltip />} />
+                  <Legend
+                    verticalAlign="bottom"
+                    wrapperStyle={{ color: '#94A3B8', fontSize: 13, paddingTop: 12 }}
+                    formatter={(value: string) => {
+                      const item = planData.find((d) => d.name === value);
+                      const pct = schools.length ? Math.round(((item?.value || 0) / schools.length) * 100) : 0;
+                      return `${value} — ${item?.value || 0} (${pct}%)`;
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="an-donut-center">
+                <span className="an-donut-center__num">{schools.length}</span>
+                <span className="an-donut-center__label">Total</span>
+              </div>
+            </div>
+          ) : (
+            <EmptyState icon={<CrownOutlined />} title="Aucun plan trouvé" />
+          )}
+        </DataCard>
+      </div>
+
+      {/* ── Row 4: Subscription lifecycle ── */}
+      <DataCard title="Cycle de vie des abonnements" icon={<RiseOutlined />}>
+        {lifecycleData.length > 0 ? (
+          <div className="an-chart-wrap">
+            <ResponsiveContainer width="100%" height={280}>
+              <AreaChart data={lifecycleData}>
+                <defs>
+                  <linearGradient id="gradActive" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#00C9A7" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#00C9A7" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="gradNew" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="gradChurn" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#EF4444" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                <XAxis dataKey="month" tick={{ fill: '#5A6A85', fontSize: 12 }} axisLine={{ stroke: 'rgba(255,255,255,0.06)' }} />
+                <YAxis tick={{ fill: '#5A6A85', fontSize: 12 }} axisLine={{ stroke: 'rgba(255,255,255,0.06)' }} allowDecimals={false} />
+                <Tooltip content={<DarkTooltip />} />
+                <Legend wrapperStyle={{ color: '#94A3B8', fontSize: 13, paddingTop: 8 }} />
+                <Area type="monotone" dataKey="actives" name="Actifs" stroke="#00C9A7" fill="url(#gradActive)" strokeWidth={2} />
+                <Area type="monotone" dataKey="nouvelles" name="Nouveaux" stroke="#10B981" fill="url(#gradNew)" strokeWidth={2} />
+                <Area type="monotone" dataKey="désactivées" name="Désactivés" stroke="#EF4444" fill="url(#gradChurn)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
-          ) : (
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Pas encore de données" />
-          )}
-        </Card>
-
-        <Card title="Répartition des plans">
-          {planData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={280}>
-              <PieChart>
-                <Pie
-                  data={planData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={55}
-                  outerRadius={85}
-                  paddingAngle={4}
-                  dataKey="value"
-                  label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
-                >
-                  {planData.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Legend />
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Aucun plan trouvé" />
-          )}
-        </Card>
-      </div>
-
-      {/* Charts row 2: School Size Distribution + Role Breakdown */}
-      <div className="sa-grid-1-1">
-        <Card title="Distribution étudiants / enseignants par école">
-          {sizeData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={sizeData} barGap={2}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--gray-200)" />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-30} textAnchor="end" height={60} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="étudiants" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="enseignants" fill="#10b981" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Données insuffisantes" />
-          )}
-        </Card>
-
-        <Card title="Répartition des rôles">
-          {roleData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={280}>
-              <PieChart>
-                <Pie
-                  data={roleData}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={85}
-                  dataKey="value"
-                  label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
-                >
-                  {roleData.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Legend />
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="sa-padded-empty">
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Aucune donnée de rôle" />
-            </div>
-          )}
-        </Card>
-      </div>
-
-      {/* School activity + plan bars */}
-      <div className="sa-grid-1-1">
-        {/* Activity status */}
-        <Card title="Statut des écoles">
-          <div className="sa-sub-row">
-            <div className="flex-1">
-              <div className="sa-sub-label">Actives</div>
-              <Progress
-                percent={schools.length ? Math.round((activeCount / schools.length) * 100) : 0}
-                strokeColor="#10b981"
-                size="small"
-              />
-            </div>
-            <div className="flex-1">
-              <div className="sa-sub-label">Inactives</div>
-              <Progress
-                percent={schools.length ? Math.round((inactiveCount / schools.length) * 100) : 0}
-                strokeColor="#ef4444"
-                size="small"
-              />
-            </div>
           </div>
-          <ResponsiveContainer width="100%" height={180}>
-            <PieChart>
-              <Pie
-                data={statusData}
-                cx="50%"
-                cy="50%"
-                innerRadius={40}
-                outerRadius={65}
-                dataKey="value"
-              >
-                <Cell fill="#10b981" />
-                <Cell fill="#ef4444" />
-              </Pie>
-              <Legend />
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </Card>
+        ) : (
+          <EmptyState icon={<BarChartOutlined />} title="Données insuffisantes" />
+        )}
+      </DataCard>
 
-        {/* Plan tier breakdown */}
-        <Card title="Détails des plans">
-          <div className="sa-plan-col">
-            {['STARTER', 'PRO', 'PRO_AI'].map((plan) => {
-              const count = planCounts[plan] || 0;
-              const pct = schools.length ? Math.round((count / schools.length) * 100) : 0;
-              const colorMap: Record<string, string> = {
-                STARTER: '#6366f1',
-                PRO: '#f59e0b',
-                PRO_AI: '#10b981',
-              };
-              const labelMap: Record<string, string> = {
-                STARTER: 'Starter',
-                PRO: 'Pro',
-                PRO_AI: 'Pro + AI',
-              };
-              return (
-                <div key={plan}>
-                  <div className="sa-plan-bar-row">
-                    <span className="font-medium">{labelMap[plan] || plan}</span>
-                    <span className="text-gray">
-                      {count} école{count !== 1 ? 's' : ''} ({pct}%)
-                    </span>
-                  </div>
-                  <Progress
-                    percent={pct}
-                    showInfo={false}
-                    strokeColor={colorMap[plan] || '#6366f1'}
-                    size="small"
-                  />
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-      </div>
-
-      {/* Top schools table */}
-      <Card title="Top 10 Écoles par nombre d'étudiants" style={{ marginBottom: 20 }}>
-        <Table
-          dataSource={topSchools}
-          rowKey={(r) => r.id}
-          pagination={false}
-          size="small"
-          columns={[
-            {
-              title: '#',
-              width: 50,
-              render: (_: unknown, __: unknown, i: number) => i + 1,
-            },
-            {
-              title: 'École',
-              dataIndex: 'name',
-              key: 'name',
-              render: (n: string) => <span className="font-medium">{n}</span>,
-            },
-            {
-              title: 'Plan',
-              dataIndex: 'subscription_plan',
-              key: 'plan',
-              render: (p: string) => {
-                const colorMap: Record<string, string> = {
-                  STARTER: 'blue',
-                  PRO: 'gold',
-                  PRO_AI: 'green',
-                };
-                const labelMap: Record<string, string> = {
-                  STARTER: 'Starter',
-                  PRO: 'Pro',
-                  PRO_AI: 'Pro + AI',
-                };
-                return <Tag color={colorMap[p] || 'default'}>{labelMap[p] || p || 'Starter'}</Tag>;
-              },
-            },
-            {
-              title: 'Étudiants',
-              dataIndex: 'student_count',
-              key: 'students',
-              render: (v: number) => v ?? 0,
-              sorter: (a: SchoolRecord, b: SchoolRecord) => (a.student_count || 0) - (b.student_count || 0),
-            },
-            {
-              title: 'Enseignants',
-              dataIndex: 'teacher_count',
-              key: 'teachers',
-              render: (v: number) => v ?? 0,
-            },
-            {
-              title: 'Statut',
-              dataIndex: 'is_active',
-              key: 'active',
-              render: (v: boolean) =>
-                v !== false ? (
-                  <Tag color="success">Active</Tag>
-                ) : (
-                  <Tag color="error">Inactive</Tag>
-                ),
-            },
-          ]}
-        />
-      </Card>
+      {/* ── Top schools table ── */}
+      <SectionHeader title="Top 10 Écoles par nombre d'étudiants" />
+      <DataCard noPadding>
+        <div className="sa-dark-table">
+          <Table
+            dataSource={topSchools}
+            columns={topColumns}
+            rowKey={(r) => r.id}
+            pagination={false}
+            size="small"
+            locale={{ emptyText: <EmptyState icon={<BankOutlined />} title="Aucune école" /> }}
+          />
+        </div>
+      </DataCard>
     </div>
   );
 };

@@ -28,7 +28,7 @@ class HomeworkPost(models.Model):
         db_column="class_id",
     )
     subject = models.ForeignKey(
-        "grades.Subject",
+        "academics.Subject",
         on_delete=models.CASCADE,
         related_name="homework_posts",
     )
@@ -38,9 +38,29 @@ class HomeworkPost(models.Model):
         related_name="homework_posts",
         limit_choices_to={"role": "TEACHER"},
     )
+    academic_year = models.ForeignKey(
+        "schools.AcademicYear",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="homework_posts",
+    )
     title = models.CharField(max_length=255)
     description = models.TextField()
-    due_date = models.DateTimeField()
+    assigned_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Date the homework was assigned (auto-set to creation date).",
+    )
+    due_date = models.DateField(
+        help_text="Deadline date for the homework.",
+    )
+    estimated_duration_minutes = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Estimated time to complete (in minutes).",
+    )
+    is_published = models.BooleanField(default=True)
     is_corrected = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -48,6 +68,7 @@ class HomeworkPost(models.Model):
     # Soft delete
     is_deleted = models.BooleanField(default=False)
     deleted_at = models.DateTimeField(blank=True, null=True)
+    delete_reason = models.TextField(blank=True, default="")
 
     class Meta:
         db_table = "homework_posts"
@@ -56,12 +77,22 @@ class HomeworkPost(models.Model):
     def __str__(self):
         return f"{self.title} — {self.class_obj.name}"
 
-    def soft_delete(self):
+    def save(self, *args, **kwargs):
+        if not self.assigned_date:
+            from django.utils import timezone
+
+            self.assigned_date = timezone.localdate()
+        super().save(*args, **kwargs)
+
+    def soft_delete(self, reason=""):
         from django.utils import timezone
 
         self.is_deleted = True
         self.deleted_at = timezone.now()
-        self.save(update_fields=["is_deleted", "deleted_at", "updated_at"])
+        self.delete_reason = reason or ""
+        self.save(
+            update_fields=["is_deleted", "deleted_at", "delete_reason", "updated_at"]
+        )
 
 
 # ---------------------------------------------------------------------------

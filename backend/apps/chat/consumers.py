@@ -1,124 +1,190 @@
 """
-WebSocket consumer for real-time chat.
-Authenticates via JWT from query param, enforces room participation.
+WebSocket consumers for real-time chat and notifications.
+Authenticates via JWT from query param.
 """
 
-from urllib.parse import parse_qs
+import json
 
 from channels.db import database_sync_to_async
-from channels.generic.websocket import AsyncJsonWebsocketConsumer
+from channels.generic.websocket import AsyncWebsocketConsumer
+from django.db import models
 
 
-class ChatConsumer(AsyncJsonWebsocketConsumer):
-    """WebSocket consumer handling real-time chat messages."""
+# ---------------------------------------------------------------------------
+# ChatConsumer — per-conversation
+# ---------------------------------------------------------------------------
+
+
+class ChatConsumer(AsyncWebsocketConsumer):
+    """WebSocket consumer for a specific conversation."""
 
     async def connect(self):
-        self.room_id = self.scope["url_route"]["kwargs"]["room_id"]
-        self.room_group_name = f"chat_{self.room_id}"
-        self.user = None
+        self.conversation_id = self.scope["url_route"]["kwargs"]["conversation_id"]
+        self.room_group_name = f"chat_{self.conversation_id}"
+        self.user = self.scope.get("user")
 
-        # ---- Authenticate via JWT from query string ----
-        query_string = self.scope.get("query_string", b"").decode()
-        params = parse_qs(query_string)
-        token = params.get("token", [None])[0]
-
-        if not token:
+        # Reject unauthenticated
+        if not self.user or not self.user.is_authenticated:
             await self.close(code=4001)
             return
 
-        self.user = await self._authenticate_token(token)
-        if self.user is None:
-            await self.close(code=4001)
-            return
-
-        # ---- Verify user is a participant of this room ----
-        is_participant = await self._is_room_participant(self.user, self.room_id)
+        # Verify participation
+        is_participant = await self._verify_participant()
         if not is_participant:
             await self.close(code=4003)
             return
 
-        # Join room group
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
 
     async def disconnect(self, close_code):
-        # Leave room group
         if hasattr(self, "room_group_name"):
             await self.channel_layer.group_discard(
                 self.room_group_name, self.channel_name
             )
 
-    async def receive_json(self, content, **kwargs):
-        if self.user is None:
+    async def receive(self, text_data):
+        if not self.user or not self.user.is_authenticated:
             return
 
-        message_content = content.get("content", "")
-        attachment_type = content.get("attachment_type")
+        try:
+            data = json.loads(text_data)
+        except json.JSONDecodeError:
+            return
 
-        # Save message to database
-        message_data = await self._save_message(
-            room_id=self.room_id,
-            sender=self.user,
-            content=message_content,
-            attachment_type=attachment_type,
-        )
+        content = data.get("content", "").strip()
+        if not content:
+            return
 
-        # Broadcast to room group
+        # Save and broadcast
+        message_data = await self._save_message(content)
+
         await self.channel_layer.group_send(
             self.room_group_name,
-            {
-                "type": "chat_message",
-                "message": message_data,
-            },
+            {"type": "chat_message", "message": message_data},
         )
+
+        # Notify the other participant
+        if message_data.get("recipient_id"):
+            await self.channel_layer.group_send(
+                f"notifications_{message_data['recipient_id']}",
+                {
+                    "type": "new_message_notification",
+                    "conversation_id": str(self.conversation_id),
+                    "sender_name": message_data["sender_name"],
+                    "preview": content[:60],
+                },
+            )
 
     async def chat_message(self, event):
-        """Receive message from room group and send to WebSocket."""
-        await self.send_json(event["message"])
+        """Relay message to WebSocket client."""
+        await self.send(text_data=json.dumps(event["message"]))
 
-    # -----------------------------------------------------------------------
-    # Database helpers
-    # -----------------------------------------------------------------------
+    # -- DB helpers --
 
     @database_sync_to_async
-    def _authenticate_token(self, token):
-        """Validate a JWT access token and return the user or None."""
-        try:
-            from rest_framework_simplejwt.tokens import AccessToken
+    def _verify_participant(self):
+        from .models import Conversation
 
-            from apps.accounts.models import User
-
-            validated = AccessToken(token)
-            user_id = validated.get("user_id")
-            return User.objects.get(pk=user_id, is_active=True)
-        except Exception:
-            return None
-
-    @database_sync_to_async
-    def _is_room_participant(self, user, room_id):
-        """Check if the user is a participant of the given room."""
-        from .models import ChatRoom
-
-        return ChatRoom.objects.filter(pk=room_id, participants=user).exists()
-
-    @database_sync_to_async
-    def _save_message(self, room_id, sender, content, attachment_type=None):
-        """Persist a message and return serialisable dict."""
-        from .models import ChatRoom, Message
-
-        room = ChatRoom.objects.get(pk=room_id)
-        message = Message.objects.create(
-            room=room,
-            sender=sender,
-            content=content,
-            attachment_type=attachment_type,
+        return (
+            Conversation.objects.filter(
+                pk=self.conversation_id,
+            )
+            .filter(
+                models.Q(participant_admin=self.user)
+                | models.Q(participant_other=self.user)
+            )
+            .exists()
         )
+
+    @database_sync_to_async
+    def _save_message(self, content):
+        from .models import Conversation, Message
+
+        conv = Conversation.objects.select_related(
+            "participant_admin", "participant_other"
+        ).get(pk=self.conversation_id)
+
+        message = Message.objects.create(
+            conversation=conv,
+            sender=self.user,
+            content=content,
+        )
+
+        other = (
+            conv.participant_other
+            if conv.participant_admin == self.user
+            else conv.participant_admin
+        )
+
         return {
             "id": str(message.id),
-            "room_id": str(message.room_id),
-            "sender_id": str(sender.id),
-            "sender_name": sender.full_name,
-            "content": message.content,
-            "attachment_type": message.attachment_type,
-            "sent_at": message.sent_at.isoformat(),
+            "conversation_id": str(conv.id),
+            "sender_id": str(self.user.id),
+            "sender_name": self.user.full_name,
+            "sender_is_admin": self.user == conv.participant_admin,
+            "content": content,
+            "attachment_url": None,
+            "attachment_type": None,
+            "attachment_name": None,
+            "attachment_size": None,
+            "is_read": False,
+            "created_at": message.created_at.isoformat(),
+            "recipient_id": str(other.id),
         }
+
+
+# ---------------------------------------------------------------------------
+# NotificationConsumer — global per-user channel
+# ---------------------------------------------------------------------------
+
+
+class NotificationConsumer(AsyncWebsocketConsumer):
+    """Global WebSocket for real-time notifications (messages, payments, absences)."""
+
+    async def connect(self):
+        self.user = self.scope.get("user")
+        if not self.user or not self.user.is_authenticated:
+            await self.close(code=4001)
+            return
+
+        self.group_name = f"notifications_{self.user.id}"
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        if hasattr(self, "group_name"):
+            await self.channel_layer.group_discard(self.group_name, self.channel_name)
+
+    async def new_message_notification(self, event):
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "type": "new_message",
+                    "conversation_id": event["conversation_id"],
+                    "sender_name": event["sender_name"],
+                    "preview": event["preview"],
+                }
+            )
+        )
+
+    async def payment_notification(self, event):
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "type": "payment_expired",
+                    "message": event["message"],
+                    "count": event["count"],
+                }
+            )
+        )
+
+    async def absence_notification(self, event):
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "type": "absence_alert",
+                    "message": event["message"],
+                }
+            )
+        )

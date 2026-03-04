@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   DashboardOutlined,
@@ -16,14 +16,18 @@ import {
   BankOutlined,
   CrownOutlined,
   SafetyCertificateOutlined,
-  GlobalOutlined,
   BellOutlined,
   BookOutlined,
   AuditOutlined,
   HeartOutlined,
   AppstoreOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
 } from '@ant-design/icons';
+import { Tooltip } from 'antd';
 import { useAuth } from '../../context/AuthContext';
+import { useSchoolProfile } from '../../hooks/useApi';
+import ilmiLogo from '../../assets/ilmi-logo.png';
 import './Sidebar.css';
 
 interface NavItem {
@@ -80,7 +84,7 @@ const schoolAdminSections: NavSection[] = [
       { path: '/students', icon: <TeamOutlined />, label: 'Élèves' },
       { path: '/teachers', icon: <SolutionOutlined />, label: 'Enseignants' },
       { path: '/classes', icon: <AppstoreOutlined />, label: 'Classes' },
-      { path: '/grades', icon: <FileTextOutlined />, label: 'Notes & Bulletins' },
+      { path: '/notes-bulletins', icon: <FileTextOutlined />, label: 'Notes & Bulletins' },
       { path: '/attendance', icon: <CheckCircleOutlined />, label: 'Absences' },
       { path: '/homework', icon: <BookOutlined />, label: 'Devoirs' },
       { path: '/timetable', icon: <CalendarOutlined />, label: 'Emploi du temps' },
@@ -97,14 +101,34 @@ const schoolAdminSections: NavSection[] = [
   {
     title: 'Administration',
     items: [
-      { path: '/financial', icon: <DollarOutlined />, label: 'Finances' },
+      { path: '/financial', icon: <DollarOutlined />, label: 'Paiements' },
       { path: '/analytics', icon: <BarChartOutlined />, label: 'Analytiques' },
       { path: '/settings', icon: <SettingOutlined />, label: 'Paramètres' },
     ],
   },
 ];
 
-const Sidebar: React.FC = () => {
+interface SidebarProps {
+  collapsed: boolean;
+  onToggle: () => void;
+}
+
+/** Normalise a logo URL so it always works from the browser.
+ *  – absolute URLs (http…) → strip to just the pathname so the Vite / nginx proxy handles it
+ *  – relative paths → ensure they start with /
+ *  – falsy values → null
+ */
+const normalizeLogoUrl = (url: string | null | undefined): string | null => {
+  if (!url || url.trim() === '') return null;
+  try {
+    const parsed = new URL(url);
+    return parsed.pathname;           // e.g. /media/schools/logos/pic.png
+  } catch {
+    return url.startsWith('/') ? url : `/${url}`;
+  }
+};
+
+const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
   const location = useLocation();
   const { user } = useAuth();
   const isActive = (path: string) => location.pathname.startsWith(path);
@@ -112,24 +136,65 @@ const Sidebar: React.FC = () => {
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   const sections = isSuperAdmin ? superAdminSections : schoolAdminSections;
 
+  const { data: schoolProfile } = useSchoolProfile({ enabled: !isSuperAdmin });
+  const school = schoolProfile as { logo_url?: string; name?: string; subscription_plan?: string } | undefined;
+  const schoolLogo = !isSuperAdmin ? normalizeLogoUrl(school?.logo_url) : null;
+
+  // Track image load errors so we can fall back to initials
+  const [logoError, setLogoError] = useState(false);
+  useEffect(() => { setLogoError(false); }, [schoolLogo]);
+  const schoolName = !isSuperAdmin ? (school?.name || user?.school_name || 'Mon école') : '';
+  const planLabel = !isSuperAdmin ? (school?.subscription_plan || user?.subscription_plan || 'Starter') : '';
+
+  const schoolInitials = schoolName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w: string) => w[0])
+    .join('')
+    .toUpperCase() || 'EC';
+
+  const initials = user
+    ? `${(user.first_name || '')[0] || ''}${(user.last_name || '')[0] || ''}`.toUpperCase() || 'AD'
+    : 'AD';
+
   return (
-    <nav className="sidebar">
-      {/* Logo */}
+    <nav className={`sidebar ${collapsed ? 'sidebar--collapsed' : ''}`}>
+      {/* School branding (top) or ILMI logo for super admin */}
       <div className="sidebar__logo">
-        <div className={`sidebar__logo-mark ${isSuperAdmin ? 'sidebar__logo-mark--sa' : ''}`}>
-          {isSuperAdmin ? 'SA' : 'M'}
-        </div>
-        <div className="sidebar__logo-text">
-          {isSuperAdmin ? (
-            <>Madra<span>ssa</span></>
-          ) : (
-            <>Madra<span>ssa</span></>
-          )}
-        </div>
+        {isSuperAdmin ? (
+          <img src={ilmiLogo} alt="ILMI Platform" className="sidebar__logo-img" />
+        ) : (
+          <>
+            <div className="sidebar__school-logo">
+              {schoolLogo && !logoError ? (
+                <img
+                  src={schoolLogo}
+                  alt={schoolName}
+                  className="sidebar__school-logo-img"
+                  onError={() => setLogoError(true)}
+                />
+              ) : (
+                <span className="sidebar__school-logo-initials">{schoolInitials}</span>
+              )}
+            </div>
+            {!collapsed && (
+              <div className="sidebar__school-info">
+                <div className="sidebar__school-name">{schoolName}</div>
+                <div className="sidebar__school-plan">Plan {planLabel}</div>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
+      {/* Collapse toggle */}
+      <button className="sidebar__toggle" onClick={onToggle} title={collapsed ? 'Expand' : 'Collapse'}>
+        {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+      </button>
+
       {/* Super Admin badge */}
-      {isSuperAdmin && (
+      {isSuperAdmin && !collapsed && (
         <div className="sidebar__sa-badge">
           <SafetyCertificateOutlined />
           <span>Super Admin</span>
@@ -137,53 +202,47 @@ const Sidebar: React.FC = () => {
       )}
 
       {/* Navigation */}
-      {sections.map((section) => (
-        <React.Fragment key={section.title}>
-          <div className="sidebar__section-title">{section.title}</div>
-          {section.items.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={`sidebar__nav-item${isActive(item.path) ? ' sidebar__nav-item--active' : ''}`}
-            >
-              <span className="sidebar__nav-icon">{item.icon}</span>
-              <span>{item.label}</span>
-            </NavLink>
-          ))}
-        </React.Fragment>
-      ))}
+      <div className="sidebar__nav">
+        {sections.map((section) => (
+          <React.Fragment key={section.title}>
+            {!collapsed && (
+              <div className="sidebar__section-title">{section.title}</div>
+            )}
+            {collapsed && <div className="sidebar__section-divider" />}
+            {section.items.map((item) => {
+              const navItem = (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={`sidebar__nav-item${isActive(item.path) ? ' sidebar__nav-item--active' : ''}`}
+                >
+                  <span className="sidebar__nav-icon">{item.icon}</span>
+                  {!collapsed && <span className="sidebar__nav-label">{item.label}</span>}
+                </NavLink>
+              );
 
-      {/* Spacer */}
-      <div className="sidebar__spacer" />
+              return collapsed ? (
+                <Tooltip key={item.path} title={item.label} placement="right" mouseEnterDelay={0.1}>
+                  {navItem}
+                </Tooltip>
+              ) : (
+                navItem
+              );
+            })}
+          </React.Fragment>
+        ))}
+      </div>
 
-      {/* Bottom card */}
-      {isSuperAdmin ? (
-        <div className="sidebar__school-card sidebar__school-card--sa">
-          <div className="sidebar__school-info">
-            <div className="sidebar__school-avatar sidebar__school-avatar--sa">
-              <GlobalOutlined />
+      {/* Bottom area — only shown for school admins */}
+      {!isSuperAdmin && (
+        <div className="sidebar__bottom">
+          {!collapsed && (
+            <div className="sidebar__powered-by">
+              <img src={ilmiLogo} alt="ILMI" className="sidebar__powered-logo" />
             </div>
-            <div>
-              <div className="sidebar__school-name">ILMI</div>
-              <div className="sidebar__school-plan">Plateforme Multi-Écoles</div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="sidebar__school-card">
-          <div className="sidebar__school-info">
-            <div className="sidebar__school-avatar">
-              {(user?.school_name || 'EC')[0]?.toUpperCase() || 'E'}
-            </div>
-            <div>
-              <div className="sidebar__school-name">{user?.school_name || 'Mon école'}</div>
-              <div className="sidebar__school-plan">{user?.subscription_plan || 'Plan Starter'}</div>
-            </div>
-          </div>
+          )}
         </div>
       )}
-
-      <div className="sidebar__version">v2.0.0</div>
     </nav>
   );
 };

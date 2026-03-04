@@ -20,7 +20,7 @@ import { useDashboardStats, useClasses, usePayments, useAttendance, useTeachers 
 import dayjs from 'dayjs';
 import './AnalyticsPage.css';
 
-const COLORS = ['#1A6BFF', '#10B981', '#F59E0B', '#EF4444', '#6366F1', '#EC4899'];
+const COLORS = ['#00C9A7', '#10B981', '#F59E0B', '#EF4444', '#1B5C7A', '#EC4899'];
 
 const AnalyticsPage: React.FC = () => {
   const { studentCount, teacherCount, classCount, paymentCount, isLoading } = useDashboardStats();
@@ -199,7 +199,7 @@ const AnalyticsPage: React.FC = () => {
                     boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                   }}
                 />
-                <Bar dataKey="effectif" fill="#1A6BFF" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="effectif" fill="#00C9A7" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -357,7 +357,7 @@ const AnalyticsPage: React.FC = () => {
       <Card
         title={
           <Space>
-            <SolutionOutlined style={{ color: '#6366F1' }} />
+            <SolutionOutlined style={{ color: '#1B5C7A' }} />
             <span className="section-title">Engagement des enseignants — Soumission des présences</span>
           </Space>
         }

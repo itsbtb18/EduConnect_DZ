@@ -1,12 +1,39 @@
-from django.urls import include, path
-from rest_framework.routers import DefaultRouter
+from django.urls import path
 from . import views
 
 app_name = "finance"
-router = DefaultRouter()
-router.register("fees", views.FeeStructureViewSet, basename="fee-structure")
-router.register("payments", views.PaymentViewSet, basename="payment")
+
 urlpatterns = [
-    path("stats/", views.FinanceStatsView.as_view(), name="finance-stats"),
-    path("", include(router.urls)),
+    # Fee Structures
+    path(
+        "fee-structures/", views.FeeStructureListCreateView.as_view(), name="fee-list"
+    ),
+    path(
+        "fee-structures/<uuid:pk>/",
+        views.FeeStructureDetailView.as_view(),
+        name="fee-detail",
+    ),
+    # Payments — special endpoints BEFORE <uuid:pk>
+    path("payments/stats/", views.PaymentStatsView.as_view(), name="payment-stats"),
+    path(
+        "payments/expiring-soon/",
+        views.PaymentExpiringSoonView.as_view(),
+        name="payment-expiring",
+    ),
+    path(
+        "payments/bulk-reminder/",
+        views.PaymentBulkReminderView.as_view(),
+        name="payment-bulk-reminder",
+    ),
+    path("payments/report/", views.PaymentReportView.as_view(), name="payment-report"),
+    # Payments CRUD
+    path("payments/", views.PaymentListCreateView.as_view(), name="payment-list"),
+    path(
+        "payments/<uuid:pk>/", views.PaymentDetailView.as_view(), name="payment-detail"
+    ),
+    path(
+        "payments/<uuid:pk>/send-reminder/",
+        views.PaymentSendReminderView.as_view(),
+        name="payment-reminder",
+    ),
 ]

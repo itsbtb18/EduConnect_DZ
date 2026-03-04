@@ -1,12 +1,16 @@
 """
 Test factories for the Grades app using factory_boy.
+
+NOTE: These factories need to be updated to match the new ExamType-based
+architecture. The old ExamType was a simple model with school/name/weight.
+The new ExamType references subject/classroom/academic_year/trimester.
+
+Placeholder factories below — update when implementing full test suite.
 """
 
 import factory
+from decimal import Decimal
 from factory.django import DjangoModelFactory
-
-from apps.academics.factories import TeacherAssignmentFactory
-from apps.schools.factories import SchoolFactory
 
 
 class ExamTypeFactory(DjangoModelFactory):
@@ -15,9 +19,10 @@ class ExamTypeFactory(DjangoModelFactory):
     class Meta:
         model = "grades.ExamType"
 
-    school = factory.SubFactory(SchoolFactory)
-    name = factory.Iterator(["Devoir 1", "Devoir 2", "Composition"])
-    weight = factory.Iterator([25, 25, 50])
+    name = factory.Iterator(["Examen 1", "Examen 2", "Contrôle Continu"])
+    percentage = factory.Iterator([Decimal("60"), Decimal("20"), Decimal("20")])
+    max_score = Decimal("20")
+    trimester = 1
 
 
 class GradeFactory(DjangoModelFactory):
@@ -26,20 +31,13 @@ class GradeFactory(DjangoModelFactory):
     class Meta:
         model = "grades.Grade"
 
-    school = factory.SubFactory(SchoolFactory)
-    student = factory.SubFactory(
-        "apps.accounts.factories.StudentUserFactory",
-        school=factory.SelfAttribute("..school"),
-    )
-    teacher_assignment = factory.SubFactory(
-        TeacherAssignmentFactory,
-        school=factory.SelfAttribute("..school"),
-    )
-    exam_type = factory.SubFactory(
-        ExamTypeFactory,
-        school=factory.SelfAttribute("..school"),
-    )
+    exam_type = factory.SubFactory(ExamTypeFactory)
     score = factory.Faker(
-        "pydecimal", left_digits=2, right_digits=2, min_value=0, max_value=20
+        "pydecimal",
+        left_digits=2,
+        right_digits=2,
+        min_value=0,
+        max_value=20,
     )
-    is_published = True
+    is_absent = False
+    is_published = False

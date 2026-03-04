@@ -1,0 +1,288 @@
+/* ══════════════════════════════════════════════════════════════════════
+   ILMI — ID Card Styles
+   Credit-card format: 85.6mm × 54mm (aspect ratio ≈ 1.585)
+   Displayed at ~320px width in the profile sidebar.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Wrapper ── */
+.idcard-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ── Card container ── */
+.idcard {
+  width: 320px;
+  aspect-ratio: 85.6 / 54;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.08),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ══════════════ Banner (top stripe) ══════════════ */
+.idcard__banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  color: #fff;
+  min-height: 38px;
+}
+
+.idcard__banner-left {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+}
+
+.idcard__school-logo {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  object-fit: cover;
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  flex-shrink: 0;
+}
+.idcard__school-logo-placeholder {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.idcard__school-text {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.idcard__school-name {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.idcard__school-sub {
+  font-size: 7px;
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.idcard__year {
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* ══════════════ Body ══════════════ */
+.idcard__body {
+  display: flex;
+  flex: 1;
+  padding: 8px 10px;
+  gap: 10px;
+  min-height: 0;
+}
+
+/* Left side — photo + info */
+.idcard__info {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.idcard__photo {
+  width: 48px;
+  height: 56px;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #F1F5F9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #E2E8F0;
+}
+.idcard__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.idcard__photo-initials {
+  font-size: 16px;
+  font-weight: 700;
+  color: #94A3B8;
+}
+
+.idcard__details {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  padding-top: 1px;
+}
+
+.idcard__name {
+  font-size: 10px;
+  font-weight: 700;
+  color: #0F2044;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.idcard__line {
+  font-size: 7.5px;
+  color: #4A5568;
+  line-height: 1.45;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.idcard__line--label {
+  font-weight: 600;
+  color: #64748B;
+  margin-top: 2px;
+}
+.idcard__line--bullet {
+  padding-left: 4px;
+}
+.idcard__line--muted {
+  color: #94A3B8;
+  font-style: italic;
+}
+
+.idcard__subjects {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Right side — QR code */
+.idcard__qr-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 72px;
+}
+
+.idcard__qr-img {
+  width: 64px;
+  height: 64px;
+  border-radius: 4px;
+  border: 1px solid #E2E8F0;
+}
+.idcard__qr-placeholder {
+  width: 64px;
+  height: 64px;
+  border-radius: 4px;
+  border: 2px dashed #CBD5E0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: #CBD5E0;
+}
+
+/* ══════════════ Footer ══════════════ */
+.idcard__footer {
+  padding: 4px 10px;
+  border-top: 1.5px solid #E2E8F0;
+  background: #FAFBFD;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.idcard__footer-validity {
+  font-size: 7px;
+  font-weight: 600;
+  color: #D97706;
+}
+.idcard__footer-phone {
+  font-size: 6.5px;
+  color: #64748B;
+}
+
+/* ══════════════ Action buttons ══════════════ */
+.idcard-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+.idcard-actions__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+.idcard-actions__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.idcard-actions__btn--pdf {
+  background: #0F2044;
+  color: #fff;
+}
+.idcard-actions__btn--pdf:hover:not(:disabled) {
+  background: #1a2d5a;
+}
+.idcard-actions__btn--png {
+  background: #F1F5F9;
+  color: #0F2044;
+  border: 1px solid #E2E8F0;
+}
+.idcard-actions__btn--png:hover:not(:disabled) {
+  background: #E2E8F0;
+}
+
+/* Spinner animation */
+@keyframes idcard-spin {
+  to { transform: rotate(360deg); }
+}
+.idcard-spin {
+  animation: idcard-spin 0.8s linear infinite;
+}
+
+/* ══════════════ Responsive ══════════════ */
+@media (max-width: 360px) {
+  .idcard {
+    width: 280px;
+  }
+  .idcard-actions {
+    flex-direction: column;
+    width: 280px;
+  }
+}

@@ -1,164 +1,149 @@
+/* ═══════════════════════════════════════════════
+   Sidebar — Collapsible dark navy navigation
+   Brand: #0F2044 navy, #00C9A7 teal accent
+   ═══════════════════════════════════════════════ */
+
 .sidebar {
   width: 260px;
-  background: linear-gradient(180deg, #0F172A 0%, #0B1022 100%);
+  background: #0F2044;
   display: flex;
   flex-direction: column;
-  padding: 20px 12px;
+  padding: 16px 10px;
   flex-shrink: 0;
-  overflow-y: auto;
   height: 100%;
-  border-right: 1px solid rgba(255, 255, 255, 0.04);
+  border-right: none;
+  transition: width 280ms cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  position: relative;
+  z-index: 100;
 }
 
-/* Logo */
+.sidebar--collapsed {
+  width: 70px;
+  padding: 16px 8px;
+}
+
+/* ── Logo area ── */
 .sidebar__logo {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 4px 14px 28px;
-}
-
-.sidebar__logo-mark {
-  width: 36px;
-  height: 36px;
-  background: linear-gradient(135deg, #1A6BFF 0%, #6366F1 100%);
-  border-radius: 10px;
-  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
-  color: #fff;
-  font-weight: 900;
-  letter-spacing: -1px;
-  box-shadow: 0 4px 12px rgba(26, 107, 255, 0.3);
+  padding: 16px 8px 20px;
+  min-height: 64px;
+  transition: padding 280ms ease;
 }
 
-.sidebar__logo-text {
-  color: #fff;
-  font-weight: 800;
-  font-size: 20px;
-  letter-spacing: -0.5px;
-}
-
-.sidebar__logo-text span {
-  color: #6366F1;
-}
-
-/* Section */
-.sidebar__section-title {
-  font-size: 10px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.2);
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  padding: 20px 14px 8px;
-}
-
-/* Nav item */
-.sidebar__nav-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  border-radius: 10px;
-  font-size: 13.5px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.45);
-  text-decoration: none;
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
-  margin: 1px 0;
-  position: relative;
-  cursor: pointer;
-}
-
-.sidebar__nav-item:hover {
-  color: rgba(255, 255, 255, 0.85);
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.sidebar__nav-item--active {
-  color: #fff !important;
-  background: linear-gradient(135deg, #1A6BFF 0%, #4F8CFF 100%) !important;
-  font-weight: 600;
-  box-shadow: 0 4px 14px rgba(26, 107, 255, 0.35);
-}
-
-.sidebar__nav-item--active:hover {
-  background: linear-gradient(135deg, #1A6BFF 0%, #4F8CFF 100%) !important;
-}
-
-/* Icon */
-.sidebar__nav-icon {
-  font-size: 18px;
-  width: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 200ms ease;
-}
-
-.sidebar__nav-item:hover .sidebar__nav-icon {
-  transform: scale(1.1);
-}
-
-/* Spacer */
-.sidebar__spacer {
-  flex: 1;
-}
-
-/* School card */
-.sidebar__school-card {
-  padding: 14px;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 12px;
-  margin-top: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  transition: background 200ms ease;
-}
-
-.sidebar__school-card:hover {
-  background: rgba(255, 255, 255, 0.07);
-}
-
-.sidebar__school-info {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.sidebar__school-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #1A6BFF, #6366F1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-weight: 800;
-  font-size: 13px;
+/* ILMI logo for super admin */
+.sidebar__logo-img {
+  width: 170px;
+  height: auto;
+  object-fit: contain;
+  background: transparent;
+  border-radius: 0;
+  padding: 8px 16px;
+  box-shadow: none;
   flex-shrink: 0;
+  transition: width 280ms cubic-bezier(0.4, 0, 0.2, 1),
+              padding 280ms ease;
+}
+
+.sidebar--collapsed .sidebar__logo-img {
+  width: 40px;
+  padding: 6px;
+  border-radius: 8px;
+}
+
+/* School logo circle */
+.sidebar__school-logo {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  transition: width 280ms ease, height 280ms ease;
+}
+
+.sidebar--collapsed .sidebar__school-logo {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+}
+
+.sidebar__school-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sidebar__school-logo-initials {
+  font-size: 20px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 1px;
+}
+
+.sidebar--collapsed .sidebar__school-logo-initials {
+  font-size: 14px;
+}
+
+/* School info text below logo */
+.sidebar__school-info {
+  text-align: center;
+  margin-top: 10px;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .sidebar__school-name {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.85);
+  color: #FFFFFF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   line-height: 1.3;
 }
 
 .sidebar__school-plan {
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.35);
-  margin-top: 1px;
+  font-weight: 600;
+  color: #00C9A7;
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-/* Version */
-.sidebar__version {
-  text-align: center;
-  font-size: 10px;
-  color: rgba(255, 255, 255, 0.15);
-  padding: 12px 0 4px;
+/* ── Toggle button ── */
+.sidebar__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  background: #FFFFFF;
+  color: #0F2044;
+  cursor: pointer;
+  position: absolute;
+  top: 24px;
+  right: -14px;
+  z-index: 110;
+  font-size: 12px;
+  transition: all 200ms ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.sidebar__toggle:hover {
+  background: #00C9A7;
+  color: #fff;
+  border-color: #00C9A7;
 }
 
 /* ── Super Admin badge ── */
@@ -166,33 +151,249 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 14px;
-  margin: 0 6px 8px;
+  padding: 6px 12px;
+  margin: 0 4px 12px;
   border-radius: 8px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
+  color: #00C9A7;
+  background: rgba(0, 201, 167, 0.12);
+  border: 1px solid rgba(0, 201, 167, 0.20);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ── Navigation area ── */
+.sidebar__nav {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 2px;
+}
+
+.sidebar__nav::-webkit-scrollbar {
+  width: 3px;
+}
+
+.sidebar__nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+.sidebar__nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Section title */
+.sidebar__section-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.35);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  padding: 18px 12px 6px;
+  white-space: nowrap;
+}
+
+/* Section divider (collapsed mode) */
+.sidebar__section-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 8px 8px;
+}
+
+/* ── Nav item ── */
+.sidebar__nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.65);
+  text-decoration: none;
+  transition: all 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  margin: 1px 0;
+  position: relative;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidebar__nav-item:hover {
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar__nav-item--active {
+  color: #fff !important;
+  background: rgba(0, 201, 167, 0.18) !important;
+  font-weight: 600;
+}
+
+.sidebar__nav-item--active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 18px;
+  background: #00C9A7;
+  border-radius: 0 3px 3px 0;
+}
+
+.sidebar__nav-item--active .sidebar__nav-icon {
+  color: #00C9A7;
+}
+
+/* Collapsed: center items */
+.sidebar--collapsed .sidebar__nav-item {
+  justify-content: center;
+  padding: 10px;
+}
+
+/* Icon */
+.sidebar__nav-icon {
+  font-size: 17px;
+  width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: color 180ms ease;
+}
+
+/* Label */
+.sidebar__nav-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Bottom area ── */
+.sidebar__bottom {
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 8px;
+  flex-shrink: 0;
+}
+
+/* User card */
+.sidebar__user-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  transition: background 200ms ease;
+}
+
+.sidebar__user-card:hover {
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.sidebar__user-card--sa {
+  border-color: rgba(0, 201, 167, 0.20);
+  background: rgba(0, 201, 167, 0.06);
+}
+
+.sidebar__user-card--sa:hover {
+  background: rgba(0, 201, 167, 0.12);
+}
+
+.sidebar__user-card--mini {
+  justify-content: center;
+  padding: 10px 6px;
+}
+
+/* Avatar */
+.sidebar__user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #00C9A7, #00AEEF);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #fff;
-  background: linear-gradient(135deg, #f5222d, #fa541c);
-  letter-spacing: 0.5px;
+  font-weight: 800;
+  font-size: 12px;
+  flex-shrink: 0;
+  overflow: hidden;
 }
 
-/* Super Admin logo mark variant */
-.sidebar__logo-mark--sa {
-  background: linear-gradient(135deg, #f5222d 0%, #fa541c 100%);
-  box-shadow: 0 4px 12px rgba(245, 34, 45, 0.3);
+.sidebar__user-avatar--sa {
+  background: linear-gradient(135deg, #00AEEF, #0F2044);
+  font-size: 15px;
 }
 
-/* Super Admin school card variant */
-.sidebar__school-card--sa {
-  border-color: rgba(245, 34, 45, 0.15);
-  background: rgba(245, 34, 45, 0.06);
+.sidebar__user-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-.sidebar__school-card--sa:hover {
-  background: rgba(245, 34, 45, 0.1);
+/* User info */
+.sidebar__user-info {
+  flex: 1;
+  min-width: 0;
 }
 
-.sidebar__school-avatar--sa {
-  background: linear-gradient(135deg, #f5222d, #fa541c);
-  font-size: 16px;
+.sidebar__user-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.90);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar__user-sub {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Health dot */
+.sidebar__health-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.sidebar__health-dot--online {
+  background: #22C55E;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.4);
+}
+
+/* Powered-by ILMI logo */
+.sidebar__powered-by {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.sidebar__powered-logo {
+  max-width: 48px;
+  max-height: 48px;
+  width: auto;
+  height: auto;
+  opacity: 0.4;
+  transition: opacity 200ms ease;
+}
+
+.sidebar__powered-logo:hover {
+  opacity: 0.65;
 }

@@ -20,6 +20,7 @@ import { useStudents, useCreateStudent, useUpdateStudent, useDeleteStudent, useC
 import { exportToCSV, exportToPDF } from '../../hooks/useExport';
 import { useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
+import ImportButtons from '../../components/ui/ImportButtons';
 import './StudentList.css';
 
 const StudentList: React.FC = () => {
@@ -266,6 +267,7 @@ const StudentList: React.FC = () => {
           <p>{data?.count ?? 0} élèves enregistrés</p>
         </div>
         <div className="page-header__actions">
+          <ImportButtons templateType="students" />
           <Button icon={<ReloadOutlined />} onClick={() => refetch()}>
             Actualiser
           </Button>
@@ -334,6 +336,15 @@ const StudentList: React.FC = () => {
           dataSource={data?.results || []}
           loading={isLoading}
           rowKey={(r: Record<string, any>) => (r.id as string) || `stu-${r.first_name}-${r.last_name}`}
+          onRow={(record: Record<string, any>) => ({
+            onClick: (e: React.MouseEvent) => {
+              // Don't navigate if clicking inside the actions column
+              const target = e.target as HTMLElement;
+              if (target.closest('.ant-btn') || target.closest('.ant-dropdown') || target.closest('.ant-popconfirm')) return;
+              navigate(`/students/${record.id}`);
+            },
+            style: { cursor: 'pointer' },
+          })}
           pagination={{
             current: page,
             pageSize: 20,

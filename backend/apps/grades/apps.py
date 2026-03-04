@@ -5,3 +5,6 @@ class GradesConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "apps.grades"
     verbose_name = "Grades & Report Cards"
+
+    def ready(self):
+        import apps.grades.signals  # noqa: F401

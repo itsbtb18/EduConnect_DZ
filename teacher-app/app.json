@@ -5,11 +5,10 @@
     "scheme": "ilmi",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/ilmi-logo.png",
     "userInterfaceStyle": "light",
-    "scheme": "educonnect",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/ilmi-logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#0D1B3E"
     },
@@ -18,7 +17,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/ilmi-logo.png",
         "backgroundColor": "#0D1B3E"
       },
       "package": "com.educonnect.teacher"

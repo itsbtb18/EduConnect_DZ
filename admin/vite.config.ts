@@ -27,6 +27,11 @@ export default defineConfig({
         target: API_TARGET,
         changeOrigin: true,
       },
+      // Proxy media files (user uploads — logos, attachments, etc.)
+      '/media': {
+        target: API_TARGET,
+        changeOrigin: true,
+      },
       // Proxy WebSocket connections
       '/ws': {
         target: WS_TARGET,

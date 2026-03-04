@@ -1,93 +1,107 @@
+"""
+Chat serializers — Conversation & Message.
+"""
+
 from rest_framework import serializers
 
-from .models import ChatRoom, Message
+from .models import Conversation, Message
 
 
 # ---------------------------------------------------------------------------
-# Read serializers
+# Message
 # ---------------------------------------------------------------------------
 
 
 class MessageSerializer(serializers.ModelSerializer):
-    sender_name = serializers.CharField(source="sender.full_name", read_only=True)
+    sender_name = serializers.SerializerMethodField()
+    sender_is_admin = serializers.SerializerMethodField()
+    attachment_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Message
         fields = [
             "id",
-            "room",
             "sender",
             "sender_name",
+            "sender_is_admin",
             "content",
-            "attachment",
+            "attachment_url",
             "attachment_type",
-            "sent_at",
-            "is_deleted",
+            "attachment_name",
+            "attachment_size",
+            "is_read",
+            "created_at",
         ]
-        read_only_fields = ["id", "sender", "sent_at", "is_deleted"]
+        read_only_fields = fields
+
+    def get_sender_name(self, obj):
+        return obj.sender.full_name if obj.sender else ""
+
+    def get_sender_is_admin(self, obj):
+        return obj.sender_id == obj.conversation.participant_admin_id
+
+    def get_attachment_url(self, obj):
+        if not obj.attachment:
+            return None
+        request = self.context.get("request")
+        if request:
+            return request.build_absolute_uri(obj.attachment.url)
+        return obj.attachment.url
 
 
-class ChatRoomSerializer(serializers.ModelSerializer):
-    last_message = serializers.SerializerMethodField()
-    unread_count = serializers.SerializerMethodField()
-    participant_names = serializers.SerializerMethodField()
+# ---------------------------------------------------------------------------
+# Conversation list
+# ---------------------------------------------------------------------------
+
+
+class ConversationListSerializer(serializers.ModelSerializer):
+    participant_other_name = serializers.SerializerMethodField()
+    participant_other_initials = serializers.SerializerMethodField()
+    last_message_preview = serializers.SerializerMethodField()
 
     class Meta:
-        model = ChatRoom
+        model = Conversation
         fields = [
             "id",
-            "school",
-            "room_type",
-            "related_student",
-            "related_class",
-            "participants",
-            "created_at",
-            "last_message",
-            "unread_count",
-            "participant_names",
+            "participant_other",
+            "participant_other_name",
+            "participant_other_role",
+            "participant_other_initials",
+            "last_message_preview",
+            "last_message_at",
+            "unread_count_admin",
         ]
-        read_only_fields = ["id", "school", "created_at"]
+        read_only_fields = fields
 
-    def get_last_message(self, obj):
-        msg = obj.messages.filter(is_deleted=False).order_by("-sent_at").first()
-        return MessageSerializer(msg).data if msg else None
+    def get_participant_other_name(self, obj):
+        return obj.participant_other.full_name if obj.participant_other else ""
 
-    def get_unread_count(self, obj):
-        request = self.context.get("request")
-        if not request or not request.user:
-            return 0
-        user = request.user
-        # Count messages in this room not sent by the user that have no read
-        return (
-            obj.messages.filter(is_deleted=False)
-            .exclude(sender=user)
-            .exclude(reads__user=user)
-            .count()
-        )
+    def get_participant_other_initials(self, obj):
+        u = obj.participant_other
+        if not u:
+            return ""
+        first = u.first_name[:1].upper() if u.first_name else ""
+        last = u.last_name[:1].upper() if u.last_name else ""
+        return f"{first}{last}"
 
-    def get_participant_names(self, obj):
-        return list(obj.participants.values_list("full_name", flat=True))
+    def get_last_message_preview(self, obj):
+        last_msg = obj.messages.order_by("-created_at").first()
+        if not last_msg:
+            return ""
+        if last_msg.content:
+            return last_msg.content[:60]
+        if last_msg.attachment:
+            return "Pièce jointe"
+        return ""
 
 
 # ---------------------------------------------------------------------------
-# Write serializers
+# Conversation create
 # ---------------------------------------------------------------------------
 
 
-class ChatRoomCreateSerializer(serializers.Serializer):
-    """Create a chat room."""
-
-    room_type = serializers.ChoiceField(choices=ChatRoom.RoomType.choices)
-    related_student_id = serializers.UUIDField(required=False, allow_null=True)
-    related_class_id = serializers.UUIDField(required=False, allow_null=True)
-    participant_ids = serializers.ListField(child=serializers.UUIDField(), min_length=1)
-
-
-class SendMessageSerializer(serializers.Serializer):
-    """Send a message via REST (fallback for offline)."""
-
-    content = serializers.CharField(required=False, allow_blank=True, default="")
-    attachment = serializers.FileField(required=False, allow_null=True)
-    attachment_type = serializers.CharField(
-        required=False, allow_blank=True, allow_null=True
+class ConversationCreateSerializer(serializers.Serializer):
+    participant_other_id = serializers.UUIDField()
+    participant_other_role = serializers.ChoiceField(
+        choices=Conversation.ParticipantRole.choices
     )

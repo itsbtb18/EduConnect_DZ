@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Table, Button, Input, Tag, Drawer, Form, Select, Space, Popconfirm, message, Card, Descriptions, Tooltip, Progress } from 'antd';
 import {
   PlusOutlined,
@@ -12,12 +13,14 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   WarningOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
 import { useTeachers, useCreateTeacher, useUpdateTeacher, useDeleteTeacher, useSubjects } from '../../hooks/useApi';
 import { exportToCSV, exportToPDF } from '../../hooks/useExport';
 import { useQueryClient } from '@tanstack/react-query';
 
 const TeacherList: React.FC = () => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -157,9 +160,16 @@ const TeacherList: React.FC = () => {
     {
       title: 'Actions',
       key: 'actions',
-      width: 140,
+      width: 170,
       render: (_: unknown, r: Record<string, unknown>) => (
         <Space size={4}>
+          <Button
+            type="text"
+            icon={<UserOutlined />}
+            size="small"
+            onClick={() => navigate(`/teachers/${r.id}/profile`)}
+            title="Profil complet"
+          />
           <Button
             type="text"
             icon={<EyeOutlined />}

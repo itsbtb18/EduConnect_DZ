@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Table, Tag, Spin, Button, Progress, Badge, Avatar, Tooltip } from 'antd';
+import { Table, Tag, Button, Tooltip } from 'antd';
 import {
   BankOutlined,
   TeamOutlined,
@@ -11,18 +11,36 @@ import {
   ArrowRightOutlined,
   RiseOutlined,
   ThunderboltOutlined,
-  GlobalOutlined,
-  SafetyCertificateOutlined,
   SettingOutlined,
   UserAddOutlined,
 } from '@ant-design/icons';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  Cell,
+} from 'recharts';
 import { usePlatformStats } from '../../hooks/useApi';
+import {
+  StatCard,
+  DataCard,
+  SectionHeader,
+  StatusBadge,
+  PageHeader,
+  LoadingSkeleton,
+  GlassCard,
+} from '../../components/ui';
 import './SuperAdmin.css';
 
+/* ─── Label / Color maps ─── */
 const planColors: Record<string, string> = {
-  STARTER: 'blue',
-  PRO: 'gold',
-  PRO_AI: 'purple',
+  STARTER: '#3B82F6',
+  PRO: '#F59E0B',
+  PRO_AI: '#A855F7',
 };
 
 const planLabels: Record<string, string> = {
@@ -49,155 +67,50 @@ const roleColors: Record<string, string> = {
   STUDENT: 'purple',
 };
 
+/* ─── Component ─── */
 const SuperAdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { data: stats, isLoading } = usePlatformStats();
 
+  /* ── Loading skeleton ── */
   if (isLoading) {
     return (
-      <div className="sa-loading">
-        <Spin size="large" />
-        <p>Chargement du tableau de bord...</p>
+      <div className="sa-page">
+        <div className="sa-stats-grid">
+          {[1, 2, 3, 4].map((i) => (
+            <LoadingSkeleton key={i} variant="stat" />
+          ))}
+        </div>
+        <div className="sa-middle-grid">
+          <LoadingSkeleton variant="card" />
+          <LoadingSkeleton variant="card" />
+        </div>
       </div>
     );
   }
 
+  /* ── Derived values ── */
   const totalSchools = stats?.schools?.total ?? 0;
   const activeSubscriptions = stats?.schools?.active_subscriptions ?? 0;
+  const inactiveSubscriptions = stats?.schools?.inactive_subscriptions ?? 0;
   const totalUsers = stats?.users?.total ?? 0;
   const newUsers30d = stats?.users?.new_last_30d ?? 0;
   const newUsers7d = stats?.users?.new_last_7d ?? 0;
   const newSchools7d = stats?.schools?.new_last_7d ?? 0;
 
-  const subscriptionRate = totalSchools > 0
-    ? Math.round((activeSubscriptions / totalSchools) * 100)
-    : 0;
+  const subscriptionRate =
+    totalSchools > 0 ? Math.round((activeSubscriptions / totalSchools) * 100) : 0;
 
-  const statCards = [
-    {
-      label: 'Écoles',
-      value: totalSchools,
-      icon: <BankOutlined />,
-      colorClass: 'sa-stat--schools',
-      route: '/platform/schools',
-      subtitle: `+${newSchools7d} cette semaine`,
-    },
-    {
-      label: 'Utilisateurs',
-      value: totalUsers,
-      icon: <TeamOutlined />,
-      colorClass: 'sa-stat--users',
-      route: '/platform/users',
-      subtitle: `+${newUsers30d} ce mois`,
-    },
-    {
-      label: 'Abonnements actifs',
-      value: activeSubscriptions,
-      icon: <CrownOutlined />,
-      colorClass: 'sa-stat--subscriptions',
-      route: '/platform/schools',
-      subtitle: `${subscriptionRate}% actifs`,
-    },
-    {
-      label: 'Nouveaux (7j)',
-      value: newUsers7d,
-      icon: <RiseOutlined />,
-      colorClass: 'sa-stat--growth',
-      route: '/platform/users',
-      subtitle: 'Dernière semaine',
-    },
-  ];
+  /* ── Chart data ── */
+  const chartData = (stats?.schools?.plan_distribution || []).map(
+    (p: { subscription_plan: string; count: number }) => ({
+      name: planLabels[p.subscription_plan] || p.subscription_plan,
+      value: p.count,
+      fill: planColors[p.subscription_plan] || '#3B82F6',
+    }),
+  );
 
-  const schoolColumns = [
-    {
-      title: 'École',
-      dataIndex: 'name',
-      key: 'name',
-      render: (name: string, record: Record<string, unknown>) => (
-        <div className="sa-school-cell">
-          <Avatar className="sa-school-avatar" size="small">
-            {(name || '?')[0].toUpperCase()}
-          </Avatar>
-          <div>
-            <div className="sa-school-name">{name}</div>
-            <div className="sa-school-subdomain">{record.subdomain as string}.ilmi.dz</div>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: 'Plan',
-      dataIndex: 'subscription_plan',
-      key: 'plan',
-      render: (plan: string) => (
-        <Tag color={planColors[plan] || 'default'} className="sa-plan-tag">
-          {planLabels[plan] || plan}
-        </Tag>
-      ),
-    },
-    {
-      title: 'Statut',
-      dataIndex: 'subscription_active',
-      key: 'status',
-      render: (active: boolean) =>
-        active ? (
-          <Badge status="success" text="Actif" />
-        ) : (
-          <Badge status="error" text="Inactif" />
-        ),
-    },
-    {
-      title: 'Créée le',
-      dataIndex: 'created_at',
-      key: 'created_at',
-      render: (date: string) =>
-        date ? new Date(date).toLocaleDateString('fr-FR') : '—',
-    },
-  ];
-
-  const userColumns = [
-    {
-      title: 'Utilisateur',
-      key: 'name',
-      render: (_: unknown, record: Record<string, unknown>) => (
-        <div className="sa-user-cell">
-          <Avatar className="sa-user-avatar" size="small">
-            {((record.first_name as string) || '?')[0].toUpperCase()}
-          </Avatar>
-          <span>{record.first_name as string} {record.last_name as string}</span>
-        </div>
-      ),
-    },
-    {
-      title: 'Rôle',
-      dataIndex: 'role',
-      key: 'role',
-      render: (role: string) => (
-        <Tag color={roleColors[role] || 'default'}>
-          {roleLabels[role] || role}
-        </Tag>
-      ),
-    },
-    {
-      title: 'École',
-      dataIndex: 'school__name',
-      key: 'school',
-      render: (name: string) => name || <span className="sa-muted">Plateforme</span>,
-    },
-    {
-      title: 'Téléphone',
-      dataIndex: 'phone_number',
-      key: 'phone',
-    },
-    {
-      title: 'Date',
-      dataIndex: 'created_at',
-      key: 'created_at',
-      render: (date: string) =>
-        date ? new Date(date).toLocaleDateString('fr-FR') : '—',
-    },
-  ];
-
+  /* ── Quick actions ── */
   const quickActions = [
     {
       label: 'Ajouter une école',
@@ -225,18 +138,107 @@ const SuperAdminDashboard: React.FC = () => {
     },
   ];
 
-  return (
-    <div className="page animate-fade-in">
-      {/* Header */}
-      <div className="sa-dashboard-header">
-        <div className="sa-dashboard-header__info">
-          <div className="sa-dashboard-header__badge">
-            <SafetyCertificateOutlined /> Super Admin
+  /* ── Table columns ── */
+  const schoolColumns = [
+    {
+      title: 'École',
+      dataIndex: 'name',
+      key: 'name',
+      render: (name: string, record: Record<string, unknown>) => (
+        <div className="sa-cell">
+          <div className="sa-cell__avatar sa-cell__avatar--school">
+            {(name || '?')[0].toUpperCase()}
           </div>
-          <h1>Tableau de bord plateforme</h1>
-          <p>Vue d&apos;ensemble de la plateforme ILMI</p>
+          <div>
+            <div className="sa-cell__name">{name}</div>
+            <div className="sa-cell__sub">{record.subdomain as string}.ilmi.dz</div>
+          </div>
         </div>
-        <div className="sa-dashboard-header__actions">
+      ),
+    },
+    {
+      title: 'Plan',
+      dataIndex: 'subscription_plan',
+      key: 'plan',
+      render: (plan: string) => (
+        <Tag
+          color={planColors[plan] || '#3B82F6'}
+          style={{ borderRadius: 20, fontWeight: 600, border: 'none' }}
+        >
+          {planLabels[plan] || plan}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Statut',
+      dataIndex: 'subscription_active',
+      key: 'status',
+      render: (active: boolean) => (
+        <StatusBadge
+          status={active ? 'active' : 'inactive'}
+          label={active ? 'Actif' : 'Inactif'}
+        />
+      ),
+    },
+    {
+      title: 'Créée le',
+      dataIndex: 'created_at',
+      key: 'created_at',
+      render: (date: string) =>
+        date ? new Date(date).toLocaleDateString('fr-FR') : '—',
+    },
+  ];
+
+  const userColumns = [
+    {
+      title: 'Utilisateur',
+      key: 'name',
+      render: (_: unknown, record: Record<string, unknown>) => (
+        <div className="sa-cell">
+          <div className="sa-cell__avatar sa-cell__avatar--user">
+            {((record.first_name as string) || '?')[0].toUpperCase()}
+          </div>
+          <span className="sa-cell__name">
+            {record.first_name as string} {record.last_name as string}
+          </span>
+        </div>
+      ),
+    },
+    {
+      title: 'Rôle',
+      dataIndex: 'role',
+      key: 'role',
+      render: (role: string) => (
+        <Tag color={roleColors[role] || 'default'} style={{ borderRadius: 20, fontWeight: 600 }}>
+          {roleLabels[role] || role}
+        </Tag>
+      ),
+    },
+    {
+      title: 'École',
+      dataIndex: 'school__name',
+      key: 'school',
+      render: (name: string) =>
+        name || <span className="sa-text-muted">Plateforme</span>,
+    },
+    {
+      title: 'Date',
+      dataIndex: 'created_at',
+      key: 'created_at',
+      render: (date: string) =>
+        date ? new Date(date).toLocaleDateString('fr-FR') : '—',
+    },
+  ];
+
+  /* ══════════════ RENDER ══════════════ */
+  return (
+    <div className="sa-page">
+      {/* ── Page header ── */}
+      <PageHeader
+        title="Tableau de bord"
+        subtitle="Vue d'ensemble de la plateforme ILMI"
+        icon={<ThunderboltOutlined />}
+        actions={
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -245,102 +247,116 @@ const SuperAdminDashboard: React.FC = () => {
           >
             Nouvelle école
           </Button>
-        </div>
+        }
+      />
+
+      {/* ── Stat Cards ── */}
+      <div className="sa-stats-grid">
+        <StatCard
+          icon={<BankOutlined />}
+          label="Écoles"
+          value={totalSchools}
+          sub={<span className="sa-stat-up">+{newSchools7d} cette semaine</span>}
+          variant="info"
+          onClick={() => navigate('/platform/schools')}
+        />
+        <StatCard
+          icon={<TeamOutlined />}
+          label="Utilisateurs"
+          value={totalUsers}
+          sub={<span className="sa-stat-up">+{newUsers30d} ce mois</span>}
+          variant="success"
+          onClick={() => navigate('/platform/users')}
+        />
+        <StatCard
+          icon={<CrownOutlined />}
+          label="Abonnements actifs"
+          value={activeSubscriptions}
+          sub={<span>{subscriptionRate}% actifs</span>}
+          variant="warning"
+          onClick={() => navigate('/platform/plans')}
+        />
+        <StatCard
+          icon={<RiseOutlined />}
+          label="Nouveaux (7j)"
+          value={newUsers7d}
+          sub={<span>Dernière semaine</span>}
+          variant="pink"
+          onClick={() => navigate('/platform/users')}
+        />
       </div>
 
-      {/* Stats cards */}
-      <div className="sa-stats-grid stagger-children">
-        {statCards.map((s) => (
-          <div
-            key={s.label}
-            className={`sa-stat-card card-interactive ${s.colorClass}`}
-            onClick={() => navigate(s.route)}
-          >
-            <div className="sa-stat-card__icon">{s.icon}</div>
-            <div className="sa-stat-card__content">
-              <div className="sa-stat-card__value">{s.value}</div>
-              <div className="sa-stat-card__label">{s.label}</div>
-              <div className="sa-stat-card__subtitle">{s.subtitle}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Middle row: Plan distribution + Quick actions */}
+      {/* ── Middle row: Chart + Quick actions ── */}
       <div className="sa-middle-grid">
-        {/* Plan distribution */}
-        <Card
-          title={
-            <span className="section-title">
-              <CrownOutlined /> Distribution des plans
-            </span>
+        {/* Plan distribution chart */}
+        <DataCard
+          title="Distribution des plans"
+          icon={<CrownOutlined />}
+          extra={
+            <div className="sa-health-pills">
+              <span className="sa-health-pill sa-health-pill--active">
+                <CheckCircleOutlined /> {activeSubscriptions} actifs
+              </span>
+              <span className="sa-health-pill sa-health-pill--inactive">
+                <CloseCircleOutlined /> {inactiveSubscriptions} inactifs
+              </span>
+            </div>
           }
-          className="sa-plan-card"
         >
-          <div className="sa-plan-distribution">
-            {(stats?.schools?.plan_distribution || []).map(
-              (p: { subscription_plan: string; count: number }) => {
-                const pct = totalSchools > 0 ? Math.round((p.count / totalSchools) * 100) : 0;
-                return (
-                  <div key={p.subscription_plan} className="sa-plan-item">
-                    <div className="sa-plan-item__header">
-                      <Tag color={planColors[p.subscription_plan] || 'default'}>
-                        {planLabels[p.subscription_plan] || p.subscription_plan}
-                      </Tag>
-                      <span className="sa-plan-item__count">
-                        {p.count} école{p.count !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                    <Progress
-                      percent={pct}
-                      strokeColor={
-                        p.subscription_plan === 'PRO_AI'
-                          ? '#722ed1'
-                          : p.subscription_plan === 'PRO'
-                            ? '#faad14'
-                            : '#1677ff'
-                      }
-                      showInfo={true}
-                      size="small"
-                    />
-                  </div>
-                );
-              },
-            )}
-            {(!stats?.schools?.plan_distribution || stats.schools.plan_distribution.length === 0) && (
-              <div className="sa-empty-mini">Aucune école enregistrée</div>
-            )}
-          </div>
-
-          {/* Subscription health */}
-          <div className="sa-subscription-health">
-            <div className="sa-health-item sa-health-item--active">
-              <CheckCircleOutlined />
-              <span>{activeSubscriptions} actifs</span>
+          {chartData.length > 0 ? (
+            <div className="sa-chart-wrap">
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={chartData} barSize={48} barGap={8}>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="rgba(255,255,255,0.04)"
+                    vertical={false}
+                  />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fill: '#94A3B8', fontSize: 12 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fill: '#5A6A85', fontSize: 11 }}
+                    axisLine={false}
+                    tickLine={false}
+                    allowDecimals={false}
+                  />
+                  <RechartsTooltip
+                    contentStyle={{
+                      background: '#0F2044',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: 8,
+                      color: '#F7F9FC',
+                      fontSize: 13,
+                    }}
+                    cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                    formatter={(value) => [`${value} école${Number(value) !== 1 ? 's' : ''}`, '']}
+                  />
+                  <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                    {chartData.map((entry: { name: string; value: number; fill: string }, idx: number) => (
+                      <Cell key={idx} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-            <div className="sa-health-item sa-health-item--inactive">
-              <CloseCircleOutlined />
-              <span>{stats?.schools?.inactive_subscriptions ?? 0} inactifs</span>
-            </div>
-          </div>
-        </Card>
+          ) : (
+            <div className="sa-empty-mini">Aucune école enregistrée</div>
+          )}
+        </DataCard>
 
-        {/* Quick actions */}
-        <Card
-          title={
-            <span className="section-title">
-              <ThunderboltOutlined /> Actions rapides
-            </span>
-          }
-          className="sa-actions-card"
+        {/* Quick actions + role summary */}
+        <DataCard
+          title="Actions rapides"
+          icon={<ThunderboltOutlined />}
         >
           <div className="sa-quick-actions">
             {quickActions.map((a) => (
               <Tooltip key={a.label} title={a.desc}>
-                <div
-                  className="sa-quick-action card-interactive"
-                  onClick={() => navigate(a.route)}
-                >
+                <div className="sa-quick-action" onClick={() => navigate(a.route)}>
                   <div className="sa-quick-action__icon">{a.icon}</div>
                   <div className="sa-quick-action__label">{a.label}</div>
                 </div>
@@ -348,18 +364,16 @@ const SuperAdminDashboard: React.FC = () => {
             ))}
           </div>
 
-          {/* Users by role summary */}
+          {/* Users by role */}
           <div className="sa-role-summary">
-            <h4>
-              <TeamOutlined /> Répartition par rôle
-            </h4>
+            <SectionHeader title="Répartition par rôle" icon={<TeamOutlined />} />
             <div className="sa-role-tags">
               {(stats?.users?.by_role || []).map(
                 (r: { role: string; count: number }) => (
                   <Tag
                     key={r.role}
                     color={roleColors[r.role] || 'default'}
-                    className="sa-role-tag"
+                    style={{ borderRadius: 16, fontWeight: 600 }}
                   >
                     {roleLabels[r.role] || r.role}: {r.count}
                   </Tag>
@@ -367,27 +381,20 @@ const SuperAdminDashboard: React.FC = () => {
               )}
             </div>
           </div>
-        </Card>
+        </DataCard>
       </div>
 
-      {/* Tables row */}
+      {/* ── Tables row ── */}
       <div className="sa-tables-grid">
-        {/* Recent schools */}
-        <Card
-          title={
-            <span className="section-title">
-              <BankOutlined /> Écoles récentes
-            </span>
-          }
+        <DataCard
+          title="Écoles récentes"
+          icon={<BankOutlined />}
+          noPadding
           extra={
-            <Button
-              type="link"
-              onClick={() => navigate('/platform/schools')}
-            >
+            <Button type="link" onClick={() => navigate('/platform/schools')}>
               Voir tout <ArrowRightOutlined />
             </Button>
           }
-          styles={{ body: { padding: 0 } }}
         >
           <Table
             columns={schoolColumns}
@@ -396,25 +403,19 @@ const SuperAdminDashboard: React.FC = () => {
             rowKey={(r: Record<string, unknown>) => r.id as string}
             size="small"
             locale={{ emptyText: 'Aucune école trouvée' }}
+            className="sa-dark-table"
           />
-        </Card>
+        </DataCard>
 
-        {/* Recent users */}
-        <Card
-          title={
-            <span className="section-title">
-              <TeamOutlined /> Utilisateurs récents
-            </span>
-          }
+        <DataCard
+          title="Utilisateurs récents"
+          icon={<TeamOutlined />}
+          noPadding
           extra={
-            <Button
-              type="link"
-              onClick={() => navigate('/platform/users')}
-            >
+            <Button type="link" onClick={() => navigate('/platform/users')}>
               Voir tout <ArrowRightOutlined />
             </Button>
           }
-          styles={{ body: { padding: 0 } }}
         >
           <Table
             columns={userColumns}
@@ -423,23 +424,22 @@ const SuperAdminDashboard: React.FC = () => {
             rowKey={(r: Record<string, unknown>) => r.id as string}
             size="small"
             locale={{ emptyText: 'Aucun utilisateur' }}
+            className="sa-dark-table"
           />
-        </Card>
+        </DataCard>
       </div>
 
-      {/* Platform info footer */}
-      <Card className="sa-platform-info">
-        <div className="sa-platform-info__content">
-          <GlobalOutlined className="sa-platform-info__icon" />
-          <div>
-            <h3>ILMI</h3>
-            <p>
-              Plateforme de gestion scolaire multi-établissement — {totalSchools} école{totalSchools !== 1 ? 's' : ''},{' '}
-              {totalUsers} utilisateur{totalUsers !== 1 ? 's' : ''}
-            </p>
-          </div>
+      {/* ── Platform footer ── */}
+      <GlassCard className="sa-platform-footer">
+        <div className="sa-platform-footer__inner">
+          <div className="sa-platform-footer__logo">ILMI</div>
+          <p className="sa-platform-footer__text">
+            Plateforme de gestion scolaire multi-établissement — {totalSchools} école
+            {totalSchools !== 1 ? 's' : ''}, {totalUsers} utilisateur
+            {totalUsers !== 1 ? 's' : ''}
+          </p>
         </div>
-      </Card>
+      </GlassCard>
     </div>
   );
 };

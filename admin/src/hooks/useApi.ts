@@ -139,6 +139,30 @@ export function useDeleteStudent() {
   });
 }
 
+export function useStudentFullProfile(id: string) {
+  return useQuery({
+    queryKey: ['students', id, 'full-profile'],
+    queryFn: async () => {
+      const { data } = await studentsAPI.fullProfile(id);
+      return data;
+    },
+    enabled: !!id,
+    staleTime: 60_000,
+  });
+}
+
+export function useStudentQRCode(id: string, enabled = true) {
+  return useQuery({
+    queryKey: ['students', id, 'qr-code'],
+    queryFn: async () => {
+      const { data } = await studentsAPI.qrCode(id);
+      return data;
+    },
+    enabled: !!id && enabled,
+    staleTime: 3_600_000, // 1h — matches Redis TTL
+  });
+}
+
 /* ────────────────────────────── Teachers ────────────────────────────── */
 export function useTeachers(params?: Record<string, unknown>) {
   return useQuery({
@@ -162,6 +186,28 @@ export function useTeacher(id: string) {
   });
 }
 
+export function useTeacherFullProfile(id: string) {
+  return useQuery({
+    queryKey: ['teachers', id, 'full-profile'],
+    queryFn: async () => {
+      const { data } = await teachersAPI.fullProfile(id);
+      return data;
+    },
+    enabled: !!id,
+  });
+}
+
+export function useTeacherQRCode(id: string) {
+  return useQuery({
+    queryKey: ['teachers', id, 'qr-code'],
+    queryFn: async () => {
+      const { data } = await teachersAPI.qrCode(id);
+      return data as { qr_code_base64: string; qr_data: string; generated_at: string };
+    },
+    enabled: !!id,
+  });
+}
+
 export function useCreateTeacher() {
   const qc = useQueryClient();
   return useMutation({
@@ -171,6 +217,17 @@ export function useCreateTeacher() {
       message.success('Enseignant cree avec succes');
     },
     onError: () => message.error("Erreur lors de la creation"),
+  });
+}
+
+export function useBulkSetupTeachers() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { teachers: Record<string, unknown>[] }) =>
+      teachersAPI.bulkSetup(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['teachers'] });
+    },
   });
 }
 
@@ -199,6 +256,151 @@ export function useDeleteTeacher() {
   });
 }
 
+/* ──────────────────────────── Levels ────────────────────────────────── */
+export function useLevels(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['levels', params],
+    queryFn: async () => {
+      const res = await academicsAPI.levels(params);
+      return extractData(res);
+    },
+    retry: 1,
+  });
+}
+
+export function useCreateLevel() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => academicsAPI.createLevel(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['levels'] });
+      message.success('Niveau ajouté');
+    },
+    onError: () => message.error("Erreur lors de l'ajout du niveau"),
+  });
+}
+
+export function useUpdateLevel() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      academicsAPI.updateLevel(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['levels'] });
+      message.success('Niveau mis à jour');
+    },
+    onError: () => message.error('Erreur de mise à jour'),
+  });
+}
+
+export function useDeleteLevel() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => academicsAPI.deleteLevel(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['levels'] });
+      message.success('Niveau supprimé');
+    },
+    onError: () => message.error('Erreur de suppression'),
+  });
+}
+
+/* ──────────────────────────── Streams ───────────────────────────────── */
+export function useStreams(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['streams', params],
+    queryFn: async () => {
+      const res = await academicsAPI.streams(params);
+      return extractData(res);
+    },
+    retry: 1,
+  });
+}
+
+export function useCreateStream() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => academicsAPI.createStream(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['streams'] });
+      message.success('Filière ajoutée');
+    },
+    onError: () => message.error("Erreur lors de l'ajout de la filière"),
+  });
+}
+
+export function useUpdateStream() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      academicsAPI.updateStream(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['streams'] });
+      message.success('Filière mise à jour');
+    },
+    onError: () => message.error('Erreur de mise à jour'),
+  });
+}
+
+export function useDeleteStream() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => academicsAPI.deleteStream(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['streams'] });
+      message.success('Filière supprimée');
+    },
+    onError: () => message.error('Erreur de suppression'),
+  });
+}
+
+/* ──────────────────────── Level–Subjects ────────────────────────────── */
+export function useLevelSubjects(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['level-subjects', params],
+    queryFn: async () => {
+      const res = await academicsAPI.levelSubjects(params);
+      return extractData(res);
+    },
+    retry: 1,
+  });
+}
+
+export function useCreateLevelSubject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => academicsAPI.createLevelSubject(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['level-subjects'] });
+    },
+  });
+}
+
+export function useUpdateLevelSubject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      academicsAPI.updateLevelSubject(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['level-subjects'] });
+      message.success('Configuration mise à jour');
+    },
+    onError: () => message.error('Erreur de mise à jour'),
+  });
+}
+
+export function useDeleteLevelSubject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => academicsAPI.deleteLevelSubject(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['level-subjects'] });
+      message.success('Configuration supprimée');
+    },
+    onError: () => message.error('Erreur de suppression'),
+  });
+}
+
 /* ────────────────────────────── Classes ─────────────────────────────── */
 export function useClasses(params?: Record<string, unknown>) {
   return useQuery({
@@ -219,6 +421,105 @@ export function useSubjects(params?: Record<string, unknown>) {
       return extractData(res);
     },
     retry: 1,
+  });
+}
+
+export function useCreateSubject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => academicsAPI.createSubject(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['subjects'] });
+    },
+  });
+}
+
+export function useDeleteSubject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => academicsAPI.deleteSubject(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['subjects'] });
+      message.success('Matière supprimée');
+    },
+    onError: () => message.error('Erreur lors de la suppression'),
+  });
+}
+
+/**
+ * Batch upsert: subjects + level-subject configs in one API call.
+ * Used by the setup wizard (step 5) for bulk save.
+ */
+export function useBulkSyncSubjects() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { subjects: Record<string, unknown>[]; level_subjects: Record<string, unknown>[] }) =>
+      academicsAPI.bulkSyncSubjects(data),
+    onSuccess: (_data) => {
+      qc.invalidateQueries({ queryKey: ['subjects'] });
+      qc.invalidateQueries({ queryKey: ['level-subjects'] });
+    },
+  });
+}
+
+/* ────────────────────────── Sections & Academic Years ───────────────── */
+export function useSections(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['sections', params],
+    queryFn: async () => {
+      const res = await schoolsAPI.sections(params);
+      return extractData(res);
+    },
+    retry: 1,
+  });
+}
+
+export function useCreateSection() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => schoolsAPI.createSection(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['sections'] });
+      message.success('Section créée');
+    },
+    onError: () => message.error('Erreur lors de la création de la section'),
+  });
+}
+
+export function useAcademicYears(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['academic-years', params],
+    queryFn: async () => {
+      const res = await schoolsAPI.academicYears(params);
+      return extractData(res);
+    },
+    retry: 1,
+  });
+}
+
+export function useCreateAcademicYear() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => schoolsAPI.createAcademicYear(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['academic-years'] });
+      message.success('Année académique créée');
+    },
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: Record<string, unknown>; status?: number } };
+      console.error('Academic year creation error:', err?.response?.data);
+      const detail = err?.response?.data?.detail;
+      if (typeof detail === 'string') {
+        message.error(detail);
+      } else if (err?.response?.data && typeof err.response.data === 'object') {
+        const firstField = Object.keys(err.response.data)[0];
+        const msgs = err.response.data[firstField];
+        const text = Array.isArray(msgs) ? msgs.join(', ') : String(msgs);
+        message.error(`${firstField}: ${text}`);
+      } else {
+        message.error("Erreur lors de la création de l'année académique");
+      }
+    },
   });
 }
 
@@ -271,6 +572,283 @@ export function useDeleteGrade() {
   });
 }
 
+export function useGradeAuditLog(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['gradeAuditLog', params],
+    queryFn: async () => {
+      const { data } = await gradesAPI.auditLog(params);
+      return Array.isArray(data) ? data : [];
+    },
+    enabled: !!params?.student_id,
+    retry: 1,
+  });
+}
+
+/* ── ExamTypes ── */
+export function useExamTypes(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['examTypes', params],
+    queryFn: async () => {
+      const res = await gradesAPI.examTypes(params);
+      return extractData(res);
+    },
+    enabled: !!params?.classroom_id,
+    retry: 1,
+  });
+}
+
+export function useCreateExamType() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => gradesAPI.createExamType(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['examTypes'] });
+      message.success('Type d\'examen créé');
+    },
+    onError: (err: unknown) => {
+      const e = err as { response?: { data?: Record<string, string[]> } };
+      const msg = e?.response?.data?.percentage?.[0] || 'Erreur lors de la création';
+      message.error(msg);
+    },
+  });
+}
+
+export function useUpdateExamType() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      gradesAPI.updateExamType(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['examTypes'] });
+      message.success('Type d\'examen mis à jour');
+    },
+    onError: (err: unknown) => {
+      const e = err as { response?: { data?: Record<string, string[]> } };
+      const msg = e?.response?.data?.percentage?.[0] || 'Erreur de mise à jour';
+      message.error(msg);
+    },
+  });
+}
+
+export function useDeleteExamType() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => gradesAPI.deleteExamType(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['examTypes'] });
+      message.success('Type d\'examen supprimé');
+    },
+    onError: () => message.error('Erreur de suppression'),
+  });
+}
+
+/* ── Grade Operations ── */
+export function useBulkEnterGrades() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => gradesAPI.bulkEnter(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['grades'] });
+      qc.invalidateQueries({ queryKey: ['gradeAuditLog'] });
+      message.success('Notes enregistrées avec succès');
+    },
+    onError: () => message.error('Erreur lors de la saisie en lot'),
+  });
+}
+
+export function usePublishGrades() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => gradesAPI.publishGrades(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['grades'] });
+      qc.invalidateQueries({ queryKey: ['gradeAuditLog'] });
+      message.success('Notes publiées avec succès');
+    },
+    onError: () => message.error('Erreur lors de la publication'),
+  });
+}
+
+export function useCorrectGrade() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      gradesAPI.correctGrade(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['grades'] });
+      qc.invalidateQueries({ queryKey: ['gradeAuditLog'] });
+      message.success('Note corrigée');
+    },
+    onError: () => message.error('Erreur lors de la correction'),
+  });
+}
+
+/* ── Subject Averages ── */
+export function useSubjectAverages(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['subjectAverages', params],
+    queryFn: async () => {
+      const res = await gradesAPI.subjectAverages(params);
+      return extractData(res);
+    },
+    enabled: !!params?.classroom_id && !!params?.trimester,
+    retry: 1,
+  });
+}
+
+export function useRecalcSubjectAverage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => gradesAPI.recalcSubjectAverage(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['subjectAverages'] });
+      message.success('Moyenne recalculée');
+    },
+    onError: () => message.error('Erreur lors du recalcul'),
+  });
+}
+
+export function useOverrideSubjectAverage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => gradesAPI.overrideSubjectAverage(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['subjectAverages'] });
+      qc.invalidateQueries({ queryKey: ['gradeAuditLog'] });
+      message.success('Moyenne matière modifiée');
+    },
+    onError: () => message.error('Erreur de modification'),
+  });
+}
+
+export function usePublishSubjectAverage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => gradesAPI.publishSubjectAverage(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['subjectAverages'] });
+      message.success('Moyennes matière publiées');
+    },
+    onError: () => message.error('Erreur de publication'),
+  });
+}
+
+/* ── Trimester Averages ── */
+export function useTrimesterAverages(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['trimesterAverages', params],
+    queryFn: async () => {
+      const res = await gradesAPI.trimesterAverages(params);
+      return extractData(res);
+    },
+    enabled: !!params?.classroom_id && !!params?.trimester,
+    retry: 1,
+  });
+}
+
+export function useRecalcTrimesterAverage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => gradesAPI.recalcTrimesterAverage(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['trimesterAverages'] });
+      qc.invalidateQueries({ queryKey: ['subjectAverages'] });
+      message.success('Moyennes trimestre recalculées');
+    },
+    onError: () => message.error('Erreur lors du recalcul'),
+  });
+}
+
+export function useOverrideTrimesterAverage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => gradesAPI.overrideTrimesterAverage(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['trimesterAverages'] });
+      qc.invalidateQueries({ queryKey: ['gradeAuditLog'] });
+      message.success('Moyenne générale modifiée');
+    },
+    onError: () => message.error('Erreur de modification'),
+  });
+}
+
+export function usePublishTrimesterAverage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => gradesAPI.publishTrimesterAverage(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['trimesterAverages'] });
+      message.success('Moyennes trimestre publiées');
+    },
+    onError: () => message.error('Erreur de publication'),
+  });
+}
+
+export function useLockTrimester() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => gradesAPI.lockTrimester(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['trimesterAverages'] });
+      qc.invalidateQueries({ queryKey: ['gradeAuditLog'] });
+      message.success('Trimestre verrouillé');
+    },
+    onError: () => message.error('Erreur de verrouillage'),
+  });
+}
+
+export function useUnlockTrimester() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => gradesAPI.unlockTrimester(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['trimesterAverages'] });
+      qc.invalidateQueries({ queryKey: ['gradeAuditLog'] });
+      message.success('Trimestre déverrouillé');
+    },
+    onError: () => message.error('Erreur de déverrouillage'),
+  });
+}
+
+/* ── Grade Appeals ── */
+export function useGradeAppeals(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['gradeAppeals', params],
+    queryFn: async () => {
+      const res = await gradesAPI.appeals(params);
+      return extractData(res);
+    },
+    retry: 1,
+  });
+}
+
+export function useRespondAppeal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      gradesAPI.respondAppeal(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['gradeAppeals'] });
+      qc.invalidateQueries({ queryKey: ['pendingAppealsCount'] });
+      qc.invalidateQueries({ queryKey: ['gradeAuditLog'] });
+      message.success('Réponse envoyée');
+    },
+    onError: () => message.error('Erreur lors de la réponse'),
+  });
+}
+
+export function usePendingAppealsCount() {
+  return useQuery({
+    queryKey: ['pendingAppealsCount'],
+    queryFn: async () => {
+      const { data } = await gradesAPI.pendingAppealsCount();
+      return (data as { count: number })?.count ?? 0;
+    },
+    refetchInterval: 60_000,
+    retry: 1,
+  });
+}
+
 /* ─────────────────────────── Attendance ─────────────────────────────── */
 export function useAttendance(params?: Record<string, unknown>) {
   return useQuery({
@@ -295,7 +873,44 @@ export function useMarkAttendance() {
   });
 }
 
-/* ─────────────────────────── Finance ────────────────────────────────── */
+export function useAbsenceStats() {
+  return useQuery({
+    queryKey: ['attendance', 'stats'],
+    queryFn: async () => {
+      const res = await attendanceAPI.stats();
+      return extractData(res);
+    },
+    retry: 1,
+    refetchInterval: 60_000, // refresh every minute
+  });
+}
+
+export function useJustifyAbsence() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, note }: { id: string; note: string }) =>
+      attendanceAPI.justify(id, { justification_note: note }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['attendance'] });
+      message.success('Absence justifiée avec succès');
+    },
+    onError: () => message.error('Erreur lors de la justification'),
+  });
+}
+
+export function useCancelAbsence() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => attendanceAPI.cancel(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['attendance'] });
+      message.success('Enregistrement supprimé');
+    },
+    onError: () => message.error('Erreur lors de la suppression'),
+  });
+}
+
+/* ─────────────────────────── Finance (Payments) ─────────────────────── */
 export function usePayments(params?: Record<string, unknown>) {
   return useQuery({
     queryKey: ['payments', params],
@@ -313,9 +928,9 @@ export function useCreatePayment() {
     mutationFn: (data: Record<string, unknown>) => financeAPI.createPayment(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['payments'] });
-      message.success('Paiement enregistré');
+      qc.invalidateQueries({ queryKey: ['paymentStats'] });
     },
-    onError: () => message.error('Erreur de paiement'),
+    onError: () => message.error('Erreur lors de la création du paiement'),
   });
 }
 
@@ -326,9 +941,67 @@ export function useUpdatePayment() {
       financeAPI.updatePayment(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['payments'] });
+      qc.invalidateQueries({ queryKey: ['paymentStats'] });
       message.success('Paiement mis à jour');
     },
     onError: () => message.error('Erreur de mise à jour'),
+  });
+}
+
+export function useDeletePayment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => financeAPI.deletePayment(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['payments'] });
+      qc.invalidateQueries({ queryKey: ['paymentStats'] });
+      message.success('Paiement supprimé');
+    },
+    onError: () => message.error('Erreur de suppression'),
+  });
+}
+
+export function usePaymentStats() {
+  return useQuery({
+    queryKey: ['paymentStats'],
+    queryFn: async () => {
+      const res = await financeAPI.stats();
+      return extractData(res);
+    },
+    retry: 1,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+}
+
+export function useExpiringSoon() {
+  return useQuery({
+    queryKey: ['expiringSoon'],
+    queryFn: async () => {
+      const res = await financeAPI.expiringSoon();
+      return extractData(res);
+    },
+    retry: 1,
+    staleTime: 30_000,
+  });
+}
+
+export function useSendReminder() {
+  return useMutation({
+    mutationFn: (id: string) => financeAPI.sendReminder(id),
+    onError: () => message.error('Erreur lors de l\'envoi du rappel'),
+  });
+}
+
+export function useBulkReminder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => financeAPI.bulkReminder(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['expiringSoon'] });
+      message.success('Rappels envoyés avec succès');
+    },
+    onError: () => message.error('Erreur lors de l\'envoi des rappels'),
   });
 }
 
@@ -349,9 +1022,22 @@ export function useCreateFee() {
     mutationFn: (data: Record<string, unknown>) => financeAPI.createFee(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['fees'] });
-      message.success('Frais créé');
+      message.success('Structure de frais créée');
     },
     onError: () => message.error('Erreur de création'),
+  });
+}
+
+export function useUpdateFee() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      financeAPI.updateFee(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['fees'] });
+      message.success('Structure mise à jour');
+    },
+    onError: () => message.error('Erreur de mise à jour'),
   });
 }
 
@@ -361,7 +1047,7 @@ export function useDeleteFee() {
     mutationFn: (id: string) => financeAPI.deleteFee(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['fees'] });
-      message.success('Frais supprimé');
+      message.success('Structure supprimée');
     },
     onError: () => message.error('Erreur de suppression'),
   });
@@ -416,39 +1102,74 @@ export function useUpdateAnnouncement() {
   });
 }
 
-/* ─────────────────────────── Chat ───────────────────────────────────── */
-export function useChatRooms(params?: Record<string, unknown>) {
+/* ─────────────────────────── Chat / Messaging ──────────────────────── */
+export function useConversations() {
   return useQuery({
-    queryKey: ['chatRooms', params],
+    queryKey: ['conversations'],
     queryFn: async () => {
-      const res = await chatAPI.rooms(params);
+      const res = await chatAPI.conversations();
       return extractData(res);
     },
     retry: 1,
   });
 }
 
-export function useChatMessages(roomId: string) {
+export function useConversationMessages(conversationId: string) {
   return useQuery({
-    queryKey: ['chatMessages', roomId],
+    queryKey: ['conversationMessages', conversationId],
     queryFn: async () => {
-      const res = await chatAPI.messages(roomId);
+      const res = await chatAPI.messages(conversationId);
       return extractData(res);
     },
-    enabled: !!roomId,
-    refetchInterval: 5000,
+    enabled: !!conversationId,
   });
 }
 
-export function useSendMessage() {
+export function useCreateConversation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ roomId, data }: { roomId: string; data: Record<string, unknown> | FormData }) =>
-      chatAPI.sendMessage(roomId, data as Record<string, unknown>),
-    onSuccess: (_res, vars) => {
-      qc.invalidateQueries({ queryKey: ['chatMessages', vars.roomId] });
+    mutationFn: (data: { participant_other_id: string; participant_other_role: string }) =>
+      chatAPI.createConversation(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['conversations'] });
     },
-    onError: () => message.error('Erreur d\'envoi'),
+    onError: () => message.error('Erreur lors de la création de la conversation'),
+  });
+}
+
+export function useDeleteConversation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => chatAPI.deleteConversation(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['conversations'] });
+      message.success('Conversation supprimée');
+    },
+    onError: () => message.error('Erreur de suppression'),
+  });
+}
+
+export function useUploadAttachment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ conversationId, data }: { conversationId: string; data: FormData }) =>
+      chatAPI.uploadAttachment(conversationId, data),
+    onSuccess: (_res, vars) => {
+      qc.invalidateQueries({ queryKey: ['conversationMessages', vars.conversationId] });
+      qc.invalidateQueries({ queryKey: ['conversations'] });
+    },
+    onError: () => message.error('Erreur d\'envoi du fichier'),
+  });
+}
+
+export function useContacts() {
+  return useQuery({
+    queryKey: ['contacts'],
+    queryFn: async () => {
+      const res = await chatAPI.contacts();
+      return extractData(res);
+    },
+    retry: 1,
   });
 }
 
@@ -487,6 +1208,68 @@ export function useScheduleSlots(params?: Record<string, unknown>) {
   });
 }
 
+/* ─────────────────────────── Timetables ─────────────────────────────── */
+export function useTimetables(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['timetables', params],
+    queryFn: async () => {
+      const res = await academicsAPI.timetables(params);
+      return extractData(res);
+    },
+    retry: 1,
+  });
+}
+
+export function useTimetablesClassesStatus() {
+  return useQuery({
+    queryKey: ['timetables-classes-status'],
+    queryFn: async () => {
+      const res = await academicsAPI.timetablesClassesStatus();
+      return extractData(res);
+    },
+    retry: 1,
+  });
+}
+
+export function useCreateTimetable() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: FormData) => academicsAPI.createTimetable(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['timetables'] });
+      qc.invalidateQueries({ queryKey: ['timetables-classes-status'] });
+    },
+    onError: () => message.error('Erreur lors de l\'ajout'),
+  });
+}
+
+export function useUpdateTimetable() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: FormData }) =>
+      academicsAPI.updateTimetable(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['timetables'] });
+      qc.invalidateQueries({ queryKey: ['timetables-classes-status'] });
+      message.success('Emploi du temps mis à jour');
+    },
+    onError: () => message.error('Erreur de mise à jour'),
+  });
+}
+
+export function useDeleteTimetable() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => academicsAPI.deleteTimetable(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['timetables'] });
+      qc.invalidateQueries({ queryKey: ['timetables-classes-status'] });
+      message.success('Emploi du temps supprimé');
+    },
+    onError: () => message.error('Erreur de suppression'),
+  });
+}
+
 /* ─────────────────────────── Schools ────────────────────────────────── */
 export function useSchools(params?: Record<string, unknown>) {
   return useQuery({
@@ -510,10 +1293,22 @@ export function useSchool(id: string) {
   });
 }
 
+export function useSchoolProfile(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ['school-profile'],
+    queryFn: async () => {
+      const { data } = await schoolsAPI.profile();
+      return data;
+    },
+    retry: 1,
+    enabled: options?.enabled ?? true,
+  });
+}
+
 export function useCreateSchool() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Record<string, unknown>) => schoolsAPI.create(data),
+    mutationFn: (data: FormData | Record<string, unknown>) => schoolsAPI.create(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['schools'] });
       message.success('Ecole creee avec succes');
@@ -525,7 +1320,7 @@ export function useCreateSchool() {
 export function useUpdateSchool() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+    mutationFn: ({ id, data }: { id: string; data: FormData | Record<string, unknown> }) =>
       schoolsAPI.update(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['schools'] });
@@ -544,6 +1339,32 @@ export function useDeleteSchool() {
       message.success('Ecole supprimee');
     },
     onError: () => message.error('Erreur de suppression'),
+  });
+}
+
+export function useUploadSchoolLogo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, file }: { id: string; file: File }) =>
+      schoolsAPI.uploadLogo(id, file),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['schools'] });
+      qc.invalidateQueries({ queryKey: ['school-profile'] });
+      message.success('Logo mis a jour');
+    },
+    onError: () => message.error('Erreur lors du telechargement du logo'),
+  });
+}
+
+export function useCompleteSetup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => schoolsAPI.completeSetup(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['school-profile'] });
+      message.success('Configuration terminee');
+    },
+    onError: () => message.error('Erreur'),
   });
 }
 
@@ -689,6 +1510,38 @@ export function useHomework(params?: Record<string, unknown>) {
   });
 }
 
+export function useHomeworkStats() {
+  return useQuery({
+    queryKey: ['homework', 'stats'],
+    queryFn: async () => {
+      const { data } = await homeworkAPI.stats();
+      return data;
+    },
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+  });
+}
+
+export function useHomeworkCalendar(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['homework', 'calendar', params],
+    queryFn: async () => {
+      const { data } = await homeworkAPI.calendar(params);
+      return data;
+    },
+  });
+}
+
+export function useHomeworkOverload(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['homework', 'overload', params],
+    queryFn: async () => {
+      const { data } = await homeworkAPI.overload(params);
+      return data;
+    },
+  });
+}
+
 export function useCreateHomework() {
   const qc = useQueryClient();
   return useMutation({
@@ -717,7 +1570,8 @@ export function useUpdateHomework() {
 export function useDeleteHomework() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => homeworkAPI.delete(id),
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+      homeworkAPI.delete(id, reason ? { reason } : undefined),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['homework'] });
       message.success('Devoir supprimé');
@@ -802,18 +1656,8 @@ export function useDeleteScheduleSlot() {
   });
 }
 
-/* ─────────────────── Create Chat Room (Rec #2) ──────────────────────── */
-export function useCreateChatRoom() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: Record<string, unknown>) => chatAPI.createRoom(data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['chatRooms'] });
-      message.success('Conversation créée');
-    },
-    onError: () => message.error('Erreur lors de la création'),
-  });
-}
+/* ─────────────────── Create Conversation (compat) ───────────────────── */
+// Kept for backward compat — delegates to useCreateConversation above
 
 /* ─────────────────── Bulk Attendance (Rec #9) ───────────────────────── */
 export function useBulkMarkAttendance() {
@@ -852,22 +1696,9 @@ export function useGenerateReportCard() {
   });
 }
 
-/* ─────────────────── Finance Stats (Rec #7) ─────────────────────────── */
+/* ─────────────────── Finance Stats (legacy — now uses usePaymentStats) ── */
 export function useFinanceStats() {
-  return useQuery({
-    queryKey: ['financeStats'],
-    queryFn: async () => {
-      try {
-        const { data } = await financeAPI.stats();
-        return data;
-      } catch {
-        // Fallback: if aggregate endpoint doesn't exist yet, return null
-        return null;
-      }
-    },
-    retry: 0,
-    staleTime: 60_000,
-  });
+  return usePaymentStats();
 }
 
 /* ─────────────── Platform Settings (Rec #3 — Super Admin) ───────────── */

@@ -213,9 +213,15 @@ class UserCreateSerializer(serializers.ModelSerializer):
             if request and request.user.school_id:
                 attrs["school"] = request.user.school
             else:
-                raise serializers.ValidationError(
-                    {"school": "A school must be assigned for this role."}
-                )
+                # SUPER_ADMIN fallback: auto-assign the only school if there is exactly one
+                from apps.schools.models import School as _School
+                schools = _School.objects.filter(is_deleted=False)
+                if schools.count() == 1:
+                    attrs["school"] = schools.first()
+                else:
+                    raise serializers.ValidationError(
+                        {"school": "A school must be assigned for this role."}
+                    )
 
         return attrs
 

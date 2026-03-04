@@ -1,70 +1,61 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import type { ChatMessage } from '../types';
 
-interface UseWebSocketOptions {
-  roomId: string;
-  enabled?: boolean;
+/* ═══════════════════════════════════════════════════════════════════════
+   useChat — manages a per-conversation WebSocket + fetches history
+   ═══════════════════════════════════════════════════════════════════════ */
+
+interface UseChatOptions {
+  conversationId: string;
   onMessage?: (msg: ChatMessage) => void;
 }
 
-/**
- * WebSocket hook for real-time chat messaging.
- * Connects to Django Channels at ws://host/ws/chat/<roomId>/?token=<jwt>
- * Falls back gracefully if WebSocket is unavailable.
- */
-export function useChatWebSocket({ roomId, enabled = true, onMessage }: UseWebSocketOptions) {
+function getWsBase() {
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = window.location.host;
+  return `${proto}//${host}`;
+}
+
+function getToken() {
+  return localStorage.getItem('access_token') || '';
+}
+
+export function useChat({ conversationId, onMessage }: UseChatOptions) {
   const wsRef = useRef<WebSocket | null>(null);
-  const [connected, setConnected] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
   const reconnectCount = useRef(0);
-  const maxReconnects = 5;
-
-  const getWsUrl = useCallback(() => {
-    const token = localStorage.getItem('access_token');
-    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
-    return `${proto}//${host}/ws/chat/${roomId}/?token=${token}`;
-  }, [roomId]);
+  const maxReconnects = 10;
+  const onMessageRef = useRef(onMessage);
+  onMessageRef.current = onMessage;
 
   const connect = useCallback(() => {
-    if (!roomId || !enabled) return;
+    if (!conversationId) return;
 
     try {
-      const ws = new WebSocket(getWsUrl());
+      const token = getToken();
+      const url = `${getWsBase()}/ws/chat/${conversationId}/?token=${token}`;
+      const ws = new WebSocket(url);
       wsRef.current = ws;
 
       ws.onopen = () => {
-        setConnected(true);
-        setError(null);
+        setIsConnected(true);
         reconnectCount.current = 0;
       };
 
       ws.onmessage = (event) => {
         try {
-          const data = JSON.parse(event.data);
-          if (data.type === 'chat_message' || data.message || data.content) {
-            const msg: ChatMessage = {
-              id: data.id || `ws-${Date.now()}`,
-              room: roomId,
-              sender: data.sender,
-              sender_name: data.sender_name,
-              content: data.content || data.message || '',
-              sent_at: data.sent_at || new Date().toISOString(),
-              is_mine: data.is_mine ?? false,
-            };
-            onMessage?.(msg);
-          }
+          const data = JSON.parse(event.data) as ChatMessage;
+          onMessageRef.current?.(data);
         } catch {
-          // non-JSON message, ignore
+          // ignore non-JSON
         }
       };
 
       ws.onclose = (event) => {
-        setConnected(false);
+        setIsConnected(false);
         wsRef.current = null;
-
-        // Auto-reconnect on abnormal close
         if (!event.wasClean && reconnectCount.current < maxReconnects) {
           reconnectCount.current++;
           const delay = Math.min(1000 * 2 ** reconnectCount.current, 30000);
@@ -73,48 +64,137 @@ export function useChatWebSocket({ roomId, enabled = true, onMessage }: UseWebSo
       };
 
       ws.onerror = () => {
-        setError('WebSocket connection error');
-        setConnected(false);
+        setIsConnected(false);
       };
     } catch {
-      setError('Failed to create WebSocket connection');
+      setIsConnected(false);
     }
-  }, [roomId, enabled, getWsUrl, onMessage]);
+  }, [conversationId]);
 
-  // Connect/disconnect on roomId change
   useEffect(() => {
-    connect();
+    // Close previous connection
+    if (wsRef.current) {
+      wsRef.current.close(1000, 'Switching conversation');
+      wsRef.current = null;
+    }
+    if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
+    reconnectCount.current = 0;
+    setIsConnected(false);
+
+    if (conversationId) {
+      connect();
+    }
 
     return () => {
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
       if (wsRef.current) {
-        wsRef.current.close(1000, 'Component unmounted');
+        wsRef.current.close(1000, 'Cleanup');
         wsRef.current = null;
       }
-      setConnected(false);
+      setIsConnected(false);
+    };
+  }, [conversationId, connect]);
+
+  const sendMessage = useCallback((content: string) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ content }));
+      return true;
+    }
+    return false;
+  }, []);
+
+  return { isConnected, sendMessage };
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   useNotifications — global WS for real-time notifications
+   ═══════════════════════════════════════════════════════════════════════ */
+
+export interface NotificationEvent {
+  type: 'new_message' | 'payment_expired' | 'absence_alert';
+  conversation_id?: string;
+  sender_name?: string;
+  preview?: string;
+  message?: string;
+  count?: number;
+}
+
+interface UseNotificationsOptions {
+  enabled?: boolean;
+  onEvent?: (event: NotificationEvent) => void;
+}
+
+export function useNotificationSocket({ enabled = true, onEvent }: UseNotificationsOptions = {}) {
+  const wsRef = useRef<WebSocket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
+  const reconnectCount = useRef(0);
+  const maxReconnects = 20;
+  const onEventRef = useRef(onEvent);
+  onEventRef.current = onEvent;
+  const qc = useQueryClient();
+
+  const connect = useCallback(() => {
+    if (!enabled) return;
+
+    try {
+      const token = getToken();
+      if (!token) return;
+      const url = `${getWsBase()}/ws/notifications/?token=${token}`;
+      const ws = new WebSocket(url);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        setIsConnected(true);
+        reconnectCount.current = 0;
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data) as NotificationEvent;
+          onEventRef.current?.(data);
+
+          // Auto-refresh conversation list on new message
+          if (data.type === 'new_message') {
+            qc.invalidateQueries({ queryKey: ['conversations'] });
+          }
+        } catch {
+          // ignore
+        }
+      };
+
+      ws.onclose = (event) => {
+        setIsConnected(false);
+        wsRef.current = null;
+        if (!event.wasClean && reconnectCount.current < maxReconnects) {
+          reconnectCount.current++;
+          const delay = Math.min(3000 * 2 ** Math.min(reconnectCount.current, 5), 30000);
+          reconnectTimer.current = setTimeout(connect, delay);
+        }
+      };
+
+      ws.onerror = () => {
+        setIsConnected(false);
+      };
+    } catch {
+      setIsConnected(false);
+    }
+  }, [enabled, qc]);
+
+  useEffect(() => {
+    connect();
+    return () => {
+      if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
+      if (wsRef.current) {
+        wsRef.current.close(1000, 'Cleanup');
+        wsRef.current = null;
+      }
     };
   }, [connect]);
 
-  const sendMessage = useCallback(
-    (content: string) => {
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ message: content, content }));
-        return true;
-      }
-      return false; // Caller should fall back to REST
-    },
-    [],
-  );
-
-  const disconnect = useCallback(() => {
-    if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
-    reconnectCount.current = maxReconnects; // prevent reconnect
-    if (wsRef.current) {
-      wsRef.current.close(1000, 'Manual disconnect');
-      wsRef.current = null;
-    }
-    setConnected(false);
-  }, []);
-
-  return { connected, error, sendMessage, disconnect };
+  return { isConnected };
 }
+
+// Legacy export for backward compat
+export { useChat as useChatWebSocket };

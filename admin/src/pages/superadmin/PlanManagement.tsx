@@ -1,5 +1,6 @@
-import React from 'react';
-import { Card, Tag, Table, Badge, Button, message } from 'antd';
+import React, { useState } from 'react';
+import { Tag, Table, Button, Modal, Select, message } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import {
   CrownOutlined,
   RocketOutlined,
@@ -7,24 +8,35 @@ import {
   CheckCircleOutlined,
   BankOutlined,
   EditOutlined,
+  SwapOutlined,
 } from '@ant-design/icons';
 import { usePlatformStats, useSchools, useUpdateSchool } from '../../hooks/useApi';
+import {
+  PageHeader,
+  StatCard,
+  DataCard,
+  StatusBadge,
+  EmptyState,
+  LoadingSkeleton,
+  SectionHeader,
+} from '../../components/ui';
 import './SuperAdmin.css';
 
+/* ── Plan config ── */
 const planConfig = [
   {
     key: 'STARTER',
     name: 'Starter',
     icon: <RocketOutlined />,
     cssClass: 'sa-plan-card-item--starter',
-    color: 'blue',
-    description: 'Plan de base pour les petites écoles',
+    color: 'blue' as const,
+    description: 'Plan de base pour les petites ecoles',
     features: [
-      'Gestion des élèves et enseignants',
+      'Gestion des eleves et enseignants',
       'Notes et bulletins',
       'Suivi des absences',
       'Messagerie de base',
-      'Jusqu\'à 200 utilisateurs',
+      'Jusqu\'a 200 utilisateurs',
     ],
   },
   {
@@ -32,14 +44,14 @@ const planConfig = [
     name: 'Pro',
     icon: <CrownOutlined />,
     cssClass: 'sa-plan-card-item--pro',
-    color: 'gold',
-    description: 'Plan professionnel pour les écoles moyennes',
+    color: 'gold' as const,
+    description: 'Plan professionnel pour les ecoles moyennes',
     features: [
       'Tout du plan Starter',
       'Finance et paiements',
-      'Notifications avancées',
-      'Analytiques détaillées',
-      'Jusqu\'à 1000 utilisateurs',
+      'Notifications avancees',
+      'Analytiques detaillees',
+      'Jusqu\'a 1000 utilisateurs',
       'Support prioritaire',
     ],
   },
@@ -48,134 +60,188 @@ const planConfig = [
     name: 'Pro + AI',
     icon: <ThunderboltOutlined />,
     cssClass: 'sa-plan-card-item--pro-ai',
-    color: 'purple',
+    color: 'purple' as const,
     description: 'Plan premium avec intelligence artificielle',
     features: [
       'Tout du plan Pro',
-      'Assistant IA pour les élèves',
-      'Analyses prédictives',
+      'Assistant IA pour les eleves',
+      'Analyses predictives',
       'Chatbot intelligent',
-      'Utilisateurs illimités',
-      'Support dédié 24/7',
+      'Utilisateurs illimites',
+      'Support dedie 24/7',
     ],
   },
 ];
+
+const PLAN_TAG_COLORS: Record<string, string> = {
+  STARTER: 'blue',
+  PRO: 'gold',
+  PRO_AI: 'purple',
+};
+const PLAN_LABELS: Record<string, string> = {
+  STARTER: 'Starter',
+  PRO: 'Pro',
+  PRO_AI: 'Pro + AI',
+};
+
+interface SchoolRow {
+  id: string;
+  name: string;
+  subdomain: string;
+  subscription_plan: string;
+  subscription_active: boolean;
+  is_active: boolean;
+  max_students: number;
+}
 
 const PlanManagement: React.FC = () => {
   const { data: stats } = usePlatformStats();
   const { data: schoolData, isLoading: schoolsLoading } = useSchools();
   const updateSchool = useUpdateSchool();
 
+  // Change plan modal
+  const [changePlanOpen, setChangePlanOpen] = useState(false);
+  const [selectedSchool, setSelectedSchool] = useState<SchoolRow | null>(null);
+  const [newPlan, setNewPlan] = useState<string | undefined>();
+
   const planDist = stats?.schools?.plan_distribution || [];
   const getCount = (plan: string) => {
     const found = planDist.find(
-      (p: { subscription_plan: string; count: number }) =>
-        p.subscription_plan === plan,
+      (p: { subscription_plan: string; count: number }) => p.subscription_plan === plan,
     );
     return found ? found.count : 0;
   };
 
+  const totalSchools = stats?.schools?.total || 0;
+
   const handleToggleSubscription = (schoolId: string, currentActive: boolean) => {
     updateSchool.mutate(
       { id: schoolId, data: { subscription_active: !currentActive } },
-      {
-        onSuccess: () => {
-          message.success(
-            currentActive ? 'Abonnement désactivé' : 'Abonnement activé',
-          );
-        },
-      },
+      { onSuccess: () => message.success(currentActive ? 'Abonnement desactive' : 'Abonnement active') },
     );
   };
 
-  const handleChangePlan = (schoolId: string, newPlan: string) => {
+  const openChangePlan = (record: SchoolRow) => {
+    setSelectedSchool(record);
+    setNewPlan(undefined);
+    setChangePlanOpen(true);
+  };
+
+  const handleChangePlan = () => {
+    if (!selectedSchool || !newPlan) return;
     updateSchool.mutate(
-      { id: schoolId, data: { subscription_plan: newPlan } },
+      { id: selectedSchool.id, data: { subscription_plan: newPlan } },
       {
         onSuccess: () => {
-          message.success('Plan mis à jour');
+          message.success('Plan mis a jour');
+          setChangePlanOpen(false);
+          setSelectedSchool(null);
         },
       },
     );
   };
 
-  const schoolColumns = [
+  /* ── Table columns ── */
+  const schoolColumns: ColumnsType<SchoolRow> = [
     {
-      title: 'École',
-      dataIndex: 'name',
+      title: 'Ecole',
       key: 'name',
-      render: (name: string) => <span className="font-semibold">{name}</span>,
+      sorter: (a, b) => a.name.localeCompare(b.name),
+      render: (_, record) => (
+        <div className="sa-cell">
+          <div className="sa-cell__avatar sa-cell__avatar--school">
+            {record.name.charAt(0)}
+          </div>
+          <div>
+            <div style={{ fontWeight: 600 }}>{record.name}</div>
+            <div style={{ fontSize: 11, opacity: 0.5, fontFamily: 'var(--font-mono)' }}>{record.subdomain}.ilmi.dz</div>
+          </div>
+        </div>
+      ),
     },
     {
-      title: 'Plan actuel',
+      title: 'Plan',
       dataIndex: 'subscription_plan',
       key: 'plan',
-      render: (plan: string) => {
-        const cfg = planConfig.find((p) => p.key === plan);
-        return (
-          <Tag color={cfg?.color || 'default'}>
-            {cfg?.name || plan}
-          </Tag>
-        );
-      },
+      filters: planConfig.map(p => ({ text: p.name, value: p.key })),
+      onFilter: (value, record) => record.subscription_plan === value,
+      render: (plan: string) => (
+        <Tag color={PLAN_TAG_COLORS[plan] || 'default'} style={{ borderRadius: 12, fontWeight: 600 }}>
+          {PLAN_LABELS[plan] || plan}
+        </Tag>
+      ),
     },
     {
-      title: 'Statut',
-      dataIndex: 'subscription_active',
+      title: 'Capacite',
+      dataIndex: 'max_students',
+      key: 'capacity',
+      sorter: (a, b) => a.max_students - b.max_students,
+      render: (v: number) => <span>{v} eleves</span>,
+    },
+    {
+      title: 'Statut abonnement',
       key: 'status',
-      render: (active: boolean) =>
-        active ? (
-          <Badge status="success" text="Actif" />
-        ) : (
-          <Badge status="error" text="Inactif" />
-        ),
+      filters: [{ text: 'Actif', value: true }, { text: 'Inactif', value: false }],
+      onFilter: (value, record) => record.subscription_active === value,
+      render: (_, record) => (
+        <StatusBadge
+          status={record.subscription_active ? 'active' : 'inactive'}
+          label={record.subscription_active ? 'Actif' : 'Inactif'}
+          dot
+          size="sm"
+        />
+      ),
     },
     {
       title: 'Actions',
       key: 'actions',
-      render: (_: unknown, record: Record<string, unknown>) => (
-        <div className="flex gap-8">
+      width: 200,
+      render: (_, record) => (
+        <div style={{ display: 'flex', gap: 6 }}>
           <Button
             size="small"
             type={record.subscription_active ? 'default' : 'primary'}
-            danger={record.subscription_active as boolean}
-            onClick={() =>
-              handleToggleSubscription(
-                record.id as string,
-                record.subscription_active as boolean,
-              )
-            }
+            danger={record.subscription_active}
+            onClick={() => handleToggleSubscription(record.id, record.subscription_active)}
           >
-            {record.subscription_active ? 'Désactiver' : 'Activer'}
+            {record.subscription_active ? 'Desactiver' : 'Activer'}
           </Button>
-          {planConfig
-            .filter((p) => p.key !== record.subscription_plan)
-            .map((p) => (
-              <Button
-                key={p.key}
-                size="small"
-                icon={<EditOutlined />}
-                onClick={() => handleChangePlan(record.id as string, p.key)}
-              >
-                → {p.name}
-              </Button>
-            ))}
+          <Button
+            size="small"
+            icon={<SwapOutlined />}
+            onClick={() => openChangePlan(record)}
+          >
+            Changer
+          </Button>
         </div>
       ),
     },
   ];
 
   return (
-    <div className="page animate-fade-in">
-      <div className="page-header">
-        <div className="page-header__info">
-          <h1>Gestion des plans</h1>
-          <p>Gérez les abonnements et assignez des plans aux écoles</p>
-        </div>
+    <div className="sa-page">
+      <PageHeader
+        title="Abonnements & Plans"
+        subtitle="Gerez les abonnements et assignez des plans aux ecoles"
+        icon={<CrownOutlined />}
+      />
+
+      {/* ── Stats row ── */}
+      <div className="sa-stats-grid">
+        {planConfig.map((plan) => (
+          <StatCard
+            key={plan.key}
+            icon={plan.icon}
+            label={`Plan ${plan.name}`}
+            value={getCount(plan.key)}
+            sub={`sur ${totalSchools} ecole${totalSchools > 1 ? 's' : ''}`}
+            variant={plan.key === 'STARTER' ? 'info' : plan.key === 'PRO' ? 'warning' : 'pink'}
+          />
+        ))}
       </div>
 
-      {/* Plan cards */}
-      <div className="sa-plans-grid stagger-children">
+      {/* ── Plan feature cards ── */}
+      <div className="sa-plans-grid">
         {planConfig.map((plan) => (
           <div key={plan.key} className={`sa-plan-card-item ${plan.cssClass}`}>
             <div className="sa-plan-card-item__icon">{plan.icon}</div>
@@ -190,30 +256,64 @@ const PlanManagement: React.FC = () => {
             </div>
             <div className="sa-plan-schools-count">{getCount(plan.key)}</div>
             <div className="sa-plan-schools-label">
-              <BankOutlined /> École{getCount(plan.key) !== 1 ? 's' : ''} sur ce plan
+              <BankOutlined /> Ecole{getCount(plan.key) !== 1 ? 's' : ''} sur ce plan
             </div>
           </div>
         ))}
       </div>
 
-      {/* Schools table */}
-      <Card
-        title={
-          <span className="section-title">
-            <BankOutlined /> Écoles et abonnements
-          </span>
-        }
-        styles={{ body: { padding: 0 } }}
+      {/* ── Schools + subscriptions table ── */}
+      <SectionHeader
+        title="Ecoles et abonnements"
+        subtitle={`${(schoolData?.results || []).length} ecole(s)`}
+        icon={<BankOutlined />}
+      />
+
+      {schoolsLoading ? (
+        <LoadingSkeleton variant="table" rows={6} />
+      ) : !(schoolData?.results || []).length ? (
+        <EmptyState icon={<BankOutlined />} title="Aucune ecole" description="Aucune ecole enregistree." />
+      ) : (
+        <DataCard noPadding>
+          <div className="sa-dark-table">
+            <Table
+              columns={schoolColumns}
+              dataSource={(schoolData?.results || []) as unknown as SchoolRow[]}
+              rowKey="id"
+              pagination={{ pageSize: 10, showTotal: (t) => `${t} ecole(s)` }}
+            />
+          </div>
+        </DataCard>
+      )}
+
+      {/* ── Change plan modal ── */}
+      <Modal
+        title={<span style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-primary)' }}><SwapOutlined /> Changer le plan: {selectedSchool?.name}</span>}
+        open={changePlanOpen}
+        onCancel={() => { setChangePlanOpen(false); setSelectedSchool(null); }}
+        onOk={handleChangePlan}
+        okText="Confirmer"
+        cancelText="Annuler"
+        confirmLoading={updateSchool.isPending}
+        className="um-modal"
+        width={420}
       >
-        <Table
-          columns={schoolColumns}
-          dataSource={schoolData?.results || []}
-          loading={schoolsLoading}
-          rowKey={(r: Record<string, unknown>) => r.id as string}
-          pagination={{ pageSize: 10 }}
-          locale={{ emptyText: 'Aucune école' }}
+        <div style={{ marginBottom: 12, color: 'var(--text-secondary)' }}>
+          Plan actuel: <Tag color={PLAN_TAG_COLORS[selectedSchool?.subscription_plan || '']} style={{ borderRadius: 12 }}>
+            {PLAN_LABELS[selectedSchool?.subscription_plan || ''] || selectedSchool?.subscription_plan}
+          </Tag>
+        </div>
+        <Select
+          placeholder="Choisir le nouveau plan"
+          value={newPlan}
+          onChange={setNewPlan}
+          style={{ width: '100%' }}
+          size="large"
+          options={planConfig
+            .filter(p => p.key !== selectedSchool?.subscription_plan)
+            .map(p => ({ value: p.key, label: p.name }))}
         />
-      </Card>
+      </Modal>
     </div>
   );
 };

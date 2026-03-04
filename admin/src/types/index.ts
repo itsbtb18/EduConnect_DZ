@@ -48,19 +48,82 @@ export interface LoginResponse {
 }
 
 // ── School ──
+export type SchoolCategory = 'PRIVATE_SCHOOL' | 'TRAINING_CENTER';
+export type TrainingType =
+  | 'SUPPORT_COURSES'
+  | 'LANGUAGES'
+  | 'PROFESSIONAL'
+  | 'EXAM_PREP'
+  | 'COMPUTING'
+  | 'OTHER';
+
 export interface School {
   id: string;
   name: string;
   logo?: string;
+  logo_url?: string;
   address?: string;
+  wilaya?: string;
   phone?: string;
   email?: string;
+  website?: string;
+  motto?: string;
   subdomain: string;
+  school_category: SchoolCategory;
+  has_primary: boolean;
+  has_middle: boolean;
+  has_high: boolean;
+  available_streams?: string[];
+  training_type?: TrainingType;
   subscription_plan: 'STARTER' | 'PRO' | 'PRO_AI';
   subscription_active: boolean;
+  subscription_start?: string;
+  subscription_end?: string;
+  max_students: number;
+  is_active: boolean;
+  setup_completed: boolean;
+  notes?: string;
   is_deleted?: boolean;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface SchoolCreatePayload {
+  name: string;
+  logo?: File;
+  address?: string;
+  wilaya?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  motto?: string;
+  subdomain: string;
+  school_category: SchoolCategory;
+  has_primary?: boolean;
+  has_middle?: boolean;
+  has_high?: boolean;
+  available_streams?: string[];
+  training_type?: TrainingType;
+  subscription_plan: string;
+  subscription_start?: string;
+  subscription_end?: string;
+  max_students?: number;
+  notes?: string;
+  admin_first_name?: string;
+  admin_last_name?: string;
+  admin_phone?: string;
+  admin_email?: string;
+  admin_password?: string;
+}
+
+export interface SchoolCreateResponse extends School {
+  admin_credentials?: {
+    user_id: string;
+    phone_number: string;
+    password: string;
+    first_name: string;
+    last_name: string;
+  };
 }
 
 export interface Section {
@@ -81,16 +144,60 @@ export interface AcademicYear {
   is_current: boolean;
 }
 
-// ── Academics ──
+// ── Academics — Hierarchy ──
+
+export interface Level {
+  id: string;
+  section: string;
+  section_name?: string;
+  section_type?: string;
+  name: string;
+  code: string;
+  order: number;
+  max_grade: number;
+  passing_grade: number;
+  has_streams: boolean;
+  stream_count?: number;
+}
+
+export interface Stream {
+  id: string;
+  level: string;
+  level_code?: string;
+  name: string;
+  code: string;
+  short_name?: string;
+  is_tronc_commun: boolean;
+  order: number;
+}
+
+export interface LevelSubject {
+  id: string;
+  level: string;
+  level_code?: string;
+  stream?: string | null;
+  stream_name?: string | null;
+  subject: string;
+  subject_name?: string;
+  coefficient: number;
+  is_mandatory: boolean;
+  weekly_hours?: number | null;
+}
+
 export interface ClassInfo {
   id: string;
   name: string;
-  level?: string;
-  stream?: string;
+  level: string;
+  level_code?: string;
+  level_name?: string;
+  stream?: string | null;
+  stream_name?: string | null;
   section?: string;
   academic_year?: string;
   homeroom_teacher?: string;
   homeroom_teacher_name?: string;
+  capacity?: number;
+  /** @deprecated use capacity */
   max_students?: number;
   student_count?: number;
   average?: number;
@@ -103,7 +210,6 @@ export interface Subject {
   name: string;
   arabic_name?: string;
   code?: string;
-  coefficient?: number;
   color?: string;
   icon?: string;
 }
@@ -269,6 +375,53 @@ export interface FinanceStats {
 }
 
 // ── Chat / Messaging ──
+export type ConversationRole = 'parent' | 'enseignant' | 'eleve' | 'admin';
+
+export interface Conversation {
+  id: string;
+  participant_other: string;
+  participant_other_name: string;
+  participant_other_role: ConversationRole;
+  participant_other_initials: string;
+  last_message_preview: string;
+  last_message_at: string | null;
+  unread_count_admin: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  conversation_id?: string;
+  sender_id?: string;
+  sender?: string;
+  sender_name?: string;
+  sender_is_admin?: boolean;
+  content: string;
+  attachment_url?: string | null;
+  attachment_type?: string | null;
+  attachment_name?: string | null;
+  attachment_size?: number | null;
+  is_read?: boolean;
+  created_at?: string;
+  // Transient fields for optimistic UI
+  _optimistic?: boolean;
+  recipient_id?: string;
+}
+
+export interface ContactUser {
+  id: string;
+  full_name: string;
+  initials: string;
+  has_conversation: boolean;
+}
+
+export interface ContactsResponse {
+  enseignants: ContactUser[];
+  parents: ContactUser[];
+  eleves: ContactUser[];
+  admins: ContactUser[];
+}
+
+// Legacy compatibility — keep ChatRoom alias
 export type ChatRoomType =
   | 'TEACHER_PARENT'
   | 'TEACHER_STUDENT'
@@ -287,22 +440,6 @@ export interface ChatRoom {
   last_message_at?: string;
   unread_count?: number;
   created_at?: string;
-}
-
-export interface ChatMessage {
-  id: string;
-  room?: string;
-  sender?: string;
-  sender_name?: string;
-  content: string;
-  text?: string;
-  attachment?: string;
-  attachment_type?: string;
-  file_url?: string;
-  file_name?: string;
-  sent_at?: string;
-  is_mine?: boolean;
-  is_deleted?: boolean;
 }
 
 // ── Announcement ──

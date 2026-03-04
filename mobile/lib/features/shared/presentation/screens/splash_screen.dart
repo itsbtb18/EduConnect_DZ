@@ -51,7 +51,12 @@ class _SplashScreenState extends State<SplashScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.school_rounded, size: 100, color: Colors.white),
+              Image.asset(
+                'assets/images/ilmi-logo.png',
+                width: 200,
+                height: 80,
+                fit: BoxFit.contain,
+              ),
               const SizedBox(height: 24),
               Text(
                 'ILMI',

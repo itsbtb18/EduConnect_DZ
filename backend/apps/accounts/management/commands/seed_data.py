@@ -348,37 +348,46 @@ class Command(BaseCommand):
     def _create_grades(self, school, students, assignments):
         from apps.grades.models import ExamType, Grade
 
-        exam_types = []
-        for name, weight in [("Devoir 1", 25), ("Devoir 2", 25), ("Composition", 50)]:
-            et, _ = ExamType.objects.get_or_create(
-                school=school,
-                name=name,
-                defaults={"weight": weight},
-            )
-            exam_types.append(et)
-
         count = 0
         for student in students[:20]:  # Limit to 20 to avoid excessive data
             profile = getattr(student, "student_profile", None)
-            if not profile or not profile.classroom:
+            if not profile or not profile.current_class:
                 continue
-            cls_assignments = [
-                a for a in assignments if a.classroom == profile.classroom
-            ]
+            classroom = profile.current_class
+            cls_assignments = [a for a in assignments if a.classroom == classroom]
             for assignment in cls_assignments:
-                for exam_type in exam_types:
-                    score = round(random.uniform(4, 20), 2)
-                    Grade.objects.get_or_create(
-                        school=school,
-                        student=student,
-                        teacher_assignment=assignment,
-                        exam_type=exam_type,
-                        defaults={
-                            "score": min(score, 20),
-                            "is_published": random.choice([True, True, False]),
-                        },
-                    )
-                    count += 1
+                # Find or create exam types for this subject/class/trimester
+                academic_year = assignment.academic_year
+                subject = assignment.subject
+                exam_configs = [
+                    ("Devoir 1", 25),
+                    ("Devoir 2", 25),
+                    ("Composition", 50),
+                ]
+                for trimester in [1, 2, 3]:
+                    exam_types = []
+                    for name, pct in exam_configs:
+                        et, _ = ExamType.objects.get_or_create(
+                            subject=subject,
+                            classroom=classroom,
+                            academic_year=academic_year,
+                            trimester=trimester,
+                            name=name,
+                            defaults={"percentage": pct, "max_score": 20},
+                        )
+                        exam_types.append(et)
+                    for exam_type in exam_types:
+                        score = round(random.uniform(4, 20), 2)
+                        Grade.objects.get_or_create(
+                            student=profile,
+                            exam_type=exam_type,
+                            defaults={
+                                "score": min(score, 20),
+                                "is_published": random.choice([True, True, False]),
+                                "entered_by": assignment.teacher,
+                            },
+                        )
+                        count += 1
         return count
 
     def _create_attendance(self, school, students, classrooms):

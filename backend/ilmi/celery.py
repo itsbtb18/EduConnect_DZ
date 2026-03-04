@@ -59,6 +59,16 @@ app.conf.beat_schedule = {
         "task": "apps.grades.tasks.flag_at_risk_students",
         "schedule": crontab(minute=0, hour=6, day_of_week=1),
     },
+    # Check expired payments — daily at 08:00
+    "check-expired-payments": {
+        "task": "apps.finance.tasks.check_expired_payments",
+        "schedule": crontab(minute=0, hour=8),
+    },
+    # Send payment reminders (expiring in 7 days) — every Sunday at 09:00
+    "send-payment-reminders": {
+        "task": "apps.finance.tasks.send_payment_reminders",
+        "schedule": crontab(minute=0, hour=9, day_of_week=0),
+    },
 }
 
 

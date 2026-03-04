@@ -82,7 +82,7 @@ When a new school registers, a step-by-step wizard guides the admin through:
 1. School name, address, logo upload
 2. Academic year configuration (start date, end date, trimester system)
 3. Add sections (Primary / Middle / High)
-4. Add classes (6ème A, 6ème B, etc.)
+4. Add classes (5ème 1, 5ème 2, etc.)
 5. Add subjects per section
 6. Invite or create or modify teacher accounts (phone number + name, system sends them a login SMS or shows their initial password)
 7. Import or create or modify students accounts (bulk CSV upload OR manual one by one)

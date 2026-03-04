@@ -9,6 +9,7 @@ import {
 } from '@ant-design/icons';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
+import ilmiLogo from '../../assets/ilmi-logo.png';
 import './LoginPage.css';
 
 const LoginPage: React.FC = () => {
@@ -49,10 +50,7 @@ const LoginPage: React.FC = () => {
       {/* Left branding */}
       <div className="login-brand">
         <div className="login-brand__logo">
-          <div className="login-brand__mark">EC</div>
-          <div className="login-brand__name">
-            Edu<span>Connect</span>
-          </div>
+          <img src={ilmiLogo} alt="ILMI Platform" className="login-brand__logo-img" />
         </div>
 
         <h1 className="login-brand__headline">
@@ -87,6 +85,9 @@ const LoginPage: React.FC = () => {
       {/* Right form */}
       <div className="login-form-panel">
         <div className="login-card">
+          <div className="login-card__logo">
+            <img src={ilmiLogo} alt="ILMI" className="login-card__logo-img" />
+          </div>
           <h2 className="login-card__title">Connexion</h2>
           <p className="login-card__sub">Connectez-vous a votre espace administrateur</p>
 
@@ -98,7 +99,7 @@ const LoginPage: React.FC = () => {
               name="phone_number"
               rules={[{ required: true, message: 'Veuillez entrer votre numero' }]}
             >
-              <Input placeholder="0550000000" />
+              <Input placeholder="Entrez votre numéro" />
             </Form.Item>
 
             <Form.Item
