@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Button, Modal, Form, Input, Select, Tag, Table,
   Typography, Tooltip, Popconfirm, Steps, Upload, Radio,
@@ -136,6 +137,7 @@ interface SchoolRecord {
 
 const SchoolManagement: React.FC = () => {
   const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
   const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN';
 
   /* ── View / filter state ── */
@@ -456,11 +458,17 @@ const SchoolManagement: React.FC = () => {
     {
       title: '',
       key: 'actions',
-      width: 120,
+      width: 150,
       render: (_, record) => (
         <div className="sm-actions-row">
+          <Tooltip title="Voir">
+            <Button type="text" size="small" icon={<EyeOutlined />} onClick={() => navigate(`/platform/schools/${record.id}`)} />
+          </Tooltip>
           <Tooltip title="Modifier">
             <Button type="text" size="small" icon={<EditOutlined />} onClick={() => openEdit(record)} />
+          </Tooltip>
+          <Tooltip title="Abonnement">
+            <Button type="text" size="small" icon={<CrownOutlined />} onClick={() => navigate(`/platform/schools/${record.id}/subscription`)} />
           </Tooltip>
           <Tooltip title="Ajouter admin">
             <Button type="text" size="small" icon={<UserAddOutlined />} onClick={() => openAddAdmin(record.id)} />

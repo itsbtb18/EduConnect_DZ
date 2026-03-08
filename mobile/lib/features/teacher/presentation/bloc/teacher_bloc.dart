@@ -1,7 +1,9 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/di/injection.dart';
+import '../../../../core/network/sync_queue_service.dart';
 import '../../../shared/data/models/communication_model.dart';
 import '../../data/repositories/attendance_repository.dart';
 
@@ -55,6 +57,13 @@ class TeacherAttendanceLoaded extends TeacherState {
 
 class TeacherAttendanceMarked extends TeacherState {}
 
+class TeacherAttendanceQueued extends TeacherState {
+  final int pendingCount;
+  const TeacherAttendanceQueued(this.pendingCount);
+  @override
+  List<Object?> get props => [pendingCount];
+}
+
 class TeacherError extends TeacherState {
   final String message;
   const TeacherError(this.message);
@@ -66,6 +75,7 @@ class TeacherError extends TeacherState {
 
 class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
   final AttendanceRepository _attendanceRepo = getIt<AttendanceRepository>();
+  final SyncQueueService _syncQueue = getIt<SyncQueueService>();
 
   TeacherBloc() : super(TeacherInitial()) {
     on<TeacherLoadAttendance>(_onLoadAttendance);
@@ -93,6 +103,32 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
     Emitter<TeacherState> emit,
   ) async {
     emit(TeacherLoading());
+
+    // Check connectivity first.
+    bool offline = false;
+    try {
+      final result = await Connectivity().checkConnectivity();
+      offline = result.contains(ConnectivityResult.none);
+    } catch (_) {
+      // Assume online if connectivity check fails (e.g., on web or in tests)
+    }
+
+    if (offline) {
+      // Queue for later sync.
+      await _syncQueue.enqueue(
+        method: 'POST',
+        path: '/attendance/mark/',
+        body: {
+          'classroom': event.classroomId,
+          'date': event.date,
+          'records': event.records,
+        },
+        label: 'Présence ${event.classroomId} — ${event.date}',
+      );
+      emit(TeacherAttendanceQueued(_syncQueue.pendingCount));
+      return;
+    }
+
     try {
       await _attendanceRepo.markAttendance(
         classroomId: event.classroomId,

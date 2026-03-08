@@ -74,6 +74,14 @@ class Subject {
     coefficient: (json['coefficient'] as num?)?.toDouble() ?? 1.0,
     color: json['color'] as String?,
   );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'name_ar': nameAr,
+    'coefficient': coefficient,
+    'color': color,
+  };
 }
 
 class ScheduleSlot {
@@ -110,6 +118,18 @@ class ScheduleSlot {
     classroomName: json['classroom_name'] as String?,
     room: json['room'] as String?,
   );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'day_of_week': dayOfWeek,
+    'start_time': startTime,
+    'end_time': endTime,
+    'subject': subjectId,
+    'subject_name': subjectName,
+    'teacher_name': teacherName,
+    'classroom_name': classroomName,
+    'room': room,
+  };
 }
 
 class Lesson {

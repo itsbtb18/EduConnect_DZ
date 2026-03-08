@@ -20,10 +20,17 @@ final _testUser = User(
   isActive: true,
 );
 
-final _loginResponse = LoginResponse(
-  accessToken: 'fake-access-token',
-  refreshToken: 'fake-refresh-token',
+final _authResult = AuthResult(
   user: _testUser,
+  contexts: [
+    UserContext(
+      contextId: 'user-1_school-1_TEACHER',
+      type: 'SCHOOL',
+      role: 'TEACHER',
+      schoolId: 'school-1',
+      schoolName: 'École Test',
+    ),
+  ],
 );
 
 // --- Tests ---
@@ -117,13 +124,13 @@ void main() {
     });
 
     group('AuthRepository mock behavior', () {
-      test('login returns LoginResponse', () async {
+      test('login returns AuthResult', () async {
         when(
           () => mockAuthRepository.login(
             phoneNumber: any(named: 'phoneNumber'),
             password: any(named: 'password'),
           ),
-        ).thenAnswer((_) async => _loginResponse);
+        ).thenAnswer((_) async => _authResult);
 
         final result = await mockAuthRepository.login(
           phoneNumber: '0551234567',
@@ -131,7 +138,7 @@ void main() {
         );
 
         expect(result.user.email, 'teacher@school.dz');
-        expect(result.accessToken, 'fake-access-token');
+        expect(result.contexts.first.role, 'TEACHER');
         verify(
           () => mockAuthRepository.login(
             phoneNumber: '0551234567',

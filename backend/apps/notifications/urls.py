@@ -5,7 +5,7 @@ from . import views
 app_name = "notifications"
 
 urlpatterns = [
-    # List notifications
+    # List notifications (30-day history, filterable)
     path("", views.NotificationListView.as_view(), name="notification-list"),
     # Mark single as read
     path(
@@ -30,5 +30,17 @@ urlpatterns = [
         "devices/",
         views.DeviceTokenView.as_view(),
         name="device-token",
+    ),
+    # User preferences
+    path(
+        "preferences/",
+        views.NotificationPreferenceView.as_view(),
+        name="notification-preferences",
+    ),
+    # Stats (admin)
+    path(
+        "stats/",
+        views.NotificationStatsView.as_view(),
+        name="notification-stats",
     ),
 ]

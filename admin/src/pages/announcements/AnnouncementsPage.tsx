@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Table, Button, Tag, Modal, Form, Input, Select, Popconfirm, Space, DatePicker, Switch, Statistic, Card, Tooltip, message } from 'antd';
+import React, { useState, useMemo, useRef } from 'react';
+import { Table, Button, Tag, Modal, Form, Input, Select, Popconfirm, Space, DatePicker, Switch, Statistic, Card, Tooltip, message, Upload } from 'antd';
 import {
   PlusOutlined,
   DeleteOutlined,
@@ -13,10 +13,23 @@ import {
   TeamOutlined,
   AlertOutlined,
   ScheduleOutlined,
+  UploadOutlined,
+  PaperClipOutlined,
+  EyeOutlined,
 } from '@ant-design/icons';
-import { useAnnouncements, useCreateAnnouncement, useDeleteAnnouncement, useUpdateAnnouncement, useClasses, useStudents, useUsers } from '../../hooks/useApi';
+import { useAnnouncements, useCreateAnnouncement, useDeleteAnnouncement, useUpdateAnnouncement, useClasses, useStudents, useUsers, useUploadAnnouncementAttachment } from '../../hooks/useApi';
+import { announcementsAPI } from '../../api/services';
 import dayjs from 'dayjs';
 import './AnnouncementsPage.css';
+
+const AUDIENCE_LABELS: Record<string, string> = {
+  ALL: 'Tous',
+  PARENTS: 'Parents',
+  STUDENTS: 'Élèves',
+  TEACHERS: 'Enseignants',
+  SPECIFIC_SECTION: 'Section',
+  SPECIFIC_CLASS: 'Classe',
+};
 
 const AnnouncementsPage: React.FC = () => {
   const [page, setPage] = useState(1);
@@ -25,44 +38,75 @@ const AnnouncementsPage: React.FC = () => {
   const [searchText, setSearchText] = useState('');
   const [filterAudience, setFilterAudience] = useState<string>('');
   const [form] = Form.useForm();
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [attachFiles, setAttachFiles] = useState<File[]>([]);
 
   const { data, isLoading, refetch } = useAnnouncements({ page, page_size: 20 });
   const createAnnouncement = useCreateAnnouncement();
   const deleteAnnouncement = useDeleteAnnouncement();
   const updateAnnouncement = useUpdateAnnouncement();
+  const uploadAttachment = useUploadAnnouncementAttachment();
   const { data: classesData } = useClasses();
   const { data: usersData } = useUsers({ page_size: 200 });
 
   const classes = (classesData?.results || classesData || []) as { id: string; name: string; section?: string }[];
   const sections = [...new Set(classes.map((c) => c.section).filter(Boolean))] as string[];
   const users = (usersData?.results || []) as { id: string; first_name: string; last_name: string; role: string }[];
-  const [audienceType, setAudienceType] = useState<string>('all');
+  const [audienceType, setAudienceType] = useState<string>('ALL');
 
   // Derived stats
   const allAnnouncements = (data?.results || []) as Record<string, unknown>[];
-  const pinnedCount = useMemo(() => allAnnouncements.filter((a) => a.pinned).length, [allAnnouncements]);
-  const urgentCount = useMemo(() => allAnnouncements.filter((a) => a.urgent).length, [allAnnouncements]);
+  const pinnedCount = useMemo(() => allAnnouncements.filter((a) => a.is_pinned).length, [allAnnouncements]);
+  const urgentCount = useMemo(() => allAnnouncements.filter((a) => a.is_urgent).length, [allAnnouncements]);
   const scheduledCount = useMemo(
-    () => allAnnouncements.filter((a) => a.scheduled_at && dayjs(a.scheduled_at as string).isAfter(dayjs())).length,
+    () => allAnnouncements.filter((a) => a.publish_at && dayjs(a.publish_at as string).isAfter(dayjs())).length,
     [allAnnouncements],
   );
 
   const handleCreate = async () => {
     try {
       const values = await form.validateFields();
-      const payload = {
-        ...values,
-        scheduled_at: values.scheduled_at ? values.scheduled_at.toISOString() : undefined,
+      const payload: Record<string, unknown> = {
+        title: values.title,
+        body: values.body,
+        target_audience: values.target_audience || 'ALL',
+        is_pinned: values.is_pinned || false,
+        is_urgent: values.is_urgent || false,
+        publish_at: values.publish_at ? values.publish_at.toISOString() : undefined,
       };
+      if (values.target_audience === 'SPECIFIC_CLASS') payload.target_class_id = values.target_class_id;
+      if (values.target_audience === 'SPECIFIC_SECTION') payload.target_section_id = values.target_section_id;
+
+      let announcementId: string;
       if (editingAnnouncement) {
         await updateAnnouncement.mutateAsync({ id: editingAnnouncement.id as string, data: payload });
+        announcementId = editingAnnouncement.id as string;
       } else {
-        await createAnnouncement.mutateAsync(payload);
+        const result = await createAnnouncement.mutateAsync(payload);
+        announcementId = (result as Record<string, unknown>).id as string;
       }
+
+      // Upload image if selected
+      if (imageFile && announcementId) {
+        const imgData = new FormData();
+        imgData.append('image', imageFile);
+        await announcementsAPI.uploadImage(announcementId, imgData);
+      }
+
+      // Upload file attachments
+      for (const file of attachFiles) {
+        const fd = new FormData();
+        fd.append('file', file);
+        await uploadAttachment.mutateAsync({ id: announcementId, data: fd });
+      }
+
       setModalOpen(false);
       setEditingAnnouncement(null);
-      setAudienceType('all');
+      setAudienceType('ALL');
+      setImageFile(null);
+      setAttachFiles([]);
       form.resetFields();
+      refetch();
     } catch {
       // validation
     }
@@ -70,10 +114,16 @@ const AnnouncementsPage: React.FC = () => {
 
   const handleEdit = (record: Record<string, unknown>) => {
     setEditingAnnouncement(record);
-    setAudienceType((record.audience as string) || 'all');
+    setAudienceType((record.target_audience as string) || 'ALL');
     form.setFieldsValue({
-      ...record,
-      scheduled_at: record.scheduled_at ? dayjs(record.scheduled_at as string) : undefined,
+      title: record.title,
+      body: record.body,
+      target_audience: record.target_audience || 'ALL',
+      target_class_id: record.target_class,
+      target_section_id: record.target_section,
+      is_pinned: record.is_pinned || false,
+      is_urgent: record.is_urgent || false,
+      publish_at: record.publish_at ? dayjs(record.publish_at as string) : undefined,
     });
     setModalOpen(true);
   };
@@ -88,21 +138,21 @@ const AnnouncementsPage: React.FC = () => {
       key: 'pinned',
       width: 40,
       render: (_: unknown, r: Record<string, unknown>) =>
-        r.pinned ? <PushpinOutlined style={{ color: '#F59E0B', fontSize: 16 }} /> : null,
+        r.is_pinned ? <PushpinOutlined style={{ color: '#F59E0B', fontSize: 16 }} /> : null,
     },
     {
       title: 'Titre',
       dataIndex: 'title',
       key: 'title',
       render: (v: string, r: Record<string, unknown>) => {
-        const scheduledAt = r.scheduled_at as string | undefined;
-        const isScheduled = scheduledAt && dayjs(scheduledAt).isAfter(dayjs());
+        const publishAt = r.publish_at as string | undefined;
+        const isScheduled = publishAt && dayjs(publishAt).isAfter(dayjs());
         return (
           <span className="font-semibold">
             {v || '—'}
             {isScheduled && (
               <Tag color="blue" className="ml-2" icon={<ClockCircleOutlined />}>
-                Programmée {dayjs(scheduledAt).format('DD/MM HH:mm')}
+                Programmée {dayjs(publishAt).format('DD/MM HH:mm')}
               </Tag>
             )}
           </span>
@@ -111,8 +161,8 @@ const AnnouncementsPage: React.FC = () => {
     },
     {
       title: 'Aperçu',
-      dataIndex: 'content',
-      key: 'content',
+      dataIndex: 'body',
+      key: 'body',
       ellipsis: true,
       width: 200,
       render: (v: string) => (
@@ -123,37 +173,49 @@ const AnnouncementsPage: React.FC = () => {
     },
     {
       title: 'Audience',
-      dataIndex: 'audience',
-      key: 'audience',
+      dataIndex: 'target_audience',
+      key: 'target_audience',
       render: (v: string, r: Record<string, unknown>) => {
-        const label = v === 'all' ? 'Tous' : v === 'parents' ? 'Parents' : v === 'students' ? 'Élèves' : v === 'teachers' ? 'Enseignants' : v === 'class' ? `Classe: ${r.target_class_name || r.target_class || ''}` : v === 'section' ? `Section: ${r.target_section || ''}` : v === 'specific' ? 'Spécifiques' : v || 'Tous';
-        const color = v === 'specific' ? 'purple' : v === 'class' ? 'cyan' : v === 'section' ? 'geekblue' : 'blue';
-        return <Tag color={color} icon={v === 'specific' ? <TeamOutlined /> : undefined}>{label}</Tag>;
+        let label = AUDIENCE_LABELS[v] || v || 'Tous';
+        if (v === 'SPECIFIC_CLASS') label = `Classe: ${r.target_class_name || r.target_class || ''}`;
+        if (v === 'SPECIFIC_SECTION') label = `Section: ${r.target_section || ''}`;
+        const color = v === 'SPECIFIC_CLASS' ? 'cyan' : v === 'SPECIFIC_SECTION' ? 'geekblue' : 'blue';
+        return <Tag color={color}>{label}</Tag>;
       },
     },
     {
-      title: 'Canal',
-      dataIndex: 'channel',
-      key: 'channel',
-      render: (v: string) => {
-        if (v === 'sms') return <Tag color="purple">SMS</Tag>;
-        if (v === 'both') return <><Tag color="green">App</Tag><Tag color="purple">SMS</Tag></>;
-        return <Tag color="green">App</Tag>;
+      title: 'Vues',
+      dataIndex: 'views_count',
+      key: 'views_count',
+      width: 70,
+      render: (v: number) => <span><EyeOutlined style={{ marginRight: 4 }} />{v ?? 0}</span>,
+    },
+    {
+      title: 'Lues',
+      dataIndex: 'read_count',
+      key: 'read_count',
+      width: 70,
+      render: (v: number) => <span>{v ?? 0}</span>,
+    },
+    {
+      title: 'Pièces jointes',
+      key: 'attachments',
+      width: 50,
+      render: (_: unknown, r: Record<string, unknown>) => {
+        const count = (r.attachments as unknown[] || []).length + (r.image_url ? 1 : 0);
+        return count > 0 ? <Tag icon={<PaperClipOutlined />}>{count}</Tag> : null;
       },
     },
     {
       title: 'Date',
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (v: string, r: Record<string, unknown>) => {
-        const d = v || (r.date as string);
-        return d ? dayjs(d).format('DD/MM/YYYY HH:mm') : '—';
-      },
+      render: (v: string) => v ? dayjs(v).format('DD/MM/YYYY HH:mm') : '—',
     },
     {
       title: 'Urgent',
-      dataIndex: 'urgent',
-      key: 'urgent',
+      dataIndex: 'is_urgent',
+      key: 'is_urgent',
       render: (v: boolean) => v ? <Tag color="red">Urgent</Tag> : <Tag>Normal</Tag>,
     },
     {
@@ -178,17 +240,17 @@ const AnnouncementsPage: React.FC = () => {
     if (searchText.trim()) {
       const q = searchText.toLowerCase();
       list = list.filter((a: any) =>
-        (a.title || '').toLowerCase().includes(q) || (a.content || '').toLowerCase().includes(q),
+        (a.title || '').toLowerCase().includes(q) || (a.body || '').toLowerCase().includes(q),
       );
     }
     // Filter by audience
     if (filterAudience) {
-      list = list.filter((a: any) => a.audience === filterAudience);
+      list = list.filter((a: any) => a.target_audience === filterAudience);
     }
     // Sort pinned first
     list.sort((a: any, b: any) => {
-      if (a.pinned && !b.pinned) return -1;
-      if (!a.pinned && b.pinned) return 1;
+      if (a.is_pinned && !b.is_pinned) return -1;
+      if (!a.is_pinned && b.is_pinned) return 1;
       return 0;
     });
     return list;
@@ -246,13 +308,12 @@ const AnnouncementsPage: React.FC = () => {
           allowClear
           style={{ minWidth: 180 }}
         >
-          <Select.Option value="all">Tous</Select.Option>
-          <Select.Option value="parents">Parents</Select.Option>
-          <Select.Option value="students">Élèves</Select.Option>
-          <Select.Option value="teachers">Enseignants</Select.Option>
-          <Select.Option value="class">Classe</Select.Option>
-          <Select.Option value="section">Section</Select.Option>
-          <Select.Option value="specific">Spécifiques</Select.Option>
+          <Select.Option value="ALL">Tous</Select.Option>
+          <Select.Option value="PARENTS">Parents</Select.Option>
+          <Select.Option value="STUDENTS">Élèves</Select.Option>
+          <Select.Option value="TEACHERS">Enseignants</Select.Option>
+          <Select.Option value="SPECIFIC_CLASS">Classe</Select.Option>
+          <Select.Option value="SPECIFIC_SECTION">Section</Select.Option>
         </Select>
       </div>
 
@@ -262,6 +323,7 @@ const AnnouncementsPage: React.FC = () => {
           dataSource={sortedAnnouncements}
           loading={isLoading}
           rowKey={(r: Record<string, any>) => (r.id as string) || `ann-${r.title}-${r.created_at}`}
+          rowClassName={(r: Record<string, any>) => r.is_urgent ? 'announcements__row--urgent' : ''}
           pagination={{
             current: page,
             pageSize: 20,
@@ -277,7 +339,7 @@ const AnnouncementsPage: React.FC = () => {
         title={editingAnnouncement ? "Modifier l'annonce" : 'Nouvelle annonce'}
         open={modalOpen}
         onOk={handleCreate}
-        onCancel={() => { setModalOpen(false); setEditingAnnouncement(null); setAudienceType('all'); }}
+        onCancel={() => { setModalOpen(false); setEditingAnnouncement(null); setAudienceType('ALL'); setImageFile(null); setAttachFiles([]); }}
         confirmLoading={createAnnouncement.isPending || updateAnnouncement.isPending}
         okText={<span><SendOutlined /> Publier</span>}
         cancelText="Annuler"
@@ -287,25 +349,24 @@ const AnnouncementsPage: React.FC = () => {
           <Form.Item label="Titre" name="title" rules={[{ required: true, message: 'Requis' }]}>
             <Input placeholder="Titre de l'annonce" />
           </Form.Item>
-          <Form.Item label="Contenu" name="content" rules={[{ required: true, message: 'Requis' }]}>
+          <Form.Item label="Contenu" name="body" rules={[{ required: true, message: 'Requis' }]}>
             <Input.TextArea rows={4} placeholder="Contenu de l'annonce..." showCount maxLength={2000} />
           </Form.Item>
 
           <div className="announcements__form-grid">
-            <Form.Item label="Audience" name="audience" initialValue="all">
+            <Form.Item label="Audience" name="target_audience" initialValue="ALL">
               <Select onChange={(v) => setAudienceType(v)}>
-                <Select.Option value="all">Tous</Select.Option>
-                <Select.Option value="parents">Tous les parents</Select.Option>
-                <Select.Option value="students">Tous les élèves</Select.Option>
-                <Select.Option value="teachers">Tous les enseignants</Select.Option>
-                <Select.Option value="class">Une classe spécifique</Select.Option>
-                <Select.Option value="section">Une section</Select.Option>
-                <Select.Option value="specific">Personnes spécifiques</Select.Option>
+                <Select.Option value="ALL">Tous</Select.Option>
+                <Select.Option value="PARENTS">Tous les parents</Select.Option>
+                <Select.Option value="STUDENTS">Tous les élèves</Select.Option>
+                <Select.Option value="TEACHERS">Tous les enseignants</Select.Option>
+                <Select.Option value="SPECIFIC_CLASS">Une classe spécifique</Select.Option>
+                <Select.Option value="SPECIFIC_SECTION">Une section</Select.Option>
               </Select>
             </Form.Item>
 
-            {audienceType === 'class' && (
-              <Form.Item label="Classe cible" name="target_class" rules={[{ required: true, message: 'Sélectionnez une classe' }]}>
+            {audienceType === 'SPECIFIC_CLASS' && (
+              <Form.Item label="Classe cible" name="target_class_id" rules={[{ required: true, message: 'Sélectionnez une classe' }]}>
                 <Select
                   showSearch
                   optionFilterProp="label"
@@ -315,8 +376,8 @@ const AnnouncementsPage: React.FC = () => {
               </Form.Item>
             )}
 
-            {audienceType === 'section' && (
-              <Form.Item label="Section cible" name="target_section" rules={[{ required: true, message: 'Sélectionnez une section' }]}>
+            {audienceType === 'SPECIFIC_SECTION' && (
+              <Form.Item label="Section cible" name="target_section_id" rules={[{ required: true, message: 'Sélectionnez une section' }]}>
                 <Select placeholder="Sélectionner une section">
                   {sections.length > 0
                     ? sections.map((s) => <Select.Option key={s} value={s}>{s}</Select.Option>)
@@ -326,31 +387,7 @@ const AnnouncementsPage: React.FC = () => {
               </Form.Item>
             )}
 
-            {audienceType === 'specific' && (
-              <Form.Item label="Destinataires" name="target_users" rules={[{ required: true, message: 'Sélectionnez au moins un destinataire' }]}>
-                <Select
-                  mode="multiple"
-                  showSearch
-                  optionFilterProp="label"
-                  placeholder="Rechercher et sélectionner des personnes..."
-                  options={users.map((u) => ({
-                    value: u.id,
-                    label: `${u.first_name} ${u.last_name} (${u.role === 'parent' ? 'Parent' : u.role === 'student' ? 'Élève' : u.role === 'teacher' ? 'Enseignant' : u.role})`,
-                  }))}
-                  maxTagCount={5}
-                />
-              </Form.Item>
-            )}
-
-            <Form.Item label="Canal d'envoi" name="channel" initialValue="app">
-              <Select>
-                <Select.Option value="app">Application uniquement</Select.Option>
-                <Select.Option value="sms">SMS uniquement</Select.Option>
-                <Select.Option value="both">Application + SMS</Select.Option>
-              </Select>
-            </Form.Item>
-
-            <Form.Item label="Urgence" name="urgent" initialValue={false}>
+            <Form.Item label="Urgence" name="is_urgent" initialValue={false}>
               <Select>
                 <Select.Option value={false}>Normal</Select.Option>
                 <Select.Option value={true}>Urgent</Select.Option>
@@ -358,8 +395,34 @@ const AnnouncementsPage: React.FC = () => {
             </Form.Item>
           </div>
 
+          {/* Image upload */}
+          <Form.Item label="Image d'illustration">
+            <Upload
+              beforeUpload={(file) => { setImageFile(file); return false; }}
+              onRemove={() => setImageFile(null)}
+              maxCount={1}
+              accept="image/*"
+              fileList={imageFile ? [{ uid: '-1', name: imageFile.name, status: 'done' } as any] : []}
+            >
+              <Button icon={<UploadOutlined />}>Choisir une image</Button>
+            </Upload>
+          </Form.Item>
+
+          {/* File attachments */}
+          <Form.Item label="Pièces jointes">
+            <Upload
+              beforeUpload={(file) => { setAttachFiles((prev) => [...prev, file]); return false; }}
+              onRemove={(file) => setAttachFiles((prev) => prev.filter((f) => f.name !== file.name))}
+              multiple
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+              fileList={attachFiles.map((f, i) => ({ uid: String(i), name: f.name, status: 'done' } as any))}
+            >
+              <Button icon={<PaperClipOutlined />}>Joindre des fichiers</Button>
+            </Upload>
+          </Form.Item>
+
           <div className="announcements__form-grid">
-            <Form.Item label="Programmer l'envoi" name="scheduled_at">
+            <Form.Item label="Programmer l'envoi" name="publish_at">
               <DatePicker
                 showTime
                 format="DD/MM/YYYY HH:mm"
@@ -369,7 +432,7 @@ const AnnouncementsPage: React.FC = () => {
               />
             </Form.Item>
 
-            <Form.Item label="Épingler l'annonce" name="pinned" valuePropName="checked" initialValue={false}>
+            <Form.Item label="Épingler l'annonce" name="is_pinned" valuePropName="checked" initialValue={false}>
               <Switch checkedChildren={<PushpinOutlined />} unCheckedChildren="Non" />
             </Form.Item>
           </div>

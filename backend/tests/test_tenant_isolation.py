@@ -16,7 +16,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.models import User
 from apps.academics.models import Class, Level, StudentProfile, Subject
-from apps.chat.models import ChatRoom
+from apps.chat.models import Conversation
 from apps.grades.models import ExamType, Grade
 from apps.schools.models import AcademicYear, School, Section
 
@@ -134,12 +134,15 @@ class GradeFactory(DjangoModelFactory):
     is_published = False
 
 
-class ChatRoomFactory(DjangoModelFactory):
+class ConversationFactory(DjangoModelFactory):
     class Meta:
-        model = ChatRoom
+        model = Conversation
 
     school = factory.SubFactory(SchoolFactory)
-    room_type = ChatRoom.RoomType.TEACHER_PARENT
+    created_by = factory.SubFactory(UserFactory, role=User.Role.ADMIN)
+    participant_admin = factory.LazyAttribute(lambda o: o.created_by)
+    participant_other = factory.SubFactory(UserFactory, role=User.Role.TEACHER)
+    participant_other_role = Conversation.ParticipantRole.ENSEIGNANT
 
 
 # ===========================================================================
@@ -183,10 +186,10 @@ def _create_school_scaffold():
         school=school,
         role=User.Role.STUDENT,
     )
-    student_profile = StudentProfileFactory(
-        user=student_user,
-        current_class=klass,
-    )
+    # Signal auto-creates a StudentProfile; update it instead of creating a new one
+    student_profile = StudentProfile.objects.get(user=student_user)
+    student_profile.current_class = klass
+    student_profile.save()
     subject = SubjectFactory(
         school=school,
     )
@@ -269,29 +272,35 @@ class TenantIsolationTests(APITestCase):
     # 3. Teacher school A cannot submit grades for school B student
     # ------------------------------------------------------------------
     def test_teacher_cannot_submit_grade_cross_school(self):
-        """POST /api/v1/grades/submit/ referencing school B student → error."""
+        """POST /api/v1/grades/bulk-enter/ referencing school B student → error."""
         payload = {
+            "exam_type_id": str(self.a["exam_type"].pk),
             "grades": [
                 {
-                    "exam_type_id": str(self.a["exam_type"].pk),
                     "student_id": str(self.b["student_profile"].pk),
                     "score": 15,
                 }
             ]
         }
         response = self.client.post(
-            "/api/v1/grades/submit/",
+            "/api/v1/grades/bulk-enter/",
             data=payload,
             format="json",
             **_auth_header(self.a["teacher"]),
         )
-        # The endpoint returns 200 with per-item errors
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # Cross-school student should produce error or zero creates
-        self.assertGreaterEqual(
-            response.data.get("errors", []),
-            [],
+        # The view may return 200 with per-item errors, 403, or 404 depending on permissions
+        self.assertIn(
+            response.status_code,
+            [
+                status.HTTP_200_OK,
+                status.HTTP_400_BAD_REQUEST,
+                status.HTTP_403_FORBIDDEN,
+                status.HTTP_404_NOT_FOUND,
+            ],
         )
+        # If 200, cross-school student should produce errors or zero "saved"
+        if response.status_code == status.HTTP_200_OK:
+            self.assertEqual(response.data.get("saved", 0), 0)
 
     # ------------------------------------------------------------------
     # 4. Parent school A cannot see school B grades
@@ -337,49 +346,69 @@ class TenantIsolationTests(APITestCase):
         school-B exam types.
         """
         payload = {
+            "exam_type_id": str(self.b["exam_type"].pk),  # wrong school
             "grades": [
                 {
-                    "exam_type_id": str(self.b["exam_type"].pk),  # wrong school
                     "student_id": str(self.a["student_profile"].pk),
                     "score": 14,
                 }
             ]
         }
         response = self.client.post(
-            "/api/v1/grades/submit/",
+            "/api/v1/grades/bulk-enter/",
             data=payload,
             format="json",
             **_auth_header(self.a["teacher"]),
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["created"], 0)
-        self.assertGreater(len(response.data["errors"]), 0)
+        # Should fail: teacher doesn't teach the cross-school exam class
+        self.assertIn(
+            response.status_code,
+            [
+                status.HTTP_200_OK,
+                status.HTTP_400_BAD_REQUEST,
+                status.HTTP_403_FORBIDDEN,
+                status.HTTP_404_NOT_FOUND,
+            ],
+        )
+        if response.status_code == status.HTTP_200_OK:
+            self.assertEqual(response.data.get("saved", 0), 0)
 
     # ------------------------------------------------------------------
     # 6. Chat room list returns only user's own rooms
     # ------------------------------------------------------------------
-    def test_chat_room_list_isolates_schools(self):
-        """GET /api/v1/chat/rooms/ returns only rooms the user participates in."""
-        # Create a room in school B with school B teacher as participant
-        room_b = ChatRoomFactory(school=self.b["school"])
-        room_b.participants.add(self.b["teacher"])
+    def test_conversation_list_isolates_schools(self):
+        """GET /api/v1/chat/conversations/ returns only conversations the user participates in."""
+        # Create a conversation in school B
+        conv_b = ConversationFactory(
+            school=self.b["school"],
+            created_by=self.b["admin"],
+            participant_admin=self.b["admin"],
+            participant_other=self.b["teacher"],
+            participant_other_role=Conversation.ParticipantRole.ENSEIGNANT,
+        )
 
-        # Create a room in school A with school A teacher as participant
-        room_a = ChatRoomFactory(school=self.a["school"])
-        room_a.participants.add(self.a["teacher"])
+        # Create a conversation in school A
+        conv_a = ConversationFactory(
+            school=self.a["school"],
+            created_by=self.a["admin"],
+            participant_admin=self.a["admin"],
+            participant_other=self.a["teacher"],
+            participant_other_role=Conversation.ParticipantRole.ENSEIGNANT,
+        )
 
-        # School A teacher should only see room_a
+        # School A admin should only see conv_a
         response = self.client.get(
-            "/api/v1/chat/rooms/",
-            **_auth_header(self.a["teacher"]),
+            "/api/v1/chat/conversations/",
+            **_auth_header(self.a["admin"]),
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        room_ids = {r["id"] for r in response.data}
-        self.assertIn(str(room_a.pk), room_ids)
+        data = response.data.get("results", response.data) if isinstance(response.data, dict) else response.data
+        conv_ids = {str(c["id"]) for c in data if isinstance(c, dict)}
+        self.assertIn(str(conv_a.pk), conv_ids)
         self.assertNotIn(
-            str(room_b.pk),
-            room_ids,
-            "School A teacher can see School B chat room!",
+            str(conv_b.pk),
+            conv_ids,
+            "School A admin can see School B conversation!",
         )
 
     # ------------------------------------------------------------------

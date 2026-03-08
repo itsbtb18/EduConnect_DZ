@@ -7,6 +7,7 @@ Academics models — Algerian private-school hierarchy.
 ║  People    :  StudentProfile · ParentProfile · TeacherProfile    ║
 ║  Assign    :  TeacherAssignment (teacher × class × subject)      ║
 ║  Schedule  :  ScheduleSlot · Lesson · Resource · Timetable       ║
+║  Rooms     :  Room (physical rooms managed per school)           ║
 ╚═══════════════════════════════════════════════════════════════════╝
 
 Algerian educational system:
@@ -453,7 +454,160 @@ class TeacherAssignment(TenantModel):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 6. SCHEDULE
+# 6. ROOMS — Physical room management per school
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class Room(TenantModel):
+    """
+    A physical room / classroom within a school.
+
+    Tracks capacity, type, and equipment.  Integrates with the schedule
+    system to prevent double-booking.
+    """
+
+    class RoomType(models.TextChoices):
+        CLASSROOM = "CLASSROOM", "Salle de classe"
+        LAB = "LAB", "Laboratoire"
+        COMPUTER_LAB = "COMPUTER_LAB", "Salle informatique"
+        LIBRARY = "LIBRARY", "Bibliothèque"
+        GYM = "GYM", "Gymnase"
+        ART_ROOM = "ART_ROOM", "Salle d'art"
+        MUSIC_ROOM = "MUSIC_ROOM", "Salle de musique"
+        MEETING_ROOM = "MEETING_ROOM", "Salle de réunion"
+        AUDITORIUM = "AUDITORIUM", "Amphithéâtre"
+        OTHER = "OTHER", "Autre"
+
+    name = models.CharField(
+        max_length=100,
+        help_text="e.g. Salle 101, Labo Physique, etc.",
+    )
+    code = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text="Short code, e.g. S101, LAB-P",
+    )
+    room_type = models.CharField(
+        max_length=20,
+        choices=RoomType.choices,
+        default=RoomType.CLASSROOM,
+    )
+    capacity = models.PositiveIntegerField(
+        default=35,
+        help_text="Maximum number of people",
+    )
+    floor = models.CharField(max_length=20, blank=True, help_text="e.g. RDC, 1er, 2e")
+    building = models.CharField(max_length=100, blank=True)
+    is_available = models.BooleanField(
+        default=True,
+        help_text="False if room is under maintenance or unusable",
+    )
+    equipment = models.TextField(
+        blank=True,
+        help_text="Equipment list: projector, whiteboard, computers, etc.",
+    )
+
+    class Meta:
+        db_table = "rooms"
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["school", "name"],
+                name="unique_room_name_per_school",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.get_room_type_display()})"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 7. TEACHER AVAILABILITY
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class TeacherAvailability(TenantModel):
+    """
+    Tracks when a teacher is NOT available (blocked slots).
+
+    Used by the schedule builder to avoid assigning a teacher to a slot
+    when they're unavailable.
+    """
+
+    DAY_CHOICES = [
+        (0, "Sunday"),
+        (1, "Monday"),
+        (2, "Tuesday"),
+        (3, "Wednesday"),
+        (4, "Thursday"),
+    ]
+
+    teacher = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.CASCADE,
+        related_name="availability_blocks",
+        limit_choices_to={"role": "TEACHER"},
+    )
+    day_of_week = models.IntegerField(choices=DAY_CHOICES)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    reason = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        db_table = "teacher_availability"
+        ordering = ["teacher", "day_of_week", "start_time"]
+
+    def __str__(self):
+        return (
+            f"{self.teacher.full_name} — "
+            f"{self.get_day_of_week_display()} "
+            f"{self.start_time}-{self.end_time}"
+        )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 7b. TIME SLOT CONFIG — configurable time slots per school
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class TimeSlotConfig(TenantModel):
+    """
+    Configurable time‐slot template for a school.
+    Admins define the standard slots (e.g. 08:00‑09:00, 09:00‑10:00)
+    that appear as rows in the timetable builder grid.
+    """
+
+    label = models.CharField(
+        max_length=50,
+        help_text='Display label, e.g. "8h-9h", "S1"',
+    )
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    order = models.PositiveIntegerField(
+        default=0,
+        help_text="Display order (lower = earlier)",
+    )
+    is_break = models.BooleanField(
+        default=False,
+        help_text="True if this slot is a break / recess",
+    )
+
+    class Meta:
+        db_table = "time_slot_configs"
+        ordering = ["order", "start_time"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["school", "start_time", "end_time"],
+                name="unique_timeslot_per_school",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.label} ({self.start_time:%H:%M}-{self.end_time:%H:%M})"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 8. SCHEDULE
 # ═══════════════════════════════════════════════════════════════════════════
 
 
@@ -467,6 +621,10 @@ class ScheduleSlot(TenantModel):
         (3, "Wednesday"),
         (4, "Thursday"),
     ]
+
+    class Status(models.TextChoices):
+        DRAFT = "DRAFT", "Brouillon"
+        PUBLISHED = "PUBLISHED", "Publié"
 
     assigned_class = models.ForeignKey(
         Class,
@@ -490,7 +648,36 @@ class ScheduleSlot(TenantModel):
     room_name = models.CharField(
         max_length=50,
         blank=True,
-        help_text="Physical room name",
+        help_text="Physical room name (legacy — prefer room FK)",
+    )
+    room = models.ForeignKey(
+        Room,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="schedule_slots",
+        help_text="Physical room — used for conflict detection",
+    )
+    academic_year = models.ForeignKey(
+        "schools.AcademicYear",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="schedule_slots",
+    )
+    status = models.CharField(
+        max_length=10,
+        choices=Status.choices,
+        default=Status.DRAFT,
+    )
+    is_temporary = models.BooleanField(
+        default=False,
+        help_text="True for one-off changes (room swap, cancelled lesson)",
+    )
+    note = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Short note for temporary changes",
     )
 
     class Meta:
@@ -505,7 +692,7 @@ class ScheduleSlot(TenantModel):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 7. LESSONS & RESOURCES
+# 9. LESSONS & RESOURCES
 # ═══════════════════════════════════════════════════════════════════════════
 
 
@@ -587,7 +774,7 @@ class Resource(TenantModel):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 8. TIMETABLE (image-based)
+# 10. TIMETABLE (image-based)
 # ═══════════════════════════════════════════════════════════════════════════
 
 

@@ -1,0 +1,10 @@
+from django.apps import AppConfig
+
+
+class FingerprintConfig(AppConfig):
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "apps.fingerprint"
+    verbose_name = "Fingerprint / Biometric"
+
+    def ready(self):
+        import apps.fingerprint.signals  # noqa: F401

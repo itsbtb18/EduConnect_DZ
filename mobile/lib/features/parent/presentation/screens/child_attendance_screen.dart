@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/di/injection.dart';
+import '../../../shared/data/models/communication_model.dart';
+import '../../../teacher/data/repositories/attendance_repository.dart';
+
 /// Parent screen to view their child's attendance records.
 class ChildAttendanceScreen extends StatefulWidget {
   const ChildAttendanceScreen({super.key});
@@ -9,94 +13,98 @@ class ChildAttendanceScreen extends StatefulWidget {
 }
 
 class _ChildAttendanceScreenState extends State<ChildAttendanceScreen> {
-  // Placeholder data
-  final _children = [
-    {'id': '1', 'name': 'Ahmed Benali', 'classroom': '1AM - A'},
-    {'id': '2', 'name': 'Sara Benali', 'classroom': '3AM - B'},
-  ];
-  String? _selectedChildId;
-
   DateTime _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
-
-  // Simulated attendance data (day → status)
-  final Map<int, String> _attendanceData = {
-    1: 'present',
-    2: 'present',
-    3: 'present',
-    4: 'absent',
-    5: 'present',
-    6: 'present',
-    7: 'present',
-    8: 'late',
-    9: 'present',
-    10: 'present',
-    11: 'present',
-    12: 'present',
-    13: 'absent',
-    14: 'present',
-    15: 'present',
-  };
+  List<AttendanceRecord> _records = [];
+  bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _selectedChildId = _children.first['id'];
+    _loadAttendance();
+  }
+
+  Future<void> _loadAttendance() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final records = await getIt<AttendanceRepository>().getRecords();
+      setState(() {
+        _records = records;
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
+  }
+
+  /// Get records filtered to the selected month
+  Map<int, String> get _monthData {
+    final map = <int, String>{};
+    for (final r in _records) {
+      if (r.date.year == _selectedMonth.year &&
+          r.date.month == _selectedMonth.month) {
+        map[r.date.day] = r.status;
+      }
+    }
+    return map;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Présences de mon enfant')),
-      body: Column(
-        children: [
-          _buildChildSelector(),
-          _buildMonthSelector(),
-          const Divider(height: 1),
-          _buildSummaryCards(),
-          const SizedBox(height: 8),
-          Expanded(child: _buildCalendarGrid()),
-          _buildLegend(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildChildSelector() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: DropdownButtonFormField<String>(
-        initialValue: _selectedChildId,
-        decoration: const InputDecoration(
-          labelText: 'Enfant',
-          border: OutlineInputBorder(),
-          isDense: true,
-          prefixIcon: Icon(Icons.child_care),
-        ),
-        items: _children
-            .map(
-              (c) => DropdownMenuItem(
-                value: c['id'],
-                child: Text('${c['name']} — ${c['classroom']}'),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(_error!, style: const TextStyle(color: Colors.red)),
+                  const SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: _loadAttendance,
+                    child: const Text('Réessayer'),
+                  ),
+                ],
               ),
             )
-            .toList(),
-        onChanged: (v) => setState(() => _selectedChildId = v),
-      ),
+          : RefreshIndicator(
+              onRefresh: _loadAttendance,
+              child: Column(
+                children: [
+                  _buildMonthSelector(),
+                  const Divider(height: 1),
+                  _buildSummaryCards(),
+                  const SizedBox(height: 8),
+                  Expanded(child: _buildCalendarGrid()),
+                  _buildLegend(),
+                ],
+              ),
+            ),
     );
   }
 
   Widget _buildMonthSelector() {
-    final months = [
-      'Jan',
-      'Fév',
-      'Mar',
-      'Avr',
+    const months = [
+      'Janvier',
+      'Février',
+      'Mars',
+      'Avril',
       'Mai',
-      'Jun',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Déc',
+      'Juin',
+      'Juillet',
+      'Août',
+      'Septembre',
+      'Octobre',
+      'Novembre',
+      'Décembre',
     ];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -113,7 +121,7 @@ class _ChildAttendanceScreenState extends State<ChildAttendanceScreen> {
           ),
           Expanded(
             child: Text(
-              '${months[_selectedMonth.month <= 6 ? _selectedMonth.month - 1 : _selectedMonth.month - 3]} ${_selectedMonth.year}',
+              '${months[_selectedMonth.month - 1]} ${_selectedMonth.year}',
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
@@ -133,10 +141,11 @@ class _ChildAttendanceScreenState extends State<ChildAttendanceScreen> {
   }
 
   Widget _buildSummaryCards() {
-    final present = _attendanceData.values.where((s) => s == 'present').length;
-    final absent = _attendanceData.values.where((s) => s == 'absent').length;
-    final late_ = _attendanceData.values.where((s) => s == 'late').length;
-    final total = _attendanceData.length;
+    final data = _monthData;
+    final present = data.values.where((s) => s == 'present').length;
+    final absent = data.values.where((s) => s == 'absent').length;
+    final late_ = data.values.where((s) => s == 'late').length;
+    final total = data.length;
     final rate = total > 0 ? (present / total * 100) : 0.0;
 
     return Padding(
@@ -181,6 +190,7 @@ class _ChildAttendanceScreenState extends State<ChildAttendanceScreen> {
   }
 
   Widget _buildCalendarGrid() {
+    final data = _monthData;
     final daysInMonth = DateUtils.getDaysInMonth(
       _selectedMonth.year,
       _selectedMonth.month,
@@ -205,7 +215,7 @@ class _ChildAttendanceScreenState extends State<ChildAttendanceScreen> {
           return const SizedBox();
         }
         final day = index - firstWeekday + 2;
-        final status = _attendanceData[day];
+        final status = data[day];
         return Container(
           decoration: BoxDecoration(
             color: _dayColor(status),

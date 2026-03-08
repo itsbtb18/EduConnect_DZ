@@ -17,6 +17,21 @@ import {
   platformSettingsAPI,
   activityLogsAPI,
   systemHealthAPI,
+  subscriptionsAPI,
+  analyticsAPI,
+  impersonationAPI,
+  contentAPI,
+  broadcastAPI,
+  infirmerieAPI,
+  cantineAPI,
+  transportAPI,
+  libraryAPI,
+  elearningAPI,
+  smsAPI,
+  notificationsExtAPI,
+  fingerprintAPI,
+  disciplineAPI,
+  staffAPI,
 } from '../api/services';
 
 /* ─────────────────────────────── Types ─────────────────────────────── */
@@ -1053,6 +1068,290 @@ export function useDeleteFee() {
   });
 }
 
+/* ── Fee Discounts ── */
+export function useDiscounts(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['discounts', params],
+    queryFn: async () => { const r = await financeAPI.discounts(params); return extractData(r); },
+    retry: 1,
+  });
+}
+export function useCreateDiscount() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => financeAPI.createDiscount(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['discounts'] }); message.success('Réduction créée'); },
+    onError: () => message.error('Erreur'),
+  });
+}
+export function useUpdateDiscount() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => financeAPI.updateDiscount(id, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['discounts'] }); message.success('Réduction mise à jour'); },
+    onError: () => message.error('Erreur'),
+  });
+}
+export function useDeleteDiscount() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => financeAPI.deleteDiscount(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['discounts'] }); message.success('Réduction supprimée'); },
+    onError: () => message.error('Erreur'),
+  });
+}
+
+/* ── Late Penalties ── */
+export function usePenalties(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['penalties', params],
+    queryFn: async () => { const r = await financeAPI.penalties(params); return extractData(r); },
+    retry: 1,
+  });
+}
+export function useCreatePenalty() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => financeAPI.createPenalty(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['penalties'] }); message.success('Pénalité créée'); },
+    onError: () => message.error('Erreur'),
+  });
+}
+export function useDeletePenalty() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => financeAPI.deletePenalty(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['penalties'] }); message.success('Pénalité supprimée'); },
+    onError: () => message.error('Erreur'),
+  });
+}
+
+/* ── Registration Deposits ── */
+export function useDeposits(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['deposits', params],
+    queryFn: async () => { const r = await financeAPI.deposits(params); return extractData(r); },
+    retry: 1,
+  });
+}
+export function useCreateDeposit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => financeAPI.createDeposit(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['deposits'] }); message.success('Inscription enregistrée'); },
+    onError: () => message.error('Erreur'),
+  });
+}
+
+/* ── Extra Fees ── */
+export function useExtraFees(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['extraFees', params],
+    queryFn: async () => { const r = await financeAPI.extraFees(params); return extractData(r); },
+    retry: 1,
+  });
+}
+export function useCreateExtraFee() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => financeAPI.createExtraFee(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['extraFees'] }); message.success('Frais supplémentaire créé'); },
+    onError: () => message.error('Erreur'),
+  });
+}
+export function useDeleteExtraFee() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => financeAPI.deleteExtraFee(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['extraFees'] }); message.success('Frais supprimé'); },
+    onError: () => message.error('Erreur'),
+  });
+}
+
+/* ── Expense Categories ── */
+export function useExpenseCategories(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['expenseCategories', params],
+    queryFn: async () => { const r = await financeAPI.expenseCategories(params); return extractData(r); },
+    retry: 1,
+  });
+}
+export function useCreateExpenseCategory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => financeAPI.createExpenseCategory(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['expenseCategories'] }); message.success('Catégorie créée'); },
+    onError: () => message.error('Erreur'),
+  });
+}
+export function useDeleteExpenseCategory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => financeAPI.deleteExpenseCategory(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['expenseCategories'] }); message.success('Catégorie supprimée'); },
+    onError: () => message.error('Erreur'),
+  });
+}
+
+/* ── Expenses ── */
+export function useExpenses(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['expenses', params],
+    queryFn: async () => { const r = await financeAPI.expenses(params); return extractData(r); },
+    retry: 1,
+  });
+}
+export function useCreateExpense() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => financeAPI.createExpense(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['expenses'] }); message.success('Dépense enregistrée'); },
+    onError: () => message.error('Erreur'),
+  });
+}
+export function useApproveExpense() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => financeAPI.approveExpense(id, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['expenses'] }); message.success('Dépense traitée'); },
+    onError: () => message.error('Erreur'),
+  });
+}
+
+/* ── Budgets ── */
+export function useBudgets(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['budgets', params],
+    queryFn: async () => { const r = await financeAPI.budgets(params); return extractData(r); },
+    retry: 1,
+  });
+}
+export function useCreateBudget() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => financeAPI.createBudget(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['budgets'] }); message.success('Budget créé'); },
+    onError: () => message.error('Erreur'),
+  });
+}
+
+/* ── Salary Configs ── */
+export function useSalaryConfigs(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['salaryConfigs', params],
+    queryFn: async () => { const r = await financeAPI.salaryConfigs(params); return extractData(r); },
+    retry: 1,
+  });
+}
+export function useCreateSalaryConfig() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => financeAPI.createSalaryConfig(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['salaryConfigs'] }); message.success('Configuration créée'); },
+    onError: () => message.error('Erreur'),
+  });
+}
+export function useUpdateSalaryConfig() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => financeAPI.updateSalaryConfig(id, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['salaryConfigs'] }); message.success('Configuration mise à jour'); },
+    onError: () => message.error('Erreur'),
+  });
+}
+
+/* ── Deductions ── */
+export function useDeductions(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['deductions', params],
+    queryFn: async () => { const r = await financeAPI.deductions(params); return extractData(r); },
+    retry: 1,
+  });
+}
+export function useCreateDeduction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => financeAPI.createDeduction(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['deductions'] }); message.success('Déduction créée'); },
+    onError: () => message.error('Erreur'),
+  });
+}
+
+/* ── Salary Advances ── */
+export function useAdvances(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['advances', params],
+    queryFn: async () => { const r = await financeAPI.advances(params); return extractData(r); },
+    retry: 1,
+  });
+}
+export function useCreateAdvance() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => financeAPI.createAdvance(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['advances'] }); message.success('Avance demandée'); },
+    onError: () => message.error('Erreur'),
+  });
+}
+export function useApproveAdvance() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => financeAPI.approveAdvance(id, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['advances'] }); message.success('Avance traitée'); },
+    onError: () => message.error('Erreur'),
+  });
+}
+
+/* ── Payslips ── */
+export function usePayslips(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['payslips', params],
+    queryFn: async () => { const r = await financeAPI.payslips(params); return extractData(r); },
+    retry: 1,
+  });
+}
+export function useGeneratePayslip() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => financeAPI.generatePayslip(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['payslips'] }); message.success('Fiche de paie générée'); },
+    onError: () => message.error('Erreur'),
+  });
+}
+export function useBulkGeneratePayslips() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => financeAPI.bulkGeneratePayslips(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['payslips'] }); message.success('Fiches de paie générées'); },
+    onError: () => message.error('Erreur'),
+  });
+}
+export function useUpdatePayslip() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => financeAPI.updatePayslip(id, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['payslips'] }); message.success('Fiche de paie mise à jour'); },
+    onError: () => message.error('Erreur'),
+  });
+}
+export function usePayrollStats(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['payrollStats', params],
+    queryFn: async () => { const r = await financeAPI.payrollStats(params); return extractData(r); },
+    retry: 1,
+  });
+}
+
+/* ── Financial Reports ── */
+export function useFinancialReports(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['financialReports', params],
+    queryFn: async () => { const r = await financeAPI.financialReports(params); return extractData(r); },
+    retry: 1,
+    staleTime: 60_000,
+  });
+}
+
 /* ─────────────────────────── Announcements ──────────────────────────── */
 export function useAnnouncements(params?: Record<string, unknown>) {
   return useQuery({
@@ -1128,8 +1427,12 @@ export function useConversationMessages(conversationId: string) {
 export function useCreateConversation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { participant_other_id: string; participant_other_role: string }) =>
-      chatAPI.createConversation(data),
+    mutationFn: (data: {
+      participant_other_id: string;
+      participant_other_role: string;
+      room_type?: string;
+      related_student_id?: string;
+    }) => chatAPI.createConversation(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['conversations'] });
     },
@@ -1162,6 +1465,39 @@ export function useUploadAttachment() {
   });
 }
 
+export function useMarkConversationRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (conversationId: string) => chatAPI.markConversationRead(conversationId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['conversations'] });
+    },
+  });
+}
+
+export function useDeleteMessage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ conversationId, messageId }: { conversationId: string; messageId: string }) =>
+      chatAPI.deleteMessage(conversationId, messageId),
+    onSuccess: (_res, vars) => {
+      qc.invalidateQueries({ queryKey: ['conversationMessages', vars.conversationId] });
+    },
+    onError: () => message.error('Impossible de supprimer ce message'),
+  });
+}
+
+export function usePinMessage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ conversationId, messageId }: { conversationId: string; messageId: string }) =>
+      chatAPI.pinMessage(conversationId, messageId),
+    onSuccess: (_res, vars) => {
+      qc.invalidateQueries({ queryKey: ['conversationMessages', vars.conversationId] });
+    },
+  });
+}
+
 export function useContacts() {
   return useQuery({
     queryKey: ['contacts'],
@@ -1170,6 +1506,167 @@ export function useContacts() {
       return extractData(res);
     },
     retry: 1,
+  });
+}
+
+// ── Rooms (group/broadcast) ──
+export function useChatRooms(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['chatRooms', params],
+    queryFn: async () => {
+      const res = await chatAPI.rooms(params);
+      return extractData(res);
+    },
+    retry: 1,
+  });
+}
+
+export function useCreateChatRoom() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => chatAPI.createRoom(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['chatRooms'] });
+      message.success('Salon créé');
+    },
+    onError: () => message.error('Erreur lors de la création du salon'),
+  });
+}
+
+export function useChatRoomMessages(roomId: string) {
+  return useQuery({
+    queryKey: ['chatRoomMessages', roomId],
+    queryFn: async () => {
+      const res = await chatAPI.roomMessages(roomId);
+      return extractData(res);
+    },
+    enabled: !!roomId,
+  });
+}
+
+export function useRoomUploadAttachment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ roomId, data }: { roomId: string; data: FormData }) =>
+      chatAPI.roomUploadAttachment(roomId, data),
+    onSuccess: (_res, vars) => {
+      qc.invalidateQueries({ queryKey: ['chatRoomMessages', vars.roomId] });
+      qc.invalidateQueries({ queryKey: ['chatRooms'] });
+    },
+    onError: () => message.error('Erreur d\'envoi du fichier'),
+  });
+}
+
+export function useDeleteRoomMessage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ roomId, messageId }: { roomId: string; messageId: string }) =>
+      chatAPI.deleteRoomMessage(roomId, messageId),
+    onSuccess: (_res, vars) => {
+      qc.invalidateQueries({ queryKey: ['chatRoomMessages', vars.roomId] });
+    },
+    onError: () => message.error('Impossible de supprimer ce message'),
+  });
+}
+
+export function usePinRoomMessage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ roomId, messageId }: { roomId: string; messageId: string }) =>
+      chatAPI.pinRoomMessage(roomId, messageId),
+    onSuccess: (_res, vars) => {
+      qc.invalidateQueries({ queryKey: ['chatRoomMessages', vars.roomId] });
+    },
+  });
+}
+
+// ── Search & Templates ──
+export function useSearchMessages(query: string) {
+  return useQuery({
+    queryKey: ['searchMessages', query],
+    queryFn: async () => {
+      const res = await chatAPI.searchMessages({ q: query });
+      return extractData(res);
+    },
+    enabled: query.length >= 2,
+    retry: 1,
+  });
+}
+
+export function useMessageTemplates(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['messageTemplates', params],
+    queryFn: async () => {
+      const res = await chatAPI.templates(params);
+      return extractData(res);
+    },
+    retry: 1,
+  });
+}
+
+export function useCreateMessageTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => chatAPI.createTemplate(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['messageTemplates'] });
+      message.success('Modèle créé');
+    },
+    onError: () => message.error('Erreur de création du modèle'),
+  });
+}
+
+export function useDeleteMessageTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => chatAPI.deleteTemplate(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['messageTemplates'] });
+      message.success('Modèle supprimé');
+    },
+    onError: () => message.error('Erreur de suppression'),
+  });
+}
+
+// ── Announcement extras ──
+export function useMarkAnnouncementRead() {
+  return useMutation({
+    mutationFn: (id: string) => announcementsAPI.markRead(id),
+  });
+}
+
+export function useUploadAnnouncementImage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: FormData }) =>
+      announcementsAPI.uploadImage(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['announcements'] });
+    },
+    onError: () => message.error('Erreur d\'upload de l\'image'),
+  });
+}
+
+export function useUploadAnnouncementAttachment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: FormData }) =>
+      announcementsAPI.uploadAttachment(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['announcements'] });
+    },
+    onError: () => message.error('Erreur d\'upload du fichier'),
+  });
+}
+
+export function useAnnouncementReaders(id: string) {
+  return useQuery({
+    queryKey: ['announcementReaders', id],
+    queryFn: async () => {
+      const res = await announcementsAPI.readers(id);
+      return extractData(res);
+    },
+    enabled: !!id,
   });
 }
 
@@ -1656,6 +2153,211 @@ export function useDeleteScheduleSlot() {
   });
 }
 
+export function useCheckConflicts() {
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => academicsAPI.checkConflicts(data),
+  });
+}
+
+export function useClassSchedule(classId?: string) {
+  return useQuery({
+    queryKey: ['classSchedule', classId],
+    queryFn: async () => {
+      const res = await academicsAPI.classSchedule(classId!);
+      return extractData(res);
+    },
+    enabled: !!classId,
+  });
+}
+
+export function useTeacherSchedule(teacherId?: string) {
+  return useQuery({
+    queryKey: ['teacherSchedule', teacherId],
+    queryFn: async () => {
+      const res = await academicsAPI.teacherSchedule(teacherId!);
+      return extractData(res);
+    },
+    enabled: !!teacherId,
+  });
+}
+
+export function usePublishSchedule() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (classId: string) => academicsAPI.publishSchedule(classId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['schedule'] });
+      message.success('Emploi du temps publié');
+    },
+    onError: () => message.error('Erreur lors de la publication'),
+  });
+}
+
+export function useUnpublishSchedule() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (classId: string) => academicsAPI.unpublishSchedule(classId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['schedule'] });
+      message.success('Emploi du temps repassé en brouillon');
+    },
+    onError: () => message.error('Erreur'),
+  });
+}
+
+export function useValidateTimetable(classId?: string) {
+  return useQuery({
+    queryKey: ['validateTimetable', classId],
+    queryFn: async () => {
+      const res = await academicsAPI.validateTimetable(classId!);
+      return extractData(res);
+    },
+    enabled: !!classId,
+  });
+}
+
+export function useExportClassPdf() {
+  return useMutation({
+    mutationFn: async (classId: string) => {
+      const res = await academicsAPI.exportClassPdf(classId);
+      return res.data;
+    },
+  });
+}
+
+export function useExportTeacherPdf() {
+  return useMutation({
+    mutationFn: async (teacherId: string) => {
+      const res = await academicsAPI.exportTeacherPdf(teacherId);
+      return res.data;
+    },
+  });
+}
+
+export function useRooms(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['rooms', params],
+    queryFn: async () => {
+      const res = await academicsAPI.rooms(params);
+      return extractData(res);
+    },
+  });
+}
+
+export function useCreateRoom() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => academicsAPI.createRoom(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['rooms'] });
+      message.success('Salle créée');
+    },
+    onError: () => message.error('Erreur'),
+  });
+}
+
+export function useUpdateRoom() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      academicsAPI.updateRoom(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['rooms'] });
+      message.success('Salle mise à jour');
+    },
+    onError: () => message.error('Erreur'),
+  });
+}
+
+export function useDeleteRoom() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => academicsAPI.deleteRoom(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['rooms'] });
+      message.success('Salle supprimée');
+    },
+    onError: () => message.error('Erreur'),
+  });
+}
+
+export function useRoomOccupancy(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['roomOccupancy', params],
+    queryFn: async () => {
+      const res = await academicsAPI.roomOccupancy(params);
+      return extractData(res);
+    },
+  });
+}
+
+export function useTeacherAvailability(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['teacherAvailability', params],
+    queryFn: async () => {
+      const res = await academicsAPI.teacherAvailability(params);
+      return extractData(res);
+    },
+  });
+}
+
+export function useTimeSlots() {
+  return useQuery({
+    queryKey: ['timeSlots'],
+    queryFn: async () => {
+      const res = await academicsAPI.timeSlots();
+      return extractData(res);
+    },
+  });
+}
+
+export function useCreateTimeSlot() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => academicsAPI.createTimeSlot(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['timeSlots'] });
+      message.success('Créneau horaire ajouté');
+    },
+    onError: () => message.error('Erreur'),
+  });
+}
+
+export function useDeleteTimeSlot() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => academicsAPI.deleteTimeSlot(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['timeSlots'] });
+      message.success('Créneau horaire supprimé');
+    },
+    onError: () => message.error('Erreur'),
+  });
+}
+
+export function useSeedDefaultTimeSlots() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => academicsAPI.seedDefaultTimeSlots(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['timeSlots'] });
+      message.success('Créneaux horaires par défaut créés');
+    },
+    onError: () => message.error('Erreur'),
+  });
+}
+
+export function useRoomSchedule(roomId?: string) {
+  return useQuery({
+    queryKey: ['roomSchedule', roomId],
+    queryFn: async () => {
+      const res = await academicsAPI.roomSchedule(roomId!);
+      return extractData(res);
+    },
+    enabled: !!roomId,
+  });
+}
+
 /* ─────────────────── Create Conversation (compat) ───────────────────── */
 // Kept for backward compat — delegates to useCreateConversation above
 
@@ -1761,5 +2463,2142 @@ export function useSystemHealth() {
     },
     retry: 0,
     refetchInterval: 30_000,
+  });
+}
+
+/* ═══════════════════ Subscriptions (Super Admin) ═══════════════════ */
+
+export function useSubscription(schoolId: string) {
+  return useQuery({
+    queryKey: ['subscription', schoolId],
+    queryFn: async () => {
+      const { data } = await subscriptionsAPI.get(schoolId);
+      return data;
+    },
+    enabled: !!schoolId,
+  });
+}
+
+export function useUpdateSubscription() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ schoolId, data }: { schoolId: string; data: Record<string, unknown> }) =>
+      subscriptionsAPI.update(schoolId, data),
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['subscription', vars.schoolId] });
+      message.success('Abonnement mis à jour');
+    },
+    onError: () => message.error('Erreur lors de la mise à jour'),
+  });
+}
+
+export function useActivateModule() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ schoolId, module, reason }: { schoolId: string; module: string; reason?: string }) =>
+      subscriptionsAPI.activateModule(schoolId, module, { reason: reason || '' }),
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['subscription', vars.schoolId] });
+      message.success('Module activé');
+    },
+    onError: () => message.error("Erreur lors de l'activation"),
+  });
+}
+
+export function useDeactivateModule() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ schoolId, module, reason }: { schoolId: string; module: string; reason?: string }) =>
+      subscriptionsAPI.deactivateModule(schoolId, module, { reason: reason || '' }),
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['subscription', vars.schoolId] });
+      message.success('Module désactivé');
+    },
+    onError: () => message.error('Erreur lors de la désactivation'),
+  });
+}
+
+export function useSuspendSchool() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ schoolId, reason }: { schoolId: string; reason: string }) =>
+      subscriptionsAPI.suspend(schoolId, reason),
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['subscription', vars.schoolId] });
+      qc.invalidateQueries({ queryKey: ['schools'] });
+      message.success('École suspendue');
+    },
+    onError: () => message.error('Erreur lors de la suspension'),
+  });
+}
+
+export function useSchoolInvoices(schoolId: string, params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['invoices', schoolId, params],
+    queryFn: async () => {
+      const { data } = await subscriptionsAPI.invoices(schoolId, params);
+      return data;
+    },
+    enabled: !!schoolId,
+  });
+}
+
+export function useAllInvoices(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['allInvoices', params],
+    queryFn: async () => {
+      const { data } = await subscriptionsAPI.allInvoices(params);
+      return data;
+    },
+  });
+}
+
+export function useGenerateInvoice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ schoolId, data }: { schoolId: string; data: Record<string, unknown> }) =>
+      subscriptionsAPI.generateInvoice(schoolId, data),
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['invoices', vars.schoolId] });
+      qc.invalidateQueries({ queryKey: ['allInvoices'] });
+      message.success('Facture générée');
+    },
+    onError: () => message.error('Erreur lors de la génération'),
+  });
+}
+
+export function useMarkInvoicePaid() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ schoolId, invoiceId }: { schoolId: string; invoiceId: string }) =>
+      subscriptionsAPI.markPaid(schoolId, invoiceId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['invoices'] });
+      qc.invalidateQueries({ queryKey: ['allInvoices'] });
+      message.success('Facture marquée comme payée');
+    },
+    onError: () => message.error('Erreur lors du marquage'),
+  });
+}
+
+export function useModuleLogs(schoolId: string) {
+  return useQuery({
+    queryKey: ['moduleLogs', schoolId],
+    queryFn: async () => {
+      const { data } = await subscriptionsAPI.moduleLogs(schoolId);
+      return data;
+    },
+    enabled: !!schoolId,
+  });
+}
+
+/* ═══════════════════ Analytics (Super Admin) ═══════════════════ */
+
+export function useAnalyticsOverview() {
+  return useQuery({
+    queryKey: ['analytics', 'overview'],
+    queryFn: async () => {
+      const { data } = await analyticsAPI.overview();
+      return data;
+    },
+    staleTime: 60_000,
+  });
+}
+
+export function useAnalyticsRevenue() {
+  return useQuery({
+    queryKey: ['analytics', 'revenue'],
+    queryFn: async () => {
+      const { data } = await analyticsAPI.revenue();
+      return data;
+    },
+    staleTime: 120_000,
+  });
+}
+
+export function useAnalyticsModulesUsage() {
+  return useQuery({
+    queryKey: ['analytics', 'modules-usage'],
+    queryFn: async () => {
+      const { data } = await analyticsAPI.modulesUsage();
+      return data;
+    },
+    staleTime: 120_000,
+  });
+}
+
+export function useAnalyticsSchoolsMap() {
+  return useQuery({
+    queryKey: ['analytics', 'schools-map'],
+    queryFn: async () => {
+      const { data } = await analyticsAPI.schoolsMap();
+      return data;
+    },
+    staleTime: 120_000,
+  });
+}
+
+export function useAnalyticsChurn() {
+  return useQuery({
+    queryKey: ['analytics', 'churn'],
+    queryFn: async () => {
+      const { data } = await analyticsAPI.churn();
+      return data;
+    },
+    staleTime: 120_000,
+  });
+}
+
+export function useAnalyticsPerformance() {
+  return useQuery({
+    queryKey: ['analytics', 'performance'],
+    queryFn: async () => {
+      const { data } = await analyticsAPI.performance();
+      return data;
+    },
+    staleTime: 120_000,
+  });
+}
+
+/* ═══════════════════ Impersonation (Super Admin) ═══════════════════ */
+
+export function useImpersonationLogs() {
+  return useQuery({
+    queryKey: ['impersonation-logs'],
+    queryFn: async () => {
+      const { data } = await impersonationAPI.logs();
+      return data;
+    },
+  });
+}
+
+export function useStartImpersonation() {
+  return useMutation({
+    mutationFn: (schoolId: string) => impersonationAPI.start(schoolId),
+  });
+}
+
+export function useEndImpersonation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (logId: string) => impersonationAPI.end(logId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['impersonation-logs'] });
+      message.success('Impersonation terminée');
+    },
+  });
+}
+
+/* ═══════════════════ Content Management (Super Admin) ═══════════════════ */
+
+export function useContentResources(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['content-resources', params],
+    queryFn: async () => {
+      const { data } = await contentAPI.list(params);
+      return data;
+    },
+  });
+}
+
+export function useContentResource(id: string) {
+  return useQuery({
+    queryKey: ['content-resources', id],
+    queryFn: async () => {
+      const { data } = await contentAPI.get(id);
+      return data;
+    },
+    enabled: !!id,
+  });
+}
+
+export function useCreateContent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: FormData | Record<string, unknown>) => contentAPI.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['content-resources'] });
+      message.success('Contenu créé');
+    },
+    onError: () => message.error('Erreur lors de la création'),
+  });
+}
+
+export function useUpdateContent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: FormData | Record<string, unknown> }) =>
+      contentAPI.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['content-resources'] });
+      message.success('Contenu mis à jour');
+    },
+    onError: () => message.error('Erreur lors de la mise à jour'),
+  });
+}
+
+export function useDeleteContent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => contentAPI.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['content-resources'] });
+      message.success('Contenu supprimé');
+    },
+    onError: () => message.error('Erreur lors de la suppression'),
+  });
+}
+
+/* ═══════════════════ Broadcast (Super Admin) ═══════════════════ */
+
+export function useBroadcast() {
+  return useMutation({
+    mutationFn: (data: { title: string; message: string; target?: string }) =>
+      broadcastAPI.send(data),
+    onSuccess: () => message.success('Diffusion envoyée'),
+    onError: () => message.error("Erreur lors de l'envoi"),
+  });
+}
+
+/* ══════════════════ Infirmerie (School Infirmary) ══════════════════ */
+
+export function useInfirmerieDashboard() {
+  return useQuery({
+    queryKey: ['infirmerie', 'dashboard'],
+    queryFn: () => infirmerieAPI.dashboard().then((r) => r.data),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+}
+
+export function useInfirmerieReports(params?: Record<string, string>) {
+  return useQuery({
+    queryKey: ['infirmerie', 'reports', params],
+    queryFn: () => infirmerieAPI.reports(params).then((r) => r.data),
+  });
+}
+
+export function useLowStockMedications() {
+  return useQuery({
+    queryKey: ['infirmerie', 'low-stock'],
+    queryFn: () => infirmerieAPI.lowStock().then((r) => r.data),
+  });
+}
+
+export function useMedicalRecords(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['infirmerie', 'records', params],
+    queryFn: () => infirmerieAPI.records.list(params).then((r) => r.data),
+  });
+}
+
+export function useMedicalRecord(id: string) {
+  return useQuery({
+    queryKey: ['infirmerie', 'records', id],
+    queryFn: () => infirmerieAPI.records.get(id).then((r) => r.data),
+    enabled: !!id,
+  });
+}
+
+export function useCreateMedicalRecord() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => infirmerieAPI.records.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['infirmerie', 'records'] });
+      message.success('Dossier médical créé');
+    },
+    onError: () => message.error('Erreur lors de la création'),
+  });
+}
+
+export function useUpdateMedicalRecord() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      infirmerieAPI.records.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['infirmerie', 'records'] });
+      message.success('Dossier mis à jour');
+    },
+    onError: () => message.error('Erreur lors de la mise à jour'),
+  });
+}
+
+export function useConsultations(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['infirmerie', 'consultations', params],
+    queryFn: () => infirmerieAPI.consultations.list(params).then((r) => r.data),
+  });
+}
+
+export function useCreateConsultation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => infirmerieAPI.consultations.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['infirmerie', 'consultations'] });
+      qc.invalidateQueries({ queryKey: ['infirmerie', 'dashboard'] });
+      message.success('Consultation enregistrée');
+    },
+    onError: () => message.error("Erreur lors de l'enregistrement"),
+  });
+}
+
+export function useEmergencyProtocols(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['infirmerie', 'protocols', params],
+    queryFn: () => infirmerieAPI.protocols.list(params).then((r) => r.data),
+  });
+}
+
+export function useEmergencyEvents(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['infirmerie', 'emergencies', params],
+    queryFn: () => infirmerieAPI.emergencies.list(params).then((r) => r.data),
+  });
+}
+
+export function useTriggerEmergency() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => infirmerieAPI.emergencies.trigger(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['infirmerie', 'emergencies'] });
+      qc.invalidateQueries({ queryKey: ['infirmerie', 'dashboard'] });
+      message.success('Urgence déclenchée');
+    },
+    onError: () => message.error("Erreur lors du déclenchement"),
+  });
+}
+
+export function useCloseEmergency() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      infirmerieAPI.emergencies.close(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['infirmerie', 'emergencies'] });
+      qc.invalidateQueries({ queryKey: ['infirmerie', 'dashboard'] });
+      message.success('Urgence clôturée');
+    },
+    onError: () => message.error('Erreur lors de la clôture'),
+  });
+}
+
+export function useInfirmerieMessages(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['infirmerie', 'messages', params],
+    queryFn: () => infirmerieAPI.messages.list(params).then((r) => r.data),
+  });
+}
+
+export function useSendInfirmerieMessage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => infirmerieAPI.messages.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['infirmerie', 'messages'] });
+      message.success('Message envoyé');
+    },
+    onError: () => message.error("Erreur lors de l'envoi"),
+  });
+}
+
+export function useAbsenceJustifications(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['infirmerie', 'justifications', params],
+    queryFn: () => infirmerieAPI.justifications.list(params).then((r) => r.data),
+  });
+}
+
+export function useCreateJustification() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown> | FormData) => infirmerieAPI.justifications.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['infirmerie', 'justifications'] });
+      message.success('Justification soumise');
+    },
+    onError: () => message.error('Erreur lors de la soumission'),
+  });
+}
+
+export function useValidateJustification() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { action: 'validate' | 'reject'; rejection_reason?: string } }) =>
+      infirmerieAPI.justifications.validate(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['infirmerie', 'justifications'] });
+      message.success('Justification traitée');
+    },
+    onError: () => message.error('Erreur lors du traitement'),
+  });
+}
+
+export function useEpidemicAlerts(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['infirmerie', 'epidemics', params],
+    queryFn: () => infirmerieAPI.epidemics.list(params).then((r) => r.data),
+  });
+}
+
+export function useCreateEpidemicAlert() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => infirmerieAPI.epidemics.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['infirmerie', 'epidemics'] });
+      message.success('Alerte épidémique créée');
+    },
+    onError: () => message.error('Erreur lors de la création'),
+  });
+}
+
+export function useContagiousDiseases(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['infirmerie', 'contagious', params],
+    queryFn: () => infirmerieAPI.contagious.list(params).then((r) => r.data),
+  });
+}
+
+export function useCreateContagiousDisease() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => infirmerieAPI.contagious.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['infirmerie', 'contagious'] });
+      message.success('Cas enregistré');
+    },
+    onError: () => message.error("Erreur lors de l'enregistrement"),
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Cantine
+// ══════════════════════════════════════════════════════════════════════
+
+export function useCanteenStudents(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['canteen', 'students', params],
+    queryFn: () => cantineAPI.students.list(params).then((r) => r.data),
+  });
+}
+
+export function useCanteenStudent(id: string) {
+  return useQuery({
+    queryKey: ['canteen', 'student', id],
+    queryFn: () => cantineAPI.students.get(id).then((r) => r.data),
+    enabled: !!id,
+  });
+}
+
+export function useCreateCanteenStudent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => cantineAPI.students.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['canteen', 'students'] });
+      message.success('Élève inscrit à la cantine');
+    },
+    onError: () => message.error("Erreur lors de l'inscription"),
+  });
+}
+
+export function useUpdateCanteenStudent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      cantineAPI.students.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['canteen', 'students'] });
+      message.success('Inscription mise à jour');
+    },
+    onError: () => message.error('Erreur lors de la mise à jour'),
+  });
+}
+
+export function useDeleteCanteenStudent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => cantineAPI.students.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['canteen', 'students'] });
+      message.success('Inscription supprimée');
+    },
+    onError: () => message.error('Erreur lors de la suppression'),
+  });
+}
+
+export function useCanteenMenus(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['canteen', 'menus', params],
+    queryFn: () => cantineAPI.menus.list(params).then((r) => r.data),
+  });
+}
+
+export function useCanteenMenu(id: string) {
+  return useQuery({
+    queryKey: ['canteen', 'menu', id],
+    queryFn: () => cantineAPI.menus.get(id).then((r) => r.data),
+    enabled: !!id,
+  });
+}
+
+export function useCreateCanteenMenu() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => cantineAPI.menus.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['canteen', 'menus'] });
+      message.success('Menu créé');
+    },
+    onError: () => message.error('Erreur lors de la création'),
+  });
+}
+
+export function useUpdateCanteenMenu() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      cantineAPI.menus.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['canteen', 'menus'] });
+      message.success('Menu mis à jour');
+    },
+    onError: () => message.error('Erreur lors de la mise à jour'),
+  });
+}
+
+export function useDeleteCanteenMenu() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => cantineAPI.menus.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['canteen', 'menus'] });
+      message.success('Menu supprimé');
+    },
+    onError: () => message.error('Erreur lors de la suppression'),
+  });
+}
+
+export function usePublishCanteenMenu() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => cantineAPI.menus.publish(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['canteen', 'menus'] });
+      message.success('Menu publié');
+    },
+    onError: () => message.error('Erreur lors de la publication'),
+  });
+}
+
+export function useCanteenMenuItems(menuId: string) {
+  return useQuery({
+    queryKey: ['canteen', 'menuItems', menuId],
+    queryFn: () => cantineAPI.menuItems.list(menuId).then((r) => r.data),
+    enabled: !!menuId,
+  });
+}
+
+export function useCreateCanteenMenuItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ menuId, data }: { menuId: string; data: Record<string, unknown> }) =>
+      cantineAPI.menuItems.create(menuId, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['canteen', 'menuItems'] });
+      qc.invalidateQueries({ queryKey: ['canteen', 'menus'] });
+      message.success('Repas ajouté');
+    },
+    onError: () => message.error("Erreur lors de l'ajout"),
+  });
+}
+
+export function useUpdateCanteenMenuItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      cantineAPI.menuItems.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['canteen', 'menuItems'] });
+      message.success('Repas mis à jour');
+    },
+    onError: () => message.error('Erreur lors de la mise à jour'),
+  });
+}
+
+export function useDeleteCanteenMenuItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => cantineAPI.menuItems.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['canteen', 'menuItems'] });
+      qc.invalidateQueries({ queryKey: ['canteen', 'menus'] });
+      message.success('Repas supprimé');
+    },
+    onError: () => message.error('Erreur lors de la suppression'),
+  });
+}
+
+export function useCanteenAttendance(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['canteen', 'attendance', params],
+    queryFn: () => cantineAPI.attendance.list(params).then((r) => r.data),
+  });
+}
+
+export function useBulkCanteenAttendance() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { date: string; entries: Array<{ student: string; present: boolean; notes?: string }> }) =>
+      cantineAPI.attendance.bulk(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['canteen', 'attendance'] });
+      message.success('Présences enregistrées');
+    },
+    onError: () => message.error("Erreur lors de l'enregistrement"),
+  });
+}
+
+export function useConsumptionReport(params?: Record<string, string>) {
+  return useQuery({
+    queryKey: ['canteen', 'report', params],
+    queryFn: () => cantineAPI.reports.consumption(params).then((r) => r.data),
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Transport
+// ══════════════════════════════════════════════════════════════════════
+
+export function useTransportDrivers(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['transport', 'drivers', params],
+    queryFn: () => transportAPI.drivers.list(params).then((r) => r.data),
+  });
+}
+
+export function useTransportDriver(id: string) {
+  return useQuery({
+    queryKey: ['transport', 'driver', id],
+    queryFn: () => transportAPI.drivers.get(id).then((r) => r.data),
+    enabled: !!id,
+  });
+}
+
+export function useCreateTransportDriver() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => transportAPI.drivers.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transport', 'drivers'] });
+      message.success('Chauffeur ajouté');
+    },
+    onError: () => message.error("Erreur lors de l'ajout"),
+  });
+}
+
+export function useUpdateTransportDriver() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      transportAPI.drivers.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transport', 'drivers'] });
+      message.success('Chauffeur mis à jour');
+    },
+    onError: () => message.error('Erreur lors de la mise à jour'),
+  });
+}
+
+export function useDeleteTransportDriver() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => transportAPI.drivers.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transport', 'drivers'] });
+      message.success('Chauffeur supprimé');
+    },
+    onError: () => message.error('Erreur lors de la suppression'),
+  });
+}
+
+export function useDriverIdCard(id: string) {
+  return useQuery({
+    queryKey: ['transport', 'driver-card', id],
+    queryFn: () => transportAPI.drivers.idCard(id).then((r) => r.data),
+    enabled: !!id,
+  });
+}
+
+export function useTransportLines(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['transport', 'lines', params],
+    queryFn: () => transportAPI.lines.list(params).then((r) => r.data),
+  });
+}
+
+export function useTransportLine(id: string) {
+  return useQuery({
+    queryKey: ['transport', 'line', id],
+    queryFn: () => transportAPI.lines.get(id).then((r) => r.data),
+    enabled: !!id,
+  });
+}
+
+export function useCreateTransportLine() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => transportAPI.lines.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transport', 'lines'] });
+      message.success('Ligne créée');
+    },
+    onError: () => message.error('Erreur lors de la création'),
+  });
+}
+
+export function useUpdateTransportLine() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      transportAPI.lines.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transport', 'lines'] });
+      message.success('Ligne mise à jour');
+    },
+    onError: () => message.error('Erreur lors de la mise à jour'),
+  });
+}
+
+export function useDeleteTransportLine() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => transportAPI.lines.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transport', 'lines'] });
+      message.success('Ligne supprimée');
+    },
+    onError: () => message.error('Erreur lors de la suppression'),
+  });
+}
+
+export function useTransportStops(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['transport', 'stops', params],
+    queryFn: () => transportAPI.stops.list(params).then((r) => r.data),
+  });
+}
+
+export function useCreateTransportStop() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => transportAPI.stops.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transport', 'stops'] });
+      qc.invalidateQueries({ queryKey: ['transport', 'lines'] });
+      message.success('Arrêt ajouté');
+    },
+    onError: () => message.error("Erreur lors de l'ajout"),
+  });
+}
+
+export function useUpdateTransportStop() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      transportAPI.stops.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transport', 'stops'] });
+      message.success('Arrêt mis à jour');
+    },
+    onError: () => message.error('Erreur lors de la mise à jour'),
+  });
+}
+
+export function useDeleteTransportStop() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => transportAPI.stops.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transport', 'stops'] });
+      qc.invalidateQueries({ queryKey: ['transport', 'lines'] });
+      message.success('Arrêt supprimé');
+    },
+    onError: () => message.error('Erreur lors de la suppression'),
+  });
+}
+
+export function useStudentTransports(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['transport', 'students', params],
+    queryFn: () => transportAPI.students.list(params).then((r) => r.data),
+  });
+}
+
+export function useCreateStudentTransport() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => transportAPI.students.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transport', 'students'] });
+      qc.invalidateQueries({ queryKey: ['transport', 'lines'] });
+      message.success('Élève affecté');
+    },
+    onError: () => message.error("Erreur lors de l'affectation"),
+  });
+}
+
+export function useUpdateStudentTransport() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      transportAPI.students.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transport', 'students'] });
+      message.success('Affectation mise à jour');
+    },
+    onError: () => message.error('Erreur lors de la mise à jour'),
+  });
+}
+
+export function useDeleteStudentTransport() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => transportAPI.students.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transport', 'students'] });
+      qc.invalidateQueries({ queryKey: ['transport', 'lines'] });
+      message.success('Affectation supprimée');
+    },
+    onError: () => message.error('Erreur lors de la suppression'),
+  });
+}
+
+export function useTransportTrips(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['transport', 'trips', params],
+    queryFn: () => transportAPI.trips.list(params).then((r) => r.data),
+  });
+}
+
+export function useCreateTransportTrip() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => transportAPI.trips.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transport', 'trips'] });
+      message.success('Trajet enregistré');
+    },
+    onError: () => message.error("Erreur lors de l'enregistrement"),
+  });
+}
+
+export function useTransportReport(params?: Record<string, string>) {
+  return useQuery({
+    queryKey: ['transport', 'report', params],
+    queryFn: () => transportAPI.reports.performance(params).then((r) => r.data),
+  });
+}
+
+export function useNotifyDelay() {
+  return useMutation({
+    mutationFn: ({ lineId, data }: { lineId: string; data: { delay_minutes: number; message?: string } }) =>
+      transportAPI.notify.delay(lineId, data),
+    onSuccess: () => message.success('Notification de retard envoyée'),
+    onError: () => message.error("Erreur lors de l'envoi"),
+  });
+}
+
+export function useNotifyArrival() {
+  return useMutation({
+    mutationFn: (lineId: string) => transportAPI.notify.arrival(lineId),
+    onSuccess: () => message.success('Notification d\'arrivée envoyée'),
+    onError: () => message.error("Erreur lors de l'envoi"),
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   LIBRARY / BIBLIOTHÈQUE
+   ═══════════════════════════════════════════════════════════════════════ */
+
+export function useBooks(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['library', 'books', params],
+    queryFn: () => libraryAPI.books.list(params).then(r => r.data),
+  });
+}
+
+export function useBook(id?: string) {
+  return useQuery({
+    queryKey: ['library', 'books', id],
+    queryFn: () => libraryAPI.books.get(id!).then(r => r.data),
+    enabled: !!id,
+  });
+}
+
+export function useCreateBook() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => libraryAPI.books.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['library', 'books'] });
+      message.success('Livre ajouté');
+    },
+    onError: () => message.error("Erreur lors de l'ajout du livre"),
+  });
+}
+
+export function useUpdateBook() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      libraryAPI.books.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['library', 'books'] });
+      message.success('Livre mis à jour');
+    },
+    onError: () => message.error('Erreur lors de la mise à jour'),
+  });
+}
+
+export function useDeleteBook() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => libraryAPI.books.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['library', 'books'] });
+      message.success('Livre supprimé');
+    },
+    onError: () => message.error('Erreur lors de la suppression'),
+  });
+}
+
+export function useBookCopies(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['library', 'copies', params],
+    queryFn: () => libraryAPI.copies.list(params).then(r => r.data),
+  });
+}
+
+export function useCreateBookCopy() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => libraryAPI.copies.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['library', 'copies'] });
+      qc.invalidateQueries({ queryKey: ['library', 'books'] });
+      message.success('Exemplaire ajouté');
+    },
+    onError: () => message.error("Erreur lors de l'ajout de l'exemplaire"),
+  });
+}
+
+export function useUpdateBookCopy() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      libraryAPI.copies.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['library', 'copies'] });
+      qc.invalidateQueries({ queryKey: ['library', 'books'] });
+      message.success('Exemplaire mis à jour');
+    },
+    onError: () => message.error('Erreur lors de la mise à jour'),
+  });
+}
+
+export function useDeleteBookCopy() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => libraryAPI.copies.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['library', 'copies'] });
+      qc.invalidateQueries({ queryKey: ['library', 'books'] });
+      message.success('Exemplaire supprimé');
+    },
+    onError: () => message.error('Erreur lors de la suppression'),
+  });
+}
+
+export function useLoans(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['library', 'loans', params],
+    queryFn: () => libraryAPI.loans.list(params).then(r => r.data),
+  });
+}
+
+export function useLoan(id?: string) {
+  return useQuery({
+    queryKey: ['library', 'loans', id],
+    queryFn: () => libraryAPI.loans.get(id!).then(r => r.data),
+    enabled: !!id,
+  });
+}
+
+export function useCreateLoan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => libraryAPI.loans.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['library', 'loans'] });
+      qc.invalidateQueries({ queryKey: ['library', 'copies'] });
+      qc.invalidateQueries({ queryKey: ['library', 'books'] });
+      message.success('Emprunt enregistré');
+    },
+    onError: () => message.error("Erreur lors de l'enregistrement de l'emprunt"),
+  });
+}
+
+export function useReturnLoan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => libraryAPI.loans.return(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['library', 'loans'] });
+      qc.invalidateQueries({ queryKey: ['library', 'copies'] });
+      qc.invalidateQueries({ queryKey: ['library', 'books'] });
+      qc.invalidateQueries({ queryKey: ['library', 'reservations'] });
+      message.success('Retour enregistré');
+    },
+    onError: () => message.error("Erreur lors du retour"),
+  });
+}
+
+export function useRenewLoan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => libraryAPI.loans.renew(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['library', 'loans'] });
+      message.success('Emprunt renouvelé');
+    },
+    onError: () => message.error('Erreur lors du renouvellement'),
+  });
+}
+
+export function useMyLoans() {
+  return useQuery({
+    queryKey: ['library', 'my-loans'],
+    queryFn: () => libraryAPI.loans.myLoans().then(r => r.data),
+  });
+}
+
+export function useReservations(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['library', 'reservations', params],
+    queryFn: () => libraryAPI.reservations.list(params).then(r => r.data),
+  });
+}
+
+export function useCreateReservation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => libraryAPI.reservations.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['library', 'reservations'] });
+      message.success('Réservation effectuée');
+    },
+    onError: () => message.error('Erreur lors de la réservation'),
+  });
+}
+
+export function useCancelReservation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => libraryAPI.reservations.cancel(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['library', 'reservations'] });
+      message.success('Réservation annulée');
+    },
+    onError: () => message.error("Erreur lors de l'annulation"),
+  });
+}
+
+export function useLibraryRequests(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['library', 'requests', params],
+    queryFn: () => libraryAPI.requests.list(params).then(r => r.data),
+  });
+}
+
+export function useLibraryRequest(id?: string) {
+  return useQuery({
+    queryKey: ['library', 'requests', id],
+    queryFn: () => libraryAPI.requests.get(id!).then(r => r.data),
+    enabled: !!id,
+  });
+}
+
+export function useCreateLibraryRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => libraryAPI.requests.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['library', 'requests'] });
+      message.success('Demande envoyée');
+    },
+    onError: () => message.error("Erreur lors de l'envoi de la demande"),
+  });
+}
+
+export function useResolveLibraryRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { action: string; admin_response?: string } }) =>
+      libraryAPI.requests.resolve(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['library', 'requests'] });
+      message.success('Demande traitée');
+    },
+    onError: () => message.error('Erreur lors du traitement'),
+  });
+}
+
+export function useLibraryUsageReport(params?: Record<string, string>) {
+  return useQuery({
+    queryKey: ['library', 'usage-report', params],
+    queryFn: () => libraryAPI.usageReport(params).then(r => r.data),
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// E-Learning Hooks
+// ═══════════════════════════════════════════════════════════════════════
+
+// ── Digital Resources ──
+
+export function useElearningResources(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['elearning', 'resources', params],
+    queryFn: () => elearningAPI.resources.list(params).then(r => r.data),
+  });
+}
+
+export function useElearningResource(id: string) {
+  return useQuery({
+    queryKey: ['elearning', 'resources', id],
+    queryFn: () => elearningAPI.resources.get(id).then(r => r.data),
+    enabled: !!id,
+  });
+}
+
+export function useCreateElearningResource() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: FormData) => elearningAPI.resources.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['elearning', 'resources'] });
+      message.success('Ressource ajoutée');
+    },
+    onError: () => message.error("Erreur lors de l'ajout de la ressource"),
+  });
+}
+
+export function useUpdateElearningResource() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: FormData }) =>
+      elearningAPI.resources.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['elearning', 'resources'] });
+      message.success('Ressource mise à jour');
+    },
+    onError: () => message.error('Erreur lors de la mise à jour'),
+  });
+}
+
+export function useDeleteElearningResource() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => elearningAPI.resources.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['elearning', 'resources'] });
+      message.success('Ressource supprimée');
+    },
+    onError: () => message.error('Erreur lors de la suppression'),
+  });
+}
+
+export function useToggleFavouriteResource() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => elearningAPI.resources.favourite(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['elearning', 'resources'] });
+    },
+  });
+}
+
+export function useTrackResourceDownload() {
+  return useMutation({
+    mutationFn: (id: string) => elearningAPI.resources.download(id),
+  });
+}
+
+// ── Exam Bank ──
+
+export function useExamBankItems(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['elearning', 'exams', params],
+    queryFn: () => elearningAPI.exams.list(params).then(r => r.data),
+  });
+}
+
+export function useExamBankItem(id: string) {
+  return useQuery({
+    queryKey: ['elearning', 'exams', id],
+    queryFn: () => elearningAPI.exams.get(id).then(r => r.data),
+    enabled: !!id,
+  });
+}
+
+export function useCreateExamBankItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: FormData) => elearningAPI.exams.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['elearning', 'exams'] });
+      message.success('Examen ajouté');
+    },
+    onError: () => message.error("Erreur lors de l'ajout"),
+  });
+}
+
+export function useUpdateExamBankItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: FormData }) =>
+      elearningAPI.exams.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['elearning', 'exams'] });
+      message.success('Examen mis à jour');
+    },
+    onError: () => message.error('Erreur lors de la mise à jour'),
+  });
+}
+
+export function useDeleteExamBankItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => elearningAPI.exams.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['elearning', 'exams'] });
+      message.success('Examen supprimé');
+    },
+    onError: () => message.error('Erreur lors de la suppression'),
+  });
+}
+
+export function useTrackExamDownload() {
+  return useMutation({
+    mutationFn: (id: string) => elearningAPI.exams.download(id),
+  });
+}
+
+// ── Quizzes ──
+
+export function useQuizzes(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['elearning', 'quizzes', params],
+    queryFn: () => elearningAPI.quizzes.list(params).then(r => r.data),
+  });
+}
+
+export function useQuiz(id: string) {
+  return useQuery({
+    queryKey: ['elearning', 'quizzes', id],
+    queryFn: () => elearningAPI.quizzes.get(id).then(r => r.data),
+    enabled: !!id,
+  });
+}
+
+export function useCreateQuiz() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => elearningAPI.quizzes.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['elearning', 'quizzes'] });
+      message.success('Quiz créé');
+    },
+    onError: () => message.error('Erreur lors de la création du quiz'),
+  });
+}
+
+export function useUpdateQuiz() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      elearningAPI.quizzes.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['elearning', 'quizzes'] });
+      message.success('Quiz mis à jour');
+    },
+    onError: () => message.error('Erreur lors de la mise à jour'),
+  });
+}
+
+export function useDeleteQuiz() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => elearningAPI.quizzes.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['elearning', 'quizzes'] });
+      message.success('Quiz supprimé');
+    },
+    onError: () => message.error('Erreur lors de la suppression'),
+  });
+}
+
+export function useQuizQuestions(quizId: string) {
+  return useQuery({
+    queryKey: ['elearning', 'quizzes', quizId, 'questions'],
+    queryFn: () => elearningAPI.quizzes.questions(quizId).then(r => r.data),
+    enabled: !!quizId,
+  });
+}
+
+export function useAddQuizQuestion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ quizId, data }: { quizId: string; data: Record<string, unknown> }) =>
+      elearningAPI.quizzes.addQuestion(quizId, data),
+    onSuccess: (_, { quizId }) => {
+      qc.invalidateQueries({ queryKey: ['elearning', 'quizzes', quizId] });
+      message.success('Question ajoutée');
+    },
+    onError: () => message.error("Erreur lors de l'ajout de la question"),
+  });
+}
+
+export function useUpdateQuizQuestion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ quizId, questionId, data }: { quizId: string; questionId: string; data: Record<string, unknown> }) =>
+      elearningAPI.quizzes.updateQuestion(quizId, questionId, data),
+    onSuccess: (_, { quizId }) => {
+      qc.invalidateQueries({ queryKey: ['elearning', 'quizzes', quizId] });
+      message.success('Question mise à jour');
+    },
+    onError: () => message.error('Erreur lors de la mise à jour'),
+  });
+}
+
+export function useDeleteQuizQuestion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ quizId, questionId }: { quizId: string; questionId: string }) =>
+      elearningAPI.quizzes.deleteQuestion(quizId, questionId),
+    onSuccess: (_, { quizId }) => {
+      qc.invalidateQueries({ queryKey: ['elearning', 'quizzes', quizId] });
+      message.success('Question supprimée');
+    },
+    onError: () => message.error('Erreur lors de la suppression'),
+  });
+}
+
+export function useQuizAttempts(quizId: string) {
+  return useQuery({
+    queryKey: ['elearning', 'quizzes', quizId, 'attempts'],
+    queryFn: () => elearningAPI.quizzes.attempts(quizId).then(r => r.data),
+    enabled: !!quizId,
+  });
+}
+
+export function useMyQuizAttempts() {
+  return useQuery({
+    queryKey: ['elearning', 'my-attempts'],
+    queryFn: () => elearningAPI.myAttempts().then(r => r.data),
+  });
+}
+
+// ── Student Progress ──
+
+export function useStudentProgressList(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['elearning', 'progress', params],
+    queryFn: () => elearningAPI.progress.list(params).then(r => r.data),
+  });
+}
+
+export function useStudentProgressDetail(id: string) {
+  return useQuery({
+    queryKey: ['elearning', 'progress', id],
+    queryFn: () => elearningAPI.progress.get(id).then(r => r.data),
+    enabled: !!id,
+  });
+}
+
+// ── Analytics ──
+
+export function useElearningAnalytics(params?: Record<string, string>) {
+  return useQuery({
+    queryKey: ['elearning', 'analytics', params],
+    queryFn: () => elearningAPI.analytics(params).then(r => r.data),
+  });
+}
+
+// ==========================================================================
+// SMS
+// ==========================================================================
+
+export function useSMSConfig() {
+  return useQuery({
+    queryKey: ['sms', 'config'],
+    queryFn: () => smsAPI.config.get().then(r => r.data),
+    retry: false,
+  });
+}
+
+export function useUpdateSMSConfig() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => smsAPI.config.update(data).then(r => r.data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['sms'] }); message.success('Configuration SMS mise à jour'); },
+    onError: () => message.error('Erreur configuration SMS'),
+  });
+}
+
+export function useSMSBalance() {
+  return useQuery({
+    queryKey: ['sms', 'balance'],
+    queryFn: () => smsAPI.balance().then(r => r.data),
+  });
+}
+
+export function useSendSMS() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { phone: string; message: string; template_id?: string; template_context?: Record<string, string> }) =>
+      smsAPI.send(data).then(r => r.data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['sms'] }); message.success('SMS envoyé'); },
+    onError: () => message.error("Erreur d'envoi SMS"),
+  });
+}
+
+export function useSMSHistory(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['sms', 'history', params],
+    queryFn: () => smsAPI.history(params).then(r => r.data),
+  });
+}
+
+export function useSMSTemplates(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['sms', 'templates', params],
+    queryFn: () => smsAPI.templates.list(params).then(r => r.data),
+  });
+}
+
+export function useCreateSMSTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => smsAPI.templates.create(data).then(r => r.data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['sms', 'templates'] }); message.success('Template créé'); },
+    onError: () => message.error('Erreur création template'),
+  });
+}
+
+export function useUpdateSMSTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      smsAPI.templates.update(id, data).then(r => r.data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['sms', 'templates'] }); message.success('Template mis à jour'); },
+    onError: () => message.error('Erreur mise à jour template'),
+  });
+}
+
+export function useDeleteSMSTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => smsAPI.templates.delete(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['sms', 'templates'] }); message.success('Template supprimé'); },
+    onError: () => message.error('Erreur suppression template'),
+  });
+}
+
+export function useSMSCampaigns(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['sms', 'campaigns', params],
+    queryFn: () => smsAPI.campaigns.list(params).then(r => r.data),
+  });
+}
+
+export function useSMSCampaign(id: string) {
+  return useQuery({
+    queryKey: ['sms', 'campaigns', id],
+    queryFn: () => smsAPI.campaigns.get(id).then(r => r.data),
+    enabled: !!id,
+  });
+}
+
+export function useCreateSMSCampaign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => smsAPI.campaigns.create(data).then(r => r.data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['sms'] }); message.success('Campagne créée'); },
+    onError: () => message.error('Erreur création campagne'),
+  });
+}
+
+export function useDeleteSMSCampaign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => smsAPI.campaigns.delete(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['sms', 'campaigns'] }); message.success('Campagne annulée'); },
+    onError: () => message.error('Erreur annulation campagne'),
+  });
+}
+
+export function useSMSAnalytics() {
+  return useQuery({
+    queryKey: ['sms', 'analytics'],
+    queryFn: () => smsAPI.analytics().then(r => r.data),
+  });
+}
+
+// ==========================================================================
+// Notifications (extended)
+// ==========================================================================
+
+export function useNotificationPreferences() {
+  return useQuery({
+    queryKey: ['notifications', 'preferences'],
+    queryFn: () => notificationsExtAPI.preferences.get().then(r => r.data),
+  });
+}
+
+export function useUpdateNotificationPreferences() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => notificationsExtAPI.preferences.update(data).then(r => r.data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['notifications', 'preferences'] }); message.success('Préférences mises à jour'); },
+    onError: () => message.error('Erreur mise à jour préférences'),
+  });
+}
+
+export function useNotificationStats() {
+  return useQuery({
+    queryKey: ['notifications', 'stats'],
+    queryFn: () => notificationsExtAPI.stats().then(r => r.data),
+  });
+}
+
+export function useMarkAllNotificationsRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => notificationsExtAPI.markAllRead().then(r => r.data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['notifications'] }); message.success('Toutes les notifications marquées comme lues'); },
+  });
+}
+
+// ==========================================================================
+// Fingerprint / Biometric
+// ==========================================================================
+
+export function useFingerprintDashboard() {
+  return useQuery({
+    queryKey: ['fingerprint', 'dashboard'],
+    queryFn: () => fingerprintAPI.dashboard().then(r => r.data),
+  });
+}
+
+export function useFingerprintDevices() {
+  return useQuery({
+    queryKey: ['fingerprint', 'devices'],
+    queryFn: () => fingerprintAPI.devices.list().then(r => r.data),
+  });
+}
+
+export function useCreateFingerprintDevice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => fingerprintAPI.devices.create(data).then(r => r.data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['fingerprint'] }); message.success('Appareil ajouté'); },
+    onError: () => message.error("Erreur ajout appareil"),
+  });
+}
+
+export function useUpdateFingerprintDevice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      fingerprintAPI.devices.update(id, data).then(r => r.data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['fingerprint'] }); message.success('Appareil mis à jour'); },
+    onError: () => message.error('Erreur mise à jour appareil'),
+  });
+}
+
+export function useDeleteFingerprintDevice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => fingerprintAPI.devices.delete(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['fingerprint'] }); message.success('Appareil supprimé'); },
+    onError: () => message.error('Erreur suppression appareil'),
+  });
+}
+
+export function useFingerprintEnroll() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { student_id: string; finger_index: number; captures: string[]; quality_scores?: number[]; device_id?: string }) =>
+      fingerprintAPI.enroll(data).then(r => r.data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['fingerprint'] }); message.success('Empreinte enregistrée'); },
+    onError: () => message.error("Erreur d'enregistrement"),
+  });
+}
+
+export function useFingerprintVerify() {
+  return useMutation({
+    mutationFn: (data: { template: string; device_id?: string }) =>
+      fingerprintAPI.verify(data).then(r => r.data),
+  });
+}
+
+export function useManualFallback() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { student_id: string; event_type: string; timestamp?: string }) =>
+      fingerprintAPI.manualFallback(data).then(r => r.data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['fingerprint'] }); message.success('Présence manuelle enregistrée'); },
+    onError: () => message.error('Erreur enregistrement manuel'),
+  });
+}
+
+export function useEnrolledStudents(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['fingerprint', 'enrolled', params],
+    queryFn: () => fingerprintAPI.enrolledStudents(params).then(r => r.data),
+  });
+}
+
+export function useBiometricLogs(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['fingerprint', 'logs', params],
+    queryFn: () => fingerprintAPI.logs(params).then(r => r.data),
+  });
+}
+
+export function useTardinessReport(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['fingerprint', 'tardiness', params],
+    queryFn: () => fingerprintAPI.tardinessReport(params).then(r => r.data),
+  });
+}
+
+export function useFingerprintDiagnostics() {
+  return useQuery({
+    queryKey: ['fingerprint', 'diagnostics'],
+    queryFn: () => fingerprintAPI.diagnostics().then(r => r.data),
+    enabled: false,
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// DISCIPLINE
+// ═══════════════════════════════════════════════════════════════════════
+
+export function useIncidents(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['discipline', 'incidents', params],
+    queryFn: () => disciplineAPI.incidents.list(params).then(r => r.data),
+  });
+}
+
+export function useIncident(id?: string) {
+  return useQuery({
+    queryKey: ['discipline', 'incidents', id],
+    queryFn: () => disciplineAPI.incidents.get(id!).then(r => r.data),
+    enabled: !!id,
+  });
+}
+
+export function useCreateIncident() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => disciplineAPI.incidents.create(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['discipline'] }); message.success('Incident signalé'); },
+    onError: () => message.error("Erreur lors du signalement"),
+  });
+}
+
+export function useUpdateIncident() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => disciplineAPI.incidents.update(id, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['discipline'] }); message.success('Incident mis à jour'); },
+    onError: () => message.error('Erreur lors de la mise à jour'),
+  });
+}
+
+export function useDeleteIncident() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => disciplineAPI.incidents.delete(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['discipline'] }); message.success('Incident supprimé'); },
+    onError: () => message.error('Erreur lors de la suppression'),
+  });
+}
+
+export function useIncidentWorkflow() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, action, resolution_note }: { id: string; action: string; resolution_note?: string }) =>
+      disciplineAPI.incidents.workflow(id, { action, resolution_note }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['discipline'] }); message.success('Action effectuée'); },
+    onError: () => message.error("Erreur lors de l'action"),
+  });
+}
+
+export function useSanctions(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['discipline', 'sanctions', params],
+    queryFn: () => disciplineAPI.sanctions.list(params).then(r => r.data),
+  });
+}
+
+export function useCreateSanction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => disciplineAPI.sanctions.create(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['discipline'] }); message.success('Sanction ajoutée'); },
+    onError: () => message.error("Erreur lors de l'ajout de la sanction"),
+  });
+}
+
+export function useBehaviorReports(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['discipline', 'behavior-reports', params],
+    queryFn: () => disciplineAPI.behaviorReports.list(params).then(r => r.data),
+  });
+}
+
+export function useCreateBehaviorReport() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => disciplineAPI.behaviorReports.create(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['discipline'] }); message.success('Rapport ajouté'); },
+    onError: () => message.error("Erreur lors de l'ajout du rapport"),
+  });
+}
+
+export function useWarningThresholds(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['discipline', 'warning-thresholds', params],
+    queryFn: () => disciplineAPI.warningThresholds.list(params).then(r => r.data),
+  });
+}
+
+export function useUpdateWarningThreshold() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => disciplineAPI.warningThresholds.update(id, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['discipline'] }); message.success('Seuil mis à jour'); },
+    onError: () => message.error('Erreur'),
+  });
+}
+
+export function useDisciplineStats(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['discipline', 'stats', params],
+    queryFn: () => disciplineAPI.stats(params).then(r => r.data),
+  });
+}
+
+export function useWarningCounter(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['discipline', 'warnings', params],
+    queryFn: () => disciplineAPI.warnings(params).then(r => r.data),
+  });
+}
+
+export function useClassComparison(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['discipline', 'class-comparison', params],
+    queryFn: () => disciplineAPI.classComparison(params).then(r => r.data),
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// STAFF MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════════
+
+export function useStaffMembers(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['staff', 'members', params],
+    queryFn: () => staffAPI.members.list(params).then(r => r.data),
+  });
+}
+
+export function useStaffMember(id?: string) {
+  return useQuery({
+    queryKey: ['staff', 'members', id],
+    queryFn: () => staffAPI.members.get(id!).then(r => r.data),
+    enabled: !!id,
+  });
+}
+
+export function useCreateStaffMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => staffAPI.members.create(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['staff'] }); message.success('Personnel ajouté'); },
+    onError: () => message.error("Erreur lors de l'ajout"),
+  });
+}
+
+export function useUpdateStaffMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => staffAPI.members.update(id, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['staff'] }); message.success('Personnel mis à jour'); },
+    onError: () => message.error('Erreur lors de la mise à jour'),
+  });
+}
+
+export function useDeleteStaffMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => staffAPI.members.delete(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['staff'] }); message.success('Personnel supprimé'); },
+    onError: () => message.error('Erreur lors de la suppression'),
+  });
+}
+
+export function useStaffDocuments(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['staff', 'documents', params],
+    queryFn: () => staffAPI.documents.list(params).then(r => r.data),
+  });
+}
+
+export function useUploadStaffDocument() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: FormData) => staffAPI.documents.create(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['staff', 'documents'] }); message.success('Document uploadé'); },
+    onError: () => message.error("Erreur lors de l'upload"),
+  });
+}
+
+export function useDeleteStaffDocument() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => staffAPI.documents.delete(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['staff', 'documents'] }); message.success('Document supprimé'); },
+    onError: () => message.error('Erreur lors de la suppression'),
+  });
+}
+
+export function useStaffAttendance(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['staff', 'attendance', params],
+    queryFn: () => staffAPI.attendance.list(params).then(r => r.data),
+  });
+}
+
+export function useCreateStaffAttendance() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => staffAPI.attendance.create(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['staff', 'attendance'] }); message.success('Pointage enregistré'); },
+    onError: () => message.error("Erreur lors de l'enregistrement"),
+  });
+}
+
+export function useStaffLeaves(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['staff', 'leaves', params],
+    queryFn: () => staffAPI.leaves.list(params).then(r => r.data),
+  });
+}
+
+export function useCreateStaffLeave() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => staffAPI.leaves.create(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['staff', 'leaves'] }); message.success('Demande de congé soumise'); },
+    onError: () => message.error('Erreur lors de la soumission'),
+  });
+}
+
+export function useApproveStaffLeave() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => staffAPI.leaves.approve(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['staff', 'leaves'] }); message.success('Congé approuvé'); },
+    onError: () => message.error("Erreur lors de l'approbation"),
+  });
+}
+
+export function useRejectStaffLeave() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => staffAPI.leaves.reject(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['staff', 'leaves'] }); message.success('Congé rejeté'); },
+    onError: () => message.error('Erreur lors du rejet'),
+  });
+}
+
+export function useStaffStats() {
+  return useQuery({
+    queryKey: ['staff', 'stats'],
+    queryFn: () => staffAPI.stats().then(r => r.data),
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// REPORT CARD TEMPLATES (Prompt V)
+// ═══════════════════════════════════════════════════════════════════════
+
+export function useReportCardTemplates(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['reportCardTemplates', params],
+    queryFn: () => gradesAPI.reportCardTemplates(params).then(r => r.data),
+  });
+}
+
+export function useCreateReportCardTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => gradesAPI.createReportCardTemplate(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['reportCardTemplates'] }); message.success('Modèle de bulletin créé'); },
+    onError: () => message.error('Erreur lors de la création du modèle'),
+  });
+}
+
+export function useUpdateReportCardTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      gradesAPI.updateReportCardTemplate(id, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['reportCardTemplates'] }); message.success('Modèle mis à jour'); },
+    onError: () => message.error('Erreur lors de la mise à jour'),
+  });
+}
+
+export function useDeleteReportCardTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => gradesAPI.deleteReportCardTemplate(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['reportCardTemplates'] }); message.success('Modèle supprimé'); },
+    onError: () => message.error('Erreur lors de la suppression'),
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// REPORT CARD GENERATION (Prompt V)
+// ═══════════════════════════════════════════════════════════════════════
+
+export function useGenerateClassReportCards() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => gradesAPI.generateClassReportCards(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['reportCards'] }); message.success('Génération des bulletins lancée'); },
+    onError: () => message.error('Erreur lors de la génération'),
+  });
+}
+
+export function useGenerateSchoolReportCards() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => gradesAPI.generateSchoolReportCards(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['reportCards'] }); message.success('Génération école lancée'); },
+    onError: () => message.error('Erreur lors de la génération'),
+  });
+}
+
+export function useReportCardProgress(taskId: string | null) {
+  return useQuery({
+    queryKey: ['reportCardProgress', taskId],
+    queryFn: () => gradesAPI.reportCardProgress(taskId!).then(r => r.data),
+    enabled: !!taskId,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status === 'completed' || status === 'failed' ? false : 2000;
+    },
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// GRADE ANALYTICS & MEN EXPORT (Prompt V)
+// ═══════════════════════════════════════════════════════════════════════
+
+export function useGradeAnalytics(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['gradeAnalytics', params],
+    queryFn: () => gradesAPI.gradeAnalytics(params).then(r => r.data),
+    staleTime: 120_000,
+  });
+}
+
+export function useMENExport() {
+  return useMutation({
+    mutationFn: (params: Record<string, unknown>) => gradesAPI.menExport(params),
+    onSuccess: (res) => {
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'export_men.xlsx';
+      a.click();
+      window.URL.revokeObjectURL(url);
+      message.success('Export MEN téléchargé');
+    },
+    onError: () => message.error("Erreur lors de l'export MEN"),
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// ATTENDANCE REPORTS (Prompt V)
+// ═══════════════════════════════════════════════════════════════════════
+
+export function useMonthlyAttendanceReport(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['attendance', 'monthlyReport', params],
+    queryFn: () => attendanceAPI.monthlyReport(params).then(r => r.data),
+    enabled: !!params?.class_id,
+  });
+}
+
+export function useAttendanceCalendar(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['attendance', 'calendar', params],
+    queryFn: () => attendanceAPI.calendarReport(params).then(r => r.data),
+    enabled: !!params?.student_id,
+  });
+}
+
+export function useAnnualAttendanceReport(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['attendance', 'annualReport', params],
+    queryFn: () => attendanceAPI.annualReport(params).then(r => r.data),
+    enabled: !!params?.class_id,
+  });
+}
+
+export function useAttendanceRanking(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ['attendance', 'ranking', params],
+    queryFn: () => attendanceAPI.ranking(params).then(r => r.data),
+  });
+}
+
+export function useAttendanceExcelExport() {
+  return useMutation({
+    mutationFn: (params: Record<string, unknown>) => attendanceAPI.excelExport(params),
+    onSuccess: (res) => {
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'rapport_presence.xlsx';
+      a.click();
+      window.URL.revokeObjectURL(url);
+      message.success('Export Excel téléchargé');
+    },
+    onError: () => message.error("Erreur lors de l'export"),
   });
 }

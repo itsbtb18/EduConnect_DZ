@@ -2,7 +2,7 @@ from rest_framework import permissions, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.permissions import IsSchoolAdmin
+from core.permissions import IsSchoolAdmin, require_module
 
 from .models import ChatMessage, ChatSession, KnowledgeBase
 from .serializers import (
@@ -12,6 +12,7 @@ from .serializers import (
 )
 
 
+@require_module("ai_chatbot")
 class KnowledgeBaseViewSet(viewsets.ModelViewSet):
     """Manage school knowledge base entries (admin only)."""
 
@@ -29,6 +30,7 @@ class KnowledgeBaseViewSet(viewsets.ModelViewSet):
         return instance
 
 
+@require_module("ai_chatbot")
 class ChatSessionViewSet(viewsets.ReadOnlyModelViewSet):
     """View user's chatbot sessions."""
 
@@ -39,6 +41,7 @@ class ChatSessionViewSet(viewsets.ReadOnlyModelViewSet):
         return ChatSession.objects.filter(user=self.request.user)
 
 
+@require_module("ai_chatbot")
 class ChatQueryView(APIView):
     """
     POST /api/v1/ai/chat/

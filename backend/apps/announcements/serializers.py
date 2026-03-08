@@ -19,6 +19,7 @@ class AnnouncementSerializer(serializers.ModelSerializer):
     author_name = serializers.CharField(source="author.full_name", read_only=True)
     attachments = AnnouncementAttachmentSerializer(many=True, read_only=True)
     read_count = serializers.IntegerField(read_only=True, default=0)
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Announcement
@@ -32,6 +33,10 @@ class AnnouncementSerializer(serializers.ModelSerializer):
             "target_section",
             "target_class",
             "is_pinned",
+            "is_urgent",
+            "image",
+            "image_url",
+            "views_count",
             "publish_at",
             "published_at",
             "created_at",
@@ -49,6 +54,14 @@ class AnnouncementSerializer(serializers.ModelSerializer):
             "is_deleted",
             "deleted_at",
         ]
+
+    def get_image_url(self, obj):
+        if not obj.image:
+            return None
+        request = self.context.get("request")
+        if request:
+            return request.build_absolute_uri(obj.image.url)
+        return obj.image.url
 
 
 class AnnouncementReadSerializer(serializers.ModelSerializer):
@@ -76,4 +89,5 @@ class AnnouncementCreateSerializer(serializers.Serializer):
     target_section_id = serializers.UUIDField(required=False, allow_null=True)
     target_class_id = serializers.UUIDField(required=False, allow_null=True)
     is_pinned = serializers.BooleanField(default=False)
+    is_urgent = serializers.BooleanField(default=False)
     publish_at = serializers.DateTimeField(required=False, allow_null=True)

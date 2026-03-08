@@ -140,7 +140,7 @@ const SetupWizard: React.FC = () => {
       <div className="setup-wizard-header">
         <div className="setup-wizard-header-content">
           <div className="header-title-section">
-            <h1>🏫 Configuration de l'École</h1>
+            <h1>Configuration de l'École</h1>
             <p>Configurez votre établissement en quelques étapes simples</p>
           </div>
           <div className="header-progress">

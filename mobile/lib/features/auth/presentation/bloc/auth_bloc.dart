@@ -8,7 +8,7 @@ import 'auth_state.dart';
 export 'auth_event.dart';
 export 'auth_state.dart';
 
-/// Handles authentication lifecycle: check session, login, PIN login, logout.
+/// Handles authentication lifecycle: check session, login, OTP/TOTP, logout.
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthRepository _authRepository = getIt<AuthRepository>();
 
@@ -16,6 +16,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthCheckRequested>(_onCheckRequested);
     on<AuthLoginRequested>(_onLoginRequested);
     on<AuthPinLoginRequested>(_onPinLoginRequested);
+    on<AuthVerifyOtpRequested>(_onVerifyOtp);
+    on<AuthVerifyTotpRequested>(_onVerifyTotp);
     on<AuthLogoutRequested>(_onLogoutRequested);
   }
 
@@ -28,7 +30,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final isLoggedIn = await _authRepository.isLoggedIn();
       if (isLoggedIn) {
         final user = await _authRepository.getMe();
-        emit(AuthAuthenticated(user));
+        emit(AuthAuthenticated(user, contexts: user.contexts));
       } else {
         emit(AuthUnauthenticated());
       }
@@ -43,11 +45,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      final loginResponse = await _authRepository.login(
+      final result = await _authRepository.login(
         phoneNumber: event.phoneNumber,
         password: event.password,
       );
-      emit(AuthAuthenticated(loginResponse.user));
+      emit(AuthAuthenticated(result.user, contexts: result.contexts));
+    } on AuthOtpRequired catch (e) {
+      emit(AuthOtpVerificationRequired(
+        requiresOtp: e.requiresOtp,
+        requiresTotp: e.requiresTotp,
+        tempToken: e.tempToken,
+      ));
     } catch (e) {
       emit(AuthError(e.toString()));
     }
@@ -59,11 +67,43 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      final loginResponse = await _authRepository.pinLogin(
+      final result = await _authRepository.pinLogin(
         phone: event.phone,
         pin: event.pin,
       );
-      emit(AuthAuthenticated(loginResponse.user));
+      emit(AuthAuthenticated(result.user, contexts: result.contexts));
+    } catch (e) {
+      emit(AuthError(e.toString()));
+    }
+  }
+
+  Future<void> _onVerifyOtp(
+    AuthVerifyOtpRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+    try {
+      final result = await _authRepository.verifyOtp(
+        tempToken: event.tempToken,
+        code: event.code,
+      );
+      emit(AuthAuthenticated(result.user, contexts: result.contexts));
+    } catch (e) {
+      emit(AuthError(e.toString()));
+    }
+  }
+
+  Future<void> _onVerifyTotp(
+    AuthVerifyTotpRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+    try {
+      final result = await _authRepository.verifyTotp(
+        tempToken: event.tempToken,
+        code: event.code,
+      );
+      emit(AuthAuthenticated(result.user, contexts: result.contexts));
     } catch (e) {
       emit(AuthError(e.toString()));
     }

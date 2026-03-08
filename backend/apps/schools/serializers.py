@@ -4,7 +4,17 @@ import string
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
-from .models import AcademicYear, School, Section, validate_school_logo
+from .models import (
+    AcademicYear,
+    ContentResource,
+    ModuleActivationLog,
+    School,
+    SchoolSubscription,
+    Section,
+    SubscriptionInvoice,
+    validate_school_logo,
+    MODULE_SLUG_TO_FIELD,
+)
 
 
 class SchoolSerializer(serializers.ModelSerializer):
@@ -286,3 +296,205 @@ class AcademicYearSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ["id", "school", "created_by", "created_at", "updated_at"]
         extra_kwargs = {"section": {"required": False, "allow_null": True}}
+
+
+# ---------------------------------------------------------------------------
+# SchoolSubscription serializers
+# ---------------------------------------------------------------------------
+
+
+class SchoolSubscriptionSerializer(serializers.ModelSerializer):
+    """Read serializer for school subscription."""
+
+    school_name = serializers.CharField(source="school.name", read_only=True)
+    active_modules = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SchoolSubscription
+        fields = [
+            "id",
+            "school",
+            "school_name",
+            "is_active",
+            "plan_name",
+            "subscription_start",
+            "subscription_end",
+            "max_students",
+            "suspension_reason",
+            "module_pedagogique",
+            "module_empreintes",
+            "module_finance",
+            "module_cantine",
+            "module_transport",
+            "module_auto_education",
+            "module_sms",
+            "module_bibliotheque",
+            "module_infirmerie",
+            "module_mobile_apps",
+            "module_ai_chatbot",
+            "monthly_total",
+            "activation_log",
+            "active_modules",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "school", "created_at", "updated_at"]
+
+    def get_active_modules(self, obj):
+        return obj.get_active_modules()
+
+
+class SchoolSubscriptionUpdateSerializer(serializers.ModelSerializer):
+    """Update serializer for modifying subscription details."""
+
+    class Meta:
+        model = SchoolSubscription
+        fields = [
+            "is_active",
+            "plan_name",
+            "subscription_start",
+            "subscription_end",
+            "max_students",
+            "suspension_reason",
+            "module_empreintes",
+            "module_finance",
+            "module_cantine",
+            "module_transport",
+            "module_auto_education",
+            "module_sms",
+            "module_bibliotheque",
+            "module_infirmerie",
+            "module_mobile_apps",
+            "module_ai_chatbot",
+            "monthly_total",
+        ]
+
+    def validate(self, attrs):
+        # module_pedagogique cannot be deactivated
+        attrs.pop("module_pedagogique", None)
+        return attrs
+
+
+class ModuleActivationLogSerializer(serializers.ModelSerializer):
+    activated_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ModuleActivationLog
+        fields = [
+            "id",
+            "school",
+            "module_name",
+            "action",
+            "activated_by",
+            "activated_by_name",
+            "reason",
+            "prorata_amount",
+            "metadata",
+            "created_at",
+        ]
+        read_only_fields = fields
+
+    def get_activated_by_name(self, obj):
+        if obj.activated_by:
+            return f"{obj.activated_by.first_name} {obj.activated_by.last_name}"
+        return None
+
+
+class SubscriptionInvoiceSerializer(serializers.ModelSerializer):
+    school_name = serializers.CharField(source="school.name", read_only=True)
+    generated_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SubscriptionInvoice
+        fields = [
+            "id",
+            "school",
+            "school_name",
+            "invoice_number",
+            "period_start",
+            "period_end",
+            "amount",
+            "tax_amount",
+            "total_amount",
+            "status",
+            "line_items",
+            "notes",
+            "paid_at",
+            "due_date",
+            "pdf_file",
+            "generated_by",
+            "generated_by_name",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "id",
+            "invoice_number",
+            "generated_by",
+            "created_at",
+            "updated_at",
+        ]
+
+    def get_generated_by_name(self, obj):
+        if obj.generated_by:
+            return f"{obj.generated_by.first_name} {obj.generated_by.last_name}"
+        return None
+
+
+class ModuleActivateSerializer(serializers.Serializer):
+    """Serializer for activating/deactivating a module."""
+
+    reason = serializers.CharField(required=False, allow_blank=True, default="")
+
+
+class SuspendSchoolSerializer(serializers.Serializer):
+    """Serializer for suspending a school."""
+
+    reason = serializers.CharField(required=True, min_length=5)
+
+
+class InvoiceGenerateSerializer(serializers.Serializer):
+    """Serializer for generating an invoice."""
+
+    period_start = serializers.DateField()
+    period_end = serializers.DateField()
+    notes = serializers.CharField(required=False, allow_blank=True, default="")
+
+
+class ContentResourceSerializer(serializers.ModelSerializer):
+    """Serializer for educational content resources."""
+
+    uploaded_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ContentResource
+        fields = [
+            "id",
+            "title",
+            "description",
+            "category",
+            "subject",
+            "level",
+            "year",
+            "file",
+            "file_url",
+            "thumbnail",
+            "is_published",
+            "download_count",
+            "uploaded_by",
+            "uploaded_by_name",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "id",
+            "uploaded_by",
+            "download_count",
+            "created_at",
+            "updated_at",
+        ]
+
+    def get_uploaded_by_name(self, obj):
+        if obj.uploaded_by:
+            return f"{obj.uploaded_by.first_name} {obj.uploaded_by.last_name}"
+        return None

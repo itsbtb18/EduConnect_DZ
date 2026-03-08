@@ -55,15 +55,15 @@
 .page-layout__title {
   font-family: var(--font-display);
   font-size: 22px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-primary);
   letter-spacing: -0.02em;
   line-height: 1.2;
 }
 
 .page-layout__subtitle {
-  font-size: 13px;
-  color: var(--text-tertiary);
+  font-size: 14px;
+  color: #64748B;
   margin-top: 2px;
   line-height: 1.4;
 }
@@ -139,5 +139,5 @@
 }
 
 .page-layout__body--no-pad {
-  margin: 0 -28px -28px;
+  margin: 0 -24px -24px;
 }

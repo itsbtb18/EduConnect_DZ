@@ -43,6 +43,10 @@ import { useSearchParams } from 'react-router-dom';
 import dayjs from 'dayjs';
 import 'dayjs/locale/fr';
 import './FinancialPage.css';
+import FeeConfigTab from './FeeConfigTab';
+import SalaryTab from './SalaryTab';
+import ExpensesTab from './ExpensesTab';
+import ReportsTab from './ReportsTab';
 
 dayjs.locale('fr');
 
@@ -828,6 +832,26 @@ const FinancialPage: React.FC = () => {
                 )}
               </>
             ),
+          },
+          {
+            key: 'fee-config',
+            label: <span><SettingOutlined /> Configuration des frais</span>,
+            children: <FeeConfigTab />,
+          },
+          {
+            key: 'salary',
+            label: <span><WalletOutlined /> Salaires</span>,
+            children: <SalaryTab />,
+          },
+          {
+            key: 'expenses',
+            label: <span><BankOutlined /> Dépenses</span>,
+            children: <ExpensesTab />,
+          },
+          {
+            key: 'reports',
+            label: <span><CalendarOutlined /> Rapports</span>,
+            children: <ReportsTab />,
           },
         ]}
       />

@@ -165,10 +165,10 @@ void main() {
         ),
       );
 
-      expect(find.text('Ahmed B'), findsOneWidget);
-      expect(find.text('Fatima B'), findsOneWidget);
+      expect(find.text('Ahmed'), findsOneWidget);
+      expect(find.text('Fatima'), findsOneWidget);
 
-      await tester.tap(find.text('Fatima B'));
+      await tester.tap(find.text('Fatima'));
       expect(selected, '2');
     });
   });

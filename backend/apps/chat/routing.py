@@ -12,6 +12,10 @@ websocket_urlpatterns = [
         consumers.ChatConsumer.as_asgi(),
     ),
     re_path(
+        r"ws/room/(?P<room_id>[0-9a-f-]+)/$",
+        consumers.GroupChatConsumer.as_asgi(),
+    ),
+    re_path(
         r"ws/notifications/$",
         consumers.NotificationConsumer.as_asgi(),
     ),

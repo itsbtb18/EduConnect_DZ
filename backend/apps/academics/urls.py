@@ -2,6 +2,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from . import views
+from .views_card import StudentCardView
 from .views_profiles import (
     ParentFullProfileView,
     StudentFullProfileView,
@@ -30,6 +31,20 @@ router.register("resources", views.ResourceViewSet, basename="resource")
 router.register("students", views.StudentViewSet, basename="student")
 router.register("teachers", views.TeacherViewSet, basename="teacher")
 router.register("timetables", views.TimetableViewSet, basename="timetable")
+# Rooms
+router.register("rooms", views.RoomViewSet, basename="room")
+# Teacher availability
+router.register(
+    "teacher-availability",
+    views.TeacherAvailabilityViewSet,
+    basename="teacher-availability",
+)
+# Time slot configuration
+router.register(
+    "time-slots",
+    views.TimeSlotConfigViewSet,
+    basename="time-slot-config",
+)
 
 # Full-profile detail endpoints
 urlpatterns = [
@@ -59,5 +74,11 @@ urlpatterns = [
         "teachers/<uuid:pk>/qr-code/",
         TeacherQRCodeView.as_view(),
         name="teacher-qr-code",
+    ),
+    # Student ID card endpoint
+    path(
+        "students/<uuid:pk>/card/",
+        StudentCardView.as_view(),
+        name="student-card",
     ),
 ]

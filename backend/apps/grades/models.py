@@ -3,13 +3,14 @@
 ║  Grades — Complete grade management system for Algerian schools (ILMI) ║
 ║                                                                        ║
 ║  Models:                                                               ║
-║    ExamType          Type d'examen par matière/classe/trimestre        ║
-║    Grade             Note d'un élève à un examen                       ║
-║    SubjectAverage    Moyenne matière par trimestre                      ║
-║    TrimesterAverage  Moyenne générale du trimestre + classements       ║
-║    AnnualAverage     Moyenne annuelle                                  ║
-║    GradeAppeal       Recours d'un élève                                ║
-║    ReportCard        Bulletin PDF généré                                ║
+║    ExamType              Type d'examen par matière/classe/trimestre    ║
+║    Grade                 Note d'un élève à un examen                   ║
+║    SubjectAverage        Moyenne matière par trimestre                  ║
+║    TrimesterAverage      Moyenne générale du trimestre + classements   ║
+║    AnnualAverage         Moyenne annuelle                              ║
+║    GradeAppeal           Recours d'un élève                            ║
+║    ReportCardTemplate    Modèle de bulletin personnalisable            ║
+║    ReportCard            Bulletin PDF généré                            ║
 ║                                                                        ║
 ║  Calcul:                                                               ║
 ║    moyenne_matière = Σ(score × percentage) / 100                       ║
@@ -124,7 +125,19 @@ class Grade(models.Model):
     """
     Note d'un élève pour un type d'examen spécifique.
     Si is_absent=True, le score est considéré comme 0 pour le calcul.
+
+    Workflow: DRAFT → SUBMITTED → PUBLISHED / RETURNED
+      - DRAFT: enseignant saisit la note (défaut)
+      - SUBMITTED: enseignant soumet pour révision admin
+      - PUBLISHED: admin approuve → visible aux élèves/parents + notification
+      - RETURNED: admin rejette avec commentaire → renvoyé à l'enseignant
     """
+
+    class Status(models.TextChoices):
+        DRAFT = "DRAFT", "Brouillon"
+        SUBMITTED = "SUBMITTED", "Soumis"
+        PUBLISHED = "PUBLISHED", "Publié"
+        RETURNED = "RETURNED", "Retourné"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
@@ -151,7 +164,16 @@ class Grade(models.Model):
         help_text="Absent = note comptée comme 0",
     )
 
-    # Publication control
+    # ── Workflow status ─────────────────────────────────────────────────
+    status = models.CharField(
+        max_length=12,
+        choices=Status.choices,
+        default=Status.DRAFT,
+        db_index=True,
+        help_text="État du workflow (DRAFT → SUBMITTED → PUBLISHED / RETURNED)",
+    )
+
+    # Publication control (kept for backward compat, now derived from status)
     is_published = models.BooleanField(
         default=False,
         help_text="Publié aux élèves/parents",
@@ -163,6 +185,31 @@ class Grade(models.Model):
         blank=True,
         on_delete=models.SET_NULL,
         related_name="published_grades",
+    )
+
+    # ── Submission tracking ─────────────────────────────────────────────
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    submitted_by = models.ForeignKey(
+        "accounts.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="submitted_grades",
+    )
+
+    # ── Return (rejection) tracking ─────────────────────────────────────
+    returned_at = models.DateTimeField(null=True, blank=True)
+    returned_by = models.ForeignKey(
+        "accounts.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="returned_grades",
+    )
+    admin_comment = models.TextField(
+        blank=True,
+        default="",
+        help_text="Commentaire de l'admin lors du rejet",
     )
 
     # Audit
@@ -666,7 +713,104 @@ class GradeAppeal(models.Model):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 7. REPORT CARD — generated PDF bulletin
+# 7a. REPORT CARD TEMPLATE — customizable per-school bulletin layout
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class ReportCardTemplate(models.Model):
+    """
+    Modèle de bulletin personnalisable par école.
+    Stocke la configuration visuelle (couleurs, logo, texte) et la structure
+    des sections du bulletin en JSONField.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    school = models.ForeignKey(
+        "schools.School",
+        on_delete=models.CASCADE,
+        related_name="report_card_templates",
+    )
+    name = models.CharField(
+        max_length=200,
+        help_text='Nom du modèle (ex: "Bulletin officiel 2024")',
+    )
+    is_default = models.BooleanField(
+        default=False,
+        help_text="Modèle par défaut utilisé pour la génération automatique.",
+    )
+
+    # Visual customization
+    logo_url = models.URLField(max_length=500, blank=True)
+    primary_color = models.CharField(
+        max_length=7,
+        default="#1a5276",
+        help_text="Couleur principale HEX (ex: #1a5276)",
+    )
+    secondary_color = models.CharField(
+        max_length=7,
+        default="#2ecc71",
+        help_text="Couleur secondaire HEX",
+    )
+    header_text = models.TextField(
+        blank=True,
+        help_text="Texte d'en-tête (République Algérienne, etc.)",
+    )
+    footer_text = models.TextField(
+        blank=True,
+        help_text="Texte de pied de page",
+    )
+    show_school_logo = models.BooleanField(default=True)
+    show_student_photo = models.BooleanField(default=True)
+    show_appreciation = models.BooleanField(default=True)
+    show_ranking = models.BooleanField(default=True)
+    show_absence_count = models.BooleanField(default=True)
+
+    # Signatures
+    signatures = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='Liste des signatures: [{"title": "Le Directeur", "name": "M. X"}]',
+    )
+
+    # Section configuration — controls what appears and in what order
+    sections_config = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=(
+            'Configuration des sections: '
+            '[{"key": "grades_table", "label": "Notes", "visible": true, "order": 1}, ...]'
+        ),
+    )
+
+    # Grading display options
+    show_coefficient = models.BooleanField(default=True)
+    show_class_average = models.BooleanField(default=True)
+    show_min_max = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "report_card_templates"
+        ordering = ["-is_default", "-created_at"]
+        verbose_name = "Modèle de bulletin"
+        verbose_name_plural = "Modèles de bulletin"
+
+    def __str__(self):
+        return f"{self.name} — {self.school.name}"
+
+    def save(self, *args, **kwargs):
+        # Ensure only one default template per school
+        if self.is_default:
+            ReportCardTemplate.objects.filter(
+                school=self.school, is_default=True
+            ).exclude(pk=self.pk).update(is_default=False)
+        super().save(*args, **kwargs)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 7b. REPORT CARD — generated PDF bulletin
 # ═══════════════════════════════════════════════════════════════════════════
 
 
@@ -722,6 +866,20 @@ class ReportCard(models.Model):
 
     is_published = models.BooleanField(default=False)
 
+    # Link to template used for generation
+    template = models.ForeignKey(
+        ReportCardTemplate,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="report_cards",
+        help_text="Modèle de bulletin utilisé pour la génération.",
+    )
+
+    # Sent to parents flag
+    sent_to_parents = models.BooleanField(default=False)
+    sent_at = models.DateTimeField(null=True, blank=True)
+
     # Audit
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -753,7 +911,10 @@ class GradeAuditLog(models.Model):
     class Action(models.TextChoices):
         GRADE_ENTERED = "GRADE_ENTERED", "Note saisie"
         GRADE_CORRECTED = "GRADE_CORRECTED", "Note corrigée"
+        GRADE_SUBMITTED = "GRADE_SUBMITTED", "Notes soumises"
         GRADE_PUBLISHED = "GRADE_PUBLISHED", "Notes publiées"
+        GRADE_RETURNED = "GRADE_RETURNED", "Notes retournées"
+        GRADE_CSV_IMPORTED = "GRADE_CSV_IMPORTED", "Notes importées par CSV"
         AVERAGE_CALCULATED = "AVERAGE_CALCULATED", "Moyenne calculée"
         AVERAGE_OVERRIDDEN = "AVERAGE_OVERRIDDEN", "Moyenne modifiée manuellement"
         AVERAGE_PUBLISHED = "AVERAGE_PUBLISHED", "Moyenne publiée"
@@ -821,3 +982,87 @@ class GradeAuditLog(models.Model):
 
     def __str__(self):
         return f"{self.get_action_display()} — {self.performed_by} — {self.created_at:%d/%m/%Y %H:%M}"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 9. TRIMESTER CONFIG — per-school configurable weighting & rounding
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class TrimesterConfig(models.Model):
+    """
+    Configuration par école pour le calcul des moyennes trimestrielles.
+
+    Permet de personnaliser :
+    - La pondération des trimestres pour la moyenne annuelle
+    - La précision des décimales
+    - Le seuil de passage
+
+    Si aucune config n'existe pour l'école, les valeurs par défaut
+    s'appliquent (pondération égale 1/1/1, 2 décimales, seuil 10).
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    school = models.OneToOneField(
+        "schools.School",
+        on_delete=models.CASCADE,
+        related_name="trimester_config",
+    )
+
+    # Trimester weights for annual average (default: equal 1/1/1)
+    weight_t1 = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        default=1,
+        help_text="Pondération du trimestre 1",
+    )
+    weight_t2 = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        default=1,
+        help_text="Pondération du trimestre 2",
+    )
+    weight_t3 = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        default=1,
+        help_text="Pondération du trimestre 3",
+    )
+
+    # Calculation precision
+    decimal_places = models.PositiveSmallIntegerField(
+        default=2,
+        help_text="Nombre de décimales pour les moyennes (1 ou 2)",
+    )
+
+    # Pass threshold
+    pass_threshold = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        default=10,
+        help_text="Seuil de passage (défaut: 10/20)",
+    )
+
+    # Whether coefficient weighting uses LevelSubject.coefficient or custom
+    use_level_subject_coefficients = models.BooleanField(
+        default=True,
+        help_text="Utiliser les coefficients de LevelSubject (défaut: oui)",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "trimester_configs"
+        verbose_name = "Configuration trimestrielle"
+        verbose_name_plural = "Configurations trimestrielles"
+
+    def __str__(self):
+        return f"TrimesterConfig — {self.school.name}"
+
+    def get_weight(self, trimester: int):
+        """Return the weight for a given trimester number (1-3)."""
+        return {1: self.weight_t1, 2: self.weight_t2, 3: self.weight_t3}.get(
+            trimester, 1
+        )

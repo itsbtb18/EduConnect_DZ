@@ -1,0 +1,449 @@
+{
+  "@@locale": "fr",
+
+  "appName": "ILMI",
+  "appTagline": "Algérie",
+
+  "login": "Connexion",
+  "phoneNumber": "Numéro de téléphone",
+  "phoneHint": "0555 12 34 56",
+  "password": "Mot de passe",
+  "passwordHint": "••••••••",
+  "loginButton": "Se connecter",
+  "pinLoginLink": "Connexion par code PIN (élèves)",
+  "errorPhoneRequired": "Veuillez entrer votre numéro",
+  "errorPhoneInvalid": "Numéro de téléphone invalide",
+  "errorPasswordRequired": "Veuillez entrer votre mot de passe",
+  "errorPasswordShort": "Le mot de passe doit contenir au moins 6 caractères",
+
+  "pinLoginTitle": "Connexion Élève",
+  "pinGreeting": "Bonjour ! 👋",
+  "pinInstructions": "Entre le numéro de téléphone de ton parent\net ton code PIN",
+  "pinPhoneHint": "05XX XXX XXX",
+  "pinCountryCode": "+213 ",
+  "pinPhoneError": "Entre le numéro de téléphone",
+  "pinCode": "Code PIN",
+  "pinEnter": "Entrer",
+  "pinBackLink": "← Retour à la connexion classique",
+
+  "securityTitle": "Sécurité",
+  "appLockSection": "Verrouillage de l'application",
+  "dataProtectionSection": "Protection des données",
+  "pinLockOption": "Code PIN",
+  "pinLockDesc": "Protégez l'accès à l'application avec un code PIN",
+  "biometricOption": "Empreinte digitale / Face ID",
+  "biometricDesc": "Déverrouillez rapidement avec la biométrie",
+  "encryptionOption": "Chiffrement des données",
+  "encryptionDesc": "Vos données sensibles sont chiffrées localement",
+  "screenshotProtection": "Protection anti-capture",
+  "screenshotDesc": "Les captures d'écran sont bloquées sur les pages sensibles",
+  "autoLogout": "Déconnexion automatique",
+  "autoLogoutDesc": "L'application se verrouille après 5 minutes d'inactivité",
+  "configurePinTitle": "Configurer le code PIN",
+  "pinInputLabel": "Code PIN (4-6 chiffres)",
+  "pinConfirmLabel": "Confirmer le code PIN",
+  "cancel": "Annuler",
+  "confirm": "Confirmer",
+  "pinMinError": "Minimum 4 chiffres",
+  "pinMismatch": "Les codes ne correspondent pas",
+
+  "studentSpace": "Espace Élève",
+  "parentSpace": "Espace Parent",
+  "teacherSpace": "Espace Enseignant",
+  "trainerSpace": "Espace Formateur",
+  "traineeSpace": "Espace Stagiaire",
+
+  "navHome": "Accueil",
+  "navGrades": "Notes",
+  "navSchedule": "Emploi",
+  "navHomework": "Devoirs",
+  "navAttendance": "Présence",
+  "navHealth": "Santé",
+  "navPayments": "Paiements",
+
+  "menuIdCard": "Carte d'identité",
+  "menuELearning": "E-Learning",
+  "menuLibrary": "Bibliothèque",
+  "menuCanteen": "Cantine",
+  "menuTransport": "Transport",
+  "menuGamification": "Gamification",
+  "menuAIChatbot": "Assistant IA",
+  "menuProfile": "Mon profil",
+  "menuReportCards": "Bulletins",
+  "menuJustifications": "Justifications",
+  "menuPreferences": "Préférences",
+  "menuTextbook": "Cahier de Texte",
+  "menuResources": "Ressources Pédagogiques",
+  "menuPayslips": "Fiches de Paie",
+  "menuCommunication": "Communication",
+  "menuExams": "Examens & Évaluations",
+  "menuAnnouncements": "Annonces",
+
+  "dashboard": "Tableau de bord",
+  "parentDashboard": "Tableau de bord Parent",
+  "trainerDashboard": "Tableau de bord Formateur",
+
+  "todayClasses": "Cours aujourd'hui",
+  "recentGrades": "Dernières notes",
+  "pendingHomework": "Devoirs à rendre",
+  "announcements": "Annonces",
+  "noClassesToday": "Pas de cours aujourd'hui",
+  "noRecentGrades": "Aucune note récente",
+  "noPendingHomework": "Aucun devoir en attente",
+  "noAnnouncements": "Aucune annonce",
+  "subject": "Matière",
+  "today": "Aujourd'hui",
+  "daysShort": " j",
+
+  "myGrades": "Mes Notes",
+  "noGrades": "Aucune note disponible",
+  "retry": "Réessayer",
+  "exam": "Examen",
+  "gradeCount": "{count} note(s)",
+  "@gradeCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "scheduleTitle": "Emploi du Temps",
+  "dayView": "Jour",
+  "weekView": "Semaine",
+  "noClassesDay": "Pas de cours ce jour",
+
+  "myHomework": "Mes Devoirs",
+  "pendingTab": "À faire ({count})",
+  "@pendingTab": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "submittedTab": "Soumis ({count})",
+  "@submittedTab": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "overdueTab": "En retard ({count})",
+  "@overdueTab": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "noPendingHW": "Aucun devoir à faire",
+  "noSubmittedHW": "Aucun devoir soumis",
+  "noOverdueHW": "Aucun devoir en retard",
+  "overdue": "En retard",
+
+  "idCardTitle": "Carte d'identité",
+  "idCardUserError": "Impossible de récupérer l'identifiant utilisateur.",
+  "idCardLoadError": "Erreur lors du chargement de la carte: {error}",
+  "@idCardLoadError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+
+  "canteenTitle": "Cantine 🍽️",
+  "noMenuPublished": "Aucun menu publié",
+  "noDetailsAvailable": "Pas de détails disponibles",
+
+  "transportTitle": "Transport 🚌",
+  "noTransportAssigned": "Aucun transport assigné",
+  "contactAdmin": "Contactez l'administration pour plus d'informations.",
+  "line": "Ligne",
+  "vehicle": "Véhicule",
+  "driver": "Chauffeur",
+  "neighborhood": "Quartier:",
+  "departure": "Départ",
+  "returnTime": "Retour",
+  "vehicleModel": "Modèle",
+  "licensePlate": "Plaque",
+  "vehicleColor": "Couleur",
+
+  "libraryTitle": "Bibliothèque",
+  "searchBookHint": "Rechercher un livre…",
+  "categoryAll": "Tous",
+  "categoryFiction": "Fiction",
+  "categoryNonFiction": "Non-fiction",
+  "categorySciences": "Sciences",
+  "categoryMath": "Mathématiques",
+  "categoryHistory": "Histoire",
+  "categoryGeography": "Géographie",
+  "categoryLiterature": "Littérature",
+  "categoryReligion": "Religion",
+  "categoryArts": "Arts",
+  "categoryTechnology": "Technologie",
+  "categoryReference": "Référence",
+  "categoryPhilosophy": "Philosophie",
+  "categoryLanguages": "Langues",
+  "categorySports": "Sports",
+  "categoryOther": "Autre",
+  "noBooksFound": "Aucun livre trouvé",
+
+  "myBorrows": "Mes emprunts",
+  "loansTab": "Emprunts",
+  "reservationsTab": "Réservations",
+  "noActiveLoans": "Aucun emprunt en cours",
+  "noReservations": "Aucune réservation",
+  "statusActive": "Actif",
+  "statusOverdue": "En retard",
+  "statusReturned": "Retourné",
+
+  "myQuizzes": "Mes Quiz",
+  "noQuizzes": "Aucun quiz disponible",
+  "quizClosed": "Fermé",
+
+  "resourcesTitle": "Ressources pédagogiques",
+  "searchResourceHint": "Rechercher une ressource...",
+  "subjectAll": "Tous",
+  "subjectMath": "Mathématiques",
+  "subjectPhysics": "Physique",
+  "subjectNaturalSciences": "Sciences Naturelles",
+  "subjectArabic": "Langue Arabe",
+  "subjectFrench": "Langue Française",
+  "subjectEnglish": "Anglais",
+  "subjectCS": "Informatique",
+  "noResourcesFound": "Aucune ressource trouvée",
+
+  "examBankTitle": "Banque d'examens",
+  "examAll": "Tout",
+  "examBEP": "BEP",
+  "examBEM": "BEM",
+  "examBAC": "BAC",
+  "examExercise": "Exercice",
+  "examDevoir": "Devoir",
+  "examBlanc": "Examen blanc",
+  "noExamsFound": "Aucun examen trouvé",
+
+  "rewardsTitle": "Mes Récompenses ⭐",
+  "myBadges": "Mes Badges",
+  "weeklyChallenges": "Défis de la Semaine",
+  "leaderboard": "Classement",
+  "noChallengesThisWeek": "Pas de défi cette semaine",
+  "leaderboardUnavailable": "Classement non disponible",
+  "congratulations": "Félicitations ! 🎉",
+  "badgeEarned": "Tu as gagné le badge\n\"{badgeName}\"",
+  "@badgeEarned": {
+    "placeholders": {
+      "badgeName": { "type": "String" }
+    }
+  },
+
+  "badgesTitle": "Mes Badges 🏅",
+  "earnedBadges": "Badges gagnés ({count})",
+  "@earnedBadges": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "lockedBadges": "Badges à débloquer ({count})",
+  "@lockedBadges": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "noBadgesAvailable": "Aucun badge disponible pour le moment",
+
+  "leaderboardTitle": "Classement 🏆",
+  "pointsUnit": " pts",
+
+  "challengesTitle": "Défis 🎯",
+  "comeBackSoon": "Reviens bientôt !",
+
+  "childGradesTitle": "Notes de mon enfant",
+  "columnSubject": "Matière",
+  "columnType": "Type",
+  "columnGrade": "Note",
+  "columnAvg": "Moy",
+  "overallAverage": "Moyenne Générale: {value} / 20",
+  "@overallAverage": {
+    "placeholders": {
+      "value": { "type": "String" }
+    }
+  },
+
+  "childAttendanceTitle": "Présences de mon enfant",
+  "monthJan": "Janvier",
+  "monthFeb": "Février",
+  "monthMar": "Mars",
+  "monthApr": "Avril",
+  "monthMay": "Mai",
+  "monthJun": "Juin",
+  "monthJul": "Juillet",
+  "monthAug": "Août",
+  "monthSep": "Septembre",
+  "monthOct": "Octobre",
+  "monthNov": "Novembre",
+  "monthDec": "Décembre",
+  "attendancePresent": "Présences",
+  "attendanceAbsent": "Absences",
+  "attendanceLate": "Retards",
+  "attendanceRate": "Taux",
+  "statusPresent": "Présent",
+  "statusAbsent": "Absent",
+  "statusLate": "Retard",
+  "statusNA": "N/A",
+
+  "canteenParentTitle": "Cantine",
+  "periodWeek": "Semaine",
+  "periodMonth": "Mois",
+  "periodTrimester": "Trimestre",
+  "mealStarter": "🥗 Entrée",
+  "mealMain": "🍖 Plat principal",
+  "mealSide": "🥕 Accompagnement",
+  "mealDessert": "🍰 Dessert",
+  "allergenLabel": "Allergènes : {list}",
+  "@allergenLabel": {
+    "placeholders": {
+      "list": { "type": "String" }
+    }
+  },
+  "diabeticLabel": "Diabétique ✓",
+  "celiacLabel": "Cœliaque ✓",
+
+  "schoolTransportTitle": "Transport scolaire",
+  "busEnRoute": "Bus en route — {lineName}",
+  "@busEnRoute": {
+    "placeholders": {
+      "lineName": { "type": "String" }
+    }
+  },
+  "speed": "Vitesse : {value} km/h",
+  "@speed": {
+    "placeholders": {
+      "value": { "type": "String" }
+    }
+  },
+  "noTransportInfo": "Aucune info transport disponible",
+  "callDriver": "Appeler",
+
+  "financeTitle": "Finances & Paiements",
+  "financeSummary": "Résumé financier",
+  "totalFees": "Total frais",
+  "paid": "Payé",
+  "remaining": "Restant",
+  "rate": "Taux",
+  "currencyDA": " DA",
+
+  "absenceJustTitle": "Justification d'absences",
+  "submitTab": "Soumettre",
+  "trackingTab": "Suivi",
+  "noAbsenceToJustify": "Aucune absence à justifier",
+  "noJustificationSubmitted": "Aucune justification soumise",
+  "statusApproved": "Approuvée",
+  "statusRejected": "Rejetée",
+  "statusPending": "En attente",
+  "justify": "Justifier",
+
+  "preferencesTitle": "Préférences",
+  "notificationsSection": "Notifications",
+  "silentModeSection": "Mode silencieux",
+  "languageSection": "Langue",
+  "appearanceSection": "Apparence",
+  "notifGrades": "Notes & Bulletins",
+  "notifAttendance": "Présence & Absences",
+  "notifHomework": "Devoirs",
+  "notifCanteen": "Cantine",
+  "notifTransport": "Transport",
+  "notifAnnouncements": "Annonces",
+  "notifFinance": "Finance",
+  "enableSilentMode": "Activer le mode silencieux",
+  "silentModeDesc": "Pas de notifications pendant la plage horaire",
+  "silentStart": "Début",
+  "silentEnd": "Fin",
+  "languageFr": "Français",
+  "languageAr": "العربية",
+  "darkMode": "Mode sombre",
+  "darkModeDesc": "Adapter l'affichage pour la nuit",
+
+  "teacherAppTitle": "ILMI — Enseignant",
+  "attendanceMarkingTitle": "Appel — Présences",
+  "validate": "Valider",
+  "classLabel": "Classe",
+  "selectClass": "Sélectionnez une classe",
+  "noStudentsFound": "Aucun élève trouvé",
+  "attendanceSaved": "Appel enregistré avec succès",
+  "errorMessage": "Erreur: {message}",
+  "@errorMessage": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+
+  "gradeEntryTitle": "Saisie des notes",
+  "save": "Enregistrer",
+  "subjectLabel": "Matière",
+  "examTypeLabel": "Type d'examen",
+  "gradeEntryHint": "Sélectionnez une classe, une matière et un type d'examen",
+
+  "hwManagementTitle": "Devoirs & Exercises",
+  "myHomeworkTab": "Mes devoirs",
+  "submissionsTab": "Soumissions",
+  "statsTab": "Stats",
+  "calendarTab": "Calendrier",
+  "newHomework": "Nouveau devoir",
+  "noHomework": "Aucun devoir",
+
+  "profileTitle": "Mon Profil",
+  "email": "E-mail",
+  "phone": "Téléphone",
+  "school": "École",
+  "language": "Langue",
+  "changePassword": "Changer le mot de passe",
+  "about": "À propos",
+  "logout": "Déconnexion",
+  "changePasswordSoon": "Changement de mot de passe à venir",
+
+  "messagesTitle": "Messages",
+  "noConversations": "Aucune conversation",
+  "noLastMessage": "Pas de message",
+  "conversationTitle": "Conversation",
+  "noMessages": "Aucun message",
+
+  "announcementsTitle": "Annonces",
+  "noAnnouncementsYet": "Aucune annonce pour le moment",
+
+  "notificationsTitle": "Notifications",
+  "markAllRead": "Tout marquer lu",
+  "noNotificationsYet": "Aucune notification pour le moment",
+
+  "edubot": "EduBot",
+  "newConversation": "Nouvelle conversation",
+  "edubotThinking": "EduBot réfléchit...",
+
+  "daySunday": "Dimanche",
+  "dayMonday": "Lundi",
+  "dayTuesday": "Mardi",
+  "dayWednesday": "Mercredi",
+  "dayThursday": "Jeudi",
+
+  "trainerGroups": "Mes groupes",
+  "trainerSessions": "Séances",
+  "trainerMessages": "Messages",
+  "unmarkedSessions": "{count} séance(s) non marquée(s)",
+  "@unmarkedSessions": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "attendanceToRecord": "Présence à enregistrer",
+  "todaySessions": "Séances du jour",
+  "myGroups": "Mes groupes",
+
+  "traineeTrainings": "Formations",
+  "traineeAttendance": "Présence",
+  "traineePayments": "Paiements",
+  "nextSession": "Prochaine séance",
+  "myTrainings": "Mes formations",
+  "pendingPayments": "{count} paiement(s) en attente",
+  "@pendingPayments": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "infirmaryTitle": "Messages infirmerie",
+
+  "medicalSummary": "Résumé médical"
+}

@@ -34,6 +34,18 @@ api_v1_patterns = [
     path("finance/", include("apps.finance.urls")),
     path("notifications/", include("apps.notifications.urls")),
     path("ai/", include("apps.ai_chatbot.urls")),
+    path("canteen/", include("apps.canteen.urls")),
+    path("transport/", include("apps.transport.urls")),
+    path("library/", include("apps.library.urls")),
+    path("extracurricular/", include("apps.extracurricular.urls")),
+    path("discipline/", include("apps.discipline.urls")),
+    path("fingerprint/", include("apps.fingerprint.urls")),
+    path("infirmerie/", include("apps.infirmerie.urls")),
+    path("elearning/", include("apps.elearning.urls")),
+    path("sms/", include("apps.sms.urls")),
+    path("staff/", include("apps.staff.urls")),
+    path("gamification/", include("apps.gamification.urls")),
+    path("formation/", include("apps.formation.urls")),
 ]
 
 urlpatterns = [

@@ -29,6 +29,15 @@
   align-items: center;
 }
 
+/* Urgent row styling */
+.announcements__row--urgent {
+  background: #FEF2F2 !important;
+  border-left: 3px solid #EF4444;
+}
+.announcements__row--urgent:hover td {
+  background: #FEE2E2 !important;
+}
+
 @media (max-width: 768px) {
   .announcements__stats {
     grid-template-columns: repeat(2, 1fr);

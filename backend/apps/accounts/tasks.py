@@ -9,6 +9,7 @@ import string
 from datetime import datetime
 
 from celery import shared_task
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -25,14 +26,17 @@ def _generate_temp_password(length: int = 10) -> str:
 
 
 # ---------------------------------------------------------------------------
-# 1. bulk_import_students
+# 1. bulk_import_students  (uses BulkImportJob for progress)
 # ---------------------------------------------------------------------------
 
 
 @shared_task(bind=True, max_retries=2, default_retry_delay=60)
-def bulk_import_students(self, file_path: str, school_id: str, admin_user_id: str):
+def bulk_import_students(self, job_id: str):
     """
     Process bulk student import from an uploaded Excel file (.xlsx).
+
+    Reads the file path, school and admin user from BulkImportJob.
+    Updates the job row-by-row so the admin can poll progress.
 
     Expected column order (row 1 = header, data starts row 2):
         0: student_first_name
@@ -43,47 +47,61 @@ def bulk_import_students(self, file_path: str, school_id: str, admin_user_id: st
         5: parent_phone         (unique identifier for parent)
         6: parent_first_name
         7: parent_last_name
-        8: second_parent_phone  (optional)
-
-    Behaviour:
-    - Each row is wrapped in its own ``transaction.atomic()`` — a bad row
-      does NOT roll back previous rows.
-    - If a parent phone already exists → the existing ParentProfile is
-      linked to the new student (``linked_count`` incremented).
-    - Otherwise a new User (PARENT) + ParentProfile is created.
-    - Temporary passwords are generated for every *new* user.
-    - An SMS notification is queued for the parent with credentials.
-    - On completion a Notification is created for the admin summarising
-      the import result (created / linked / errors).
+        8: parent_relationship  (FATHER / MOTHER / GUARDIAN, optional)
+        9: second_parent_phone  (optional)
+        10: second_parent_first_name (optional)
+        11: second_parent_last_name  (optional)
+        12: second_parent_relationship (optional)
 
     Returns:
         dict with created_count, linked_count, error_rows.
     """
     from django.db import transaction
 
-    from apps.accounts.models import User
+    from apps.accounts.models import BulkImportJob, User
+    from apps.accounts.services import StudentParentCreationService
     from apps.academics.models import Class, StudentProfile
     from apps.schools.models import AcademicYear, School, Section
+
+    # ------------------------------------------------------------------
+    # Load BulkImportJob
+    # ------------------------------------------------------------------
+    try:
+        job = BulkImportJob.objects.get(pk=job_id)
+    except BulkImportJob.DoesNotExist:
+        logger.error("BulkImportJob %s not found", job_id)
+        return {"error": "Job not found"}
+
+    job.status = BulkImportJob.Status.PROCESSING
+    job.celery_task_id = self.request.id or ""
+    job.save(update_fields=["status", "celery_task_id"])
+
+    school = job.school
+    admin_user = job.uploaded_by
+    file_path = job.file.path
 
     # ------------------------------------------------------------------
     # Counters
     # ------------------------------------------------------------------
     created_count = 0
     linked_count = 0
-    error_rows: list[dict] = []  # [{row_number, reason}]
+    error_rows: list[dict] = []
 
     try:
         import openpyxl
 
-        school = School.objects.get(pk=school_id)
-        admin_user = User.objects.get(pk=admin_user_id)
+        svc = StudentParentCreationService(school=school, created_by=admin_user)
 
         wb = openpyxl.load_workbook(file_path, read_only=True, data_only=True)
         ws = wb.active
 
-        for row_num, row in enumerate(
-            ws.iter_rows(min_row=2, values_only=True), start=2
-        ):
+        # Count total data rows first (for progress bar)
+        all_rows = list(ws.iter_rows(min_row=2, values_only=True))
+        total_rows = len(all_rows)
+        job.total_rows = total_rows
+        job.save(update_fields=["total_rows"])
+
+        for row_num, row in enumerate(all_rows, start=2):
             try:
                 # ----------------------------------------------------------
                 # 1. Parse & validate row
@@ -92,9 +110,10 @@ def bulk_import_students(self, file_path: str, school_id: str, admin_user_id: st
                     error_rows.append(
                         {
                             "row_number": row_num,
-                            "reason": "Row too short (need ≥ 8 columns)",
+                            "reason": "Row too short (need >= 8 columns)",
                         }
                     )
+                    _update_job_progress(job, created_count, linked_count, error_rows)
                     continue
 
                 student_first = str(row[0] or "").strip()
@@ -105,19 +124,33 @@ def bulk_import_students(self, file_path: str, school_id: str, admin_user_id: st
                 parent_phone = str(row[5] or "").strip()
                 parent_first = str(row[6] or "").strip()
                 parent_last = str(row[7] or "").strip()
+                parent_relationship = (
+                    str(row[8]).strip().upper() if len(row) > 8 and row[8] else ""
+                )
                 second_parent_phone = (
-                    str(row[8]).strip() if len(row) > 8 and row[8] else ""
+                    str(row[9]).strip() if len(row) > 9 and row[9] else ""
+                )
+                second_parent_first = (
+                    str(row[10]).strip() if len(row) > 10 and row[10] else ""
+                )
+                second_parent_last = (
+                    str(row[11]).strip() if len(row) > 11 and row[11] else ""
+                )
+                second_parent_relationship = (
+                    str(row[12]).strip().upper() if len(row) > 12 and row[12] else ""
                 )
 
                 if not student_first or not student_last:
                     error_rows.append(
                         {"row_number": row_num, "reason": "Missing student name"}
                     )
+                    _update_job_progress(job, created_count, linked_count, error_rows)
                     continue
                 if not class_name:
                     error_rows.append(
                         {"row_number": row_num, "reason": "Missing class_name"}
                     )
+                    _update_job_progress(job, created_count, linked_count, error_rows)
                     continue
                 if not section_type or section_type not in (
                     "PRIMARY",
@@ -130,11 +163,13 @@ def bulk_import_students(self, file_path: str, school_id: str, admin_user_id: st
                             "reason": f"Invalid section_type: {section_type}",
                         }
                     )
+                    _update_job_progress(job, created_count, linked_count, error_rows)
                     continue
                 if not parent_phone:
                     error_rows.append(
                         {"row_number": row_num, "reason": "Missing parent_phone"}
                     )
+                    _update_job_progress(job, created_count, linked_count, error_rows)
                     continue
 
                 # Parse date_of_birth
@@ -169,82 +204,88 @@ def bulk_import_students(self, file_path: str, school_id: str, admin_user_id: st
                 )
 
                 # ----------------------------------------------------------
-                # 3. Create student (atomic per row)
+                # 3. Create student + parents via service (atomic)
                 # ----------------------------------------------------------
-                with transaction.atomic():
-                    # --- 3a. Student User ---
-                    student_phone = _generate_student_phone(
-                        student_first, student_last, row_num, school_id
+                result = svc.create_student_with_parents(
+                    first_name=student_first,
+                    last_name=student_last,
+                    current_class=class_obj,
+                    date_of_birth=date_of_birth,
+                    parent_phone=parent_phone,
+                    parent_first_name=parent_first,
+                    parent_last_name=parent_last,
+                    parent_relationship=parent_relationship,
+                    second_parent_phone=second_parent_phone,
+                    second_parent_first_name=second_parent_first,
+                    second_parent_last_name=second_parent_last,
+                    second_parent_relationship=second_parent_relationship,
+                )
+
+                if not result.ok:
+                    error_rows.append(
+                        {
+                            "row_number": row_num,
+                            "reason": "; ".join(result.errors),
+                        }
                     )
-                    student_password = _generate_temp_password()
-
-                    student_user = User.objects.create_user(
-                        phone_number=student_phone,
-                        password=student_password,
-                        first_name=student_first,
-                        last_name=student_last,
-                        role=User.Role.STUDENT,
-                        school=school,
-                        is_first_login=True,
-                        created_by=admin_user,
-                    )
-
-                    # --- 3b. StudentProfile ---
-                    student_profile = StudentProfile.objects.create(
-                        user=student_user,
-                        current_class=class_obj,
-                        date_of_birth=date_of_birth,
-                        created_by=admin_user,
-                    )
-
-                    # --- 3c. Primary parent ---
-                    _was_linked = _link_or_create_parent(
-                        parent_phone=parent_phone,
-                        parent_first=parent_first,
-                        parent_last=parent_last,
-                        student_profile=student_profile,
-                        school=school,
-                        admin_user=admin_user,
-                    )
-                    if _was_linked:
-                        linked_count += 1
-
-                    # --- 3d. Second parent (optional) ---
-                    if second_parent_phone:
-                        _link_or_create_parent(
-                            parent_phone=second_parent_phone,
-                            parent_first="",
-                            parent_last="",
-                            student_profile=student_profile,
-                            school=school,
-                            admin_user=admin_user,
-                        )
-
+                else:
                     created_count += 1
+                    # Count linked parents (existing phone deduplicated)
+                    for pr in result.parent_results:
+                        if pr.was_existing:
+                            linked_count += 1
+                    # Queue welcome SMS to parent(s)
+                    for pr in result.parent_results:
+                        if not pr.was_existing and pr.temp_password:
+                            send_welcome_sms.delay(
+                                phone=pr.user.phone_number,
+                                student_name=f"{student_first} {student_last}",
+                                temp_password=pr.temp_password,
+                            )
 
-                    # --- 3e. Queue SMS to parent ---
-                    send_welcome_sms.delay(
-                        phone=parent_phone,
-                        student_name=f"{student_first} {student_last}",
-                        temp_password=student_password,
-                    )
+                _update_job_progress(job, created_count, linked_count, error_rows)
 
             except Exception as exc:
                 error_rows.append({"row_number": row_num, "reason": str(exc)})
                 logger.warning("Row %d import error: %s", row_num, exc)
+                _update_job_progress(job, created_count, linked_count, error_rows)
 
         wb.close()
 
     except Exception as exc:
         logger.exception("Bulk import — fatal error")
+        job.status = BulkImportJob.Status.FAILED
+        job.error_rows = [{"row_number": 0, "reason": f"Fatal: {exc}"}]
+        job.completed_at = timezone.now()
+        job.save(update_fields=["status", "error_rows", "completed_at"])
         raise self.retry(exc=exc)
+
+    # ------------------------------------------------------------------
+    # Mark job as completed
+    # ------------------------------------------------------------------
+    job.status = BulkImportJob.Status.COMPLETED
+    job.created_count = created_count
+    job.linked_count = linked_count
+    job.error_count = len(error_rows)
+    job.error_rows = error_rows
+    job.completed_at = timezone.now()
+    job.save(
+        update_fields=[
+            "status",
+            "created_count",
+            "linked_count",
+            "error_count",
+            "error_rows",
+            "completed_at",
+        ]
+    )
 
     # ------------------------------------------------------------------
     # Summary notification for the admin
     # ------------------------------------------------------------------
     _send_admin_summary(
-        admin_user_id=admin_user_id,
-        school_id=school_id,
+        admin_user_id=str(admin_user.pk) if admin_user else "",
+        school_id=str(school.pk),
         created_count=created_count,
         linked_count=linked_count,
         error_rows=error_rows,
@@ -252,16 +293,33 @@ def bulk_import_students(self, file_path: str, school_id: str, admin_user_id: st
 
     logger.info(
         "Bulk import done — school=%s  created=%d  linked=%d  errors=%d",
-        school_id,
+        school.pk,
         created_count,
         linked_count,
         len(error_rows),
     )
     return {
+        "job_id": str(job.pk),
         "created_count": created_count,
         "linked_count": linked_count,
-        "error_rows": error_rows,
+        "error_count": len(error_rows),
     }
+
+
+def _update_job_progress(job, created_count, linked_count, error_rows):
+    """Increment processed_rows and persist counters (called per row)."""
+    job.processed_rows += 1
+    job.created_count = created_count
+    job.linked_count = linked_count
+    job.error_count = len(error_rows)
+    job.save(
+        update_fields=[
+            "processed_rows",
+            "created_count",
+            "linked_count",
+            "error_count",
+        ]
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -297,75 +355,9 @@ def send_welcome_sms(
 # ---------------------------------------------------------------------------
 
 
-def _generate_student_phone(first: str, last: str, row: int, school_id: str) -> str:
-    """
-    Build a unique placeholder phone for a student who typically has no
-    real phone.  Format: ``STU-<first 4 of school_id>-<row>-<random>``.
-    """
-    suffix = secrets.token_hex(3)
-    return f"STU-{str(school_id)[:8]}-{row}-{suffix}"
-
-
-def _link_or_create_parent(
-    *,
-    parent_phone,
-    parent_first,
-    parent_last,
-    student_profile,
-    school,
-    admin_user,
-) -> bool:
-    """
-    If a User with ``parent_phone`` already exists → link their
-    ParentProfile to ``student_profile`` and return ``True`` (linked).
-    Otherwise create a new PARENT User + ParentProfile and return
-    ``False`` (created).
-    """
-    from apps.accounts.models import User
-    from apps.academics.models import ParentProfile
-
-    existing_user = User.objects.filter(
-        phone_number=parent_phone,
-        role=User.Role.PARENT,
-    ).first()
-
-    if existing_user:
-        # Parent already exists — just link the child
-        try:
-            profile = existing_user.parent_profile
-        except ParentProfile.DoesNotExist:
-            profile = ParentProfile.objects.create(
-                user=existing_user,
-                created_by=admin_user,
-            )
-        profile.children.add(student_profile)
-        return True
-
-    # Create brand-new parent
-    parent_password = _generate_temp_password()
-    parent_user = User.objects.create_user(
-        phone_number=parent_phone,
-        password=parent_password,
-        first_name=parent_first or "Parent",
-        last_name=parent_last or student_profile.user.last_name,
-        role=User.Role.PARENT,
-        school=school,
-        is_first_login=True,
-        created_by=admin_user,
-    )
-    parent_profile = ParentProfile.objects.create(
-        user=parent_user,
-        created_by=admin_user,
-    )
-    parent_profile.children.add(student_profile)
-
-    # Queue SMS with parent's own credentials
-    send_welcome_sms.delay(
-        phone=parent_phone,
-        student_name=student_profile.user.full_name,
-        temp_password=parent_password,
-    )
-    return False
+# ---------------------------------------------------------------------------
+# Private helpers
+# ---------------------------------------------------------------------------
 
 
 def _send_admin_summary(
@@ -402,3 +394,110 @@ def _send_admin_summary(
         body=body,
         notification_type="EVENT",
     )
+
+
+# ---------------------------------------------------------------------------
+# Security tasks
+# ---------------------------------------------------------------------------
+
+
+@shared_task
+def check_dormant_accounts():
+    """
+    Suspend accounts inactive for 6 months.
+    Send a warning notification 7 days before suspension.
+    """
+    from datetime import timedelta
+
+    from apps.accounts.models import User
+    from apps.accounts.security import log_audit
+
+    now = timezone.now()
+    six_months_ago = now - timedelta(days=180)
+    warning_threshold = now - timedelta(days=173)  # 180 - 7
+
+    # 1. Suspend dormant accounts (no login for 6 months)
+    dormant_users = User.objects.filter(
+        is_active=True,
+        last_login__lt=six_months_ago,
+    ).exclude(role="SUPER_ADMIN")
+
+    suspended_count = 0
+    for user in dormant_users:
+        user.is_active = False
+        user.save(update_fields=["is_active"])
+        suspended_count += 1
+        log_audit(
+            user=user,
+            action="ACCOUNT_SUSPENDED",
+            metadata={"reason": "dormant_6_months", "last_login": str(user.last_login)},
+        )
+
+    # 2. Warn users approaching dormancy (7 days before)
+    warning_users = User.objects.filter(
+        is_active=True,
+        last_login__lt=warning_threshold,
+        last_login__gte=six_months_ago,
+    ).exclude(role="SUPER_ADMIN")
+
+    for user in warning_users:
+        try:
+            from apps.notifications.tasks import send_notification
+
+            send_notification.delay(
+                user_id=str(user.pk),
+                title="Compte bientôt suspendu",
+                body="Votre compte sera suspendu pour inactivité dans 7 jours. Connectez-vous pour éviter la suspension.",
+                notification_type="ALERT",
+            )
+        except Exception:
+            pass
+
+    logger.info(
+        "Dormant accounts check: suspended=%d, warned=%d",
+        suspended_count,
+        warning_users.count(),
+    )
+
+
+@shared_task
+def cleanup_expired_sessions():
+    """Remove expired and revoked sessions from the database."""
+    from apps.accounts.models_security import ActiveSession
+
+    now = timezone.now()
+    deleted, _ = ActiveSession.objects.filter(
+        models_Q(is_revoked=True) | models_Q(expires_at__lt=now)
+    ).delete()
+
+    logger.info("Cleaned up %d expired/revoked sessions", deleted)
+
+
+@shared_task
+def cleanup_expired_otps():
+    """Remove expired and used OTP records."""
+    from apps.accounts.models_security import OTPVerification
+
+    now = timezone.now()
+    deleted, _ = OTPVerification.objects.filter(
+        models_Q(is_used=True) | models_Q(expires_at__lt=now)
+    ).delete()
+
+    logger.info("Cleaned up %d expired/used OTPs", deleted)
+
+
+@shared_task
+def cleanup_old_login_attempts():
+    """Remove login attempt records older than 90 days."""
+    from apps.accounts.models_security import LoginAttempt
+
+    cutoff = timezone.now() - timezone.timedelta(days=90)
+    deleted, _ = LoginAttempt.objects.filter(timestamp__lt=cutoff).delete()
+    logger.info("Cleaned up %d old login attempt records", deleted)
+
+
+def models_Q(**kwargs):
+    """Helper to import Q without top-level import."""
+    from django.db.models import Q
+
+    return Q(**kwargs)

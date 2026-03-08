@@ -186,7 +186,7 @@ export function printStudentProfile(opts: PrintProfileOptions): void {
         <tr><td>Téléphone</td><td>${identity.phone_number ?? '—'}</td></tr>
         <tr><td>Email</td><td>${identity.email ?? '—'}</td></tr>
         <tr><td>Inscrit le</td><td>${fmtDate(identity.enrollment_date)}</td></tr>
-        <tr><td>Statut</td><td>${identity.is_active ? '✅ Actif' : '❌ Inactif'}</td></tr>
+        <tr><td>Statut</td><td>${identity.is_active ? 'Actif' : 'Inactif'}</td></tr>
       </table>
     </div>
 

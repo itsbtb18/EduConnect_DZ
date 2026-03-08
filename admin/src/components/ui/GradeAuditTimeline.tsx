@@ -65,17 +65,17 @@ const ACTION_COLORS: Record<string, { dot: string; tag: string }> = {
 };
 
 const ACTION_EMOJI: Record<string, string> = {
-  GRADE_ENTERED: '🟢',
-  GRADE_CORRECTED: '🟡',
-  GRADE_PUBLISHED: '🔵',
-  AVERAGE_CALCULATED: '🔵',
-  AVERAGE_OVERRIDDEN: '🟠',
-  AVERAGE_PUBLISHED: '🔵',
-  TRIMESTER_LOCKED: '🟣',
-  TRIMESTER_UNLOCKED: '🟣',
-  APPEAL_CREATED: '🟡',
-  APPEAL_ACCEPTED: '🟢',
-  APPEAL_REJECTED: '🔴',
+  GRADE_ENTERED: '',
+  GRADE_CORRECTED: '',
+  GRADE_PUBLISHED: '',
+  AVERAGE_CALCULATED: '',
+  AVERAGE_OVERRIDDEN: '',
+  AVERAGE_PUBLISHED: '',
+  TRIMESTER_LOCKED: '',
+  TRIMESTER_UNLOCKED: '',
+  APPEAL_CREATED: '',
+  APPEAL_ACCEPTED: '',
+  APPEAL_REJECTED: '',
 };
 
 const formatDate = (iso: string) => {
@@ -117,7 +117,7 @@ const GradeAuditTimeline: React.FC<GradeAuditTimelineProps> = ({
   );
 
   const title = [
-    '📋 Historique',
+    'Historique',
     studentName && `— ${studentName}`,
     subjectName && `— ${subjectName}`,
     trimesterFilter && `T${trimesterFilter}`,
@@ -168,17 +168,17 @@ const GradeAuditTimeline: React.FC<GradeAuditTimelineProps> = ({
           onChange={(v) => setActionFilter(v ?? null)}
           style={{ flex: 1 }}
           options={[
-            { value: 'GRADE_ENTERED', label: '🟢 Note saisie' },
-            { value: 'GRADE_CORRECTED', label: '🟡 Note corrigée' },
-            { value: 'GRADE_PUBLISHED', label: '🔵 Notes publiées' },
-            { value: 'AVERAGE_CALCULATED', label: '🔵 Moyenne calculée' },
-            { value: 'AVERAGE_OVERRIDDEN', label: '🟠 Moyenne modifiée' },
-            { value: 'AVERAGE_PUBLISHED', label: '🔵 Moyenne publiée' },
-            { value: 'TRIMESTER_LOCKED', label: '🟣 Verrouillé' },
-            { value: 'TRIMESTER_UNLOCKED', label: '🟣 Déverrouillé' },
-            { value: 'APPEAL_CREATED', label: '🟡 Recours créé' },
-            { value: 'APPEAL_ACCEPTED', label: '🟢 Recours accepté' },
-            { value: 'APPEAL_REJECTED', label: '🔴 Recours rejeté' },
+            { value: 'GRADE_ENTERED', label: 'Note saisie' },
+            { value: 'GRADE_CORRECTED', label: 'Note corrigée' },
+            { value: 'GRADE_PUBLISHED', label: 'Notes publiées' },
+            { value: 'AVERAGE_CALCULATED', label: 'Moyenne calculée' },
+            { value: 'AVERAGE_OVERRIDDEN', label: 'Moyenne modifiée' },
+            { value: 'AVERAGE_PUBLISHED', label: 'Moyenne publiée' },
+            { value: 'TRIMESTER_LOCKED', label: 'Verrouillé' },
+            { value: 'TRIMESTER_UNLOCKED', label: 'Déverrouillé' },
+            { value: 'APPEAL_CREATED', label: 'Recours créé' },
+            { value: 'APPEAL_ACCEPTED', label: 'Recours accepté' },
+            { value: 'APPEAL_REJECTED', label: 'Recours rejeté' },
           ]}
         />
       </div>
@@ -199,7 +199,7 @@ const GradeAuditTimeline: React.FC<GradeAuditTimelineProps> = ({
         <div className="audit-timeline">
           {(entries as AuditEntry[]).map((entry) => {
             const colors = ACTION_COLORS[entry.action] || { dot: '', tag: 'default' };
-            const emoji = ACTION_EMOJI[entry.action] || '⚪';
+            const emoji = ACTION_EMOJI[entry.action] || '';
 
             return (
               <div className="audit-item" key={entry.id}>

@@ -1,4 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../../../core/di/injection.dart';
+import '../../../student/data/models/academic_model.dart';
+import '../../../student/data/repositories/academic_repository.dart';
+import '../../../shared/data/models/communication_model.dart';
+
+import '../bloc/teacher_bloc.dart';
 
 /// Teacher screen for marking daily attendance for a classroom.
 class AttendanceMarkingScreen extends StatefulWidget {
@@ -10,28 +18,43 @@ class AttendanceMarkingScreen extends StatefulWidget {
 }
 
 class _AttendanceMarkingScreenState extends State<AttendanceMarkingScreen> {
-  String? _selectedClassroom;
+  String? _selectedClassroomId;
   DateTime _selectedDate = DateTime.now();
-  final Map<String, String> _attendanceStatus = {}; // studentId → status
+  final Map<String, String> _attendanceStatus = {};
 
-  // Placeholder data — replace with BLoC/repository
-  final _classrooms = ['1AM - A', '1AM - B', '2AM - A', '2AM - B'];
-  final _students = [
-    {'id': '1', 'name': 'Ahmed Benali'},
-    {'id': '2', 'name': 'Fatima Rahmani'},
-    {'id': '3', 'name': 'Youcef Mansouri'},
-    {'id': '4', 'name': 'Sara Boudiaf'},
-    {'id': '5', 'name': 'Khalil Haddad'},
-    {'id': '6', 'name': 'Meriem Khelifi'},
-    {'id': '7', 'name': 'Amine Djebbar'},
-  ];
+  List<Classroom> _classrooms = [];
+  bool _loadingClassrooms = true;
+  bool _submitting = false;
 
   @override
   void initState() {
     super.initState();
-    // Default everyone to present
-    for (final s in _students) {
-      _attendanceStatus[s['id']!] = 'present';
+    _loadClassrooms();
+  }
+
+  Future<void> _loadClassrooms() async {
+    try {
+      final classrooms = await getIt<AcademicRepository>().getClassrooms();
+      setState(() {
+        _classrooms = classrooms;
+        _loadingClassrooms = false;
+      });
+    } catch (e) {
+      setState(() => _loadingClassrooms = false);
+    }
+  }
+
+  void _onClassroomChanged(String? classroomId) {
+    setState(() {
+      _selectedClassroomId = classroomId;
+      _attendanceStatus.clear();
+    });
+    if (classroomId != null) {
+      final dateStr =
+          '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
+      context.read<TeacherBloc>().add(
+        TeacherLoadAttendance(classroomId: classroomId, date: dateStr),
+      );
     }
   }
 
@@ -42,7 +65,12 @@ class _AttendanceMarkingScreenState extends State<AttendanceMarkingScreen> {
       firstDate: DateTime.now().subtract(const Duration(days: 30)),
       lastDate: DateTime.now(),
     );
-    if (picked != null) setState(() => _selectedDate = picked);
+    if (picked != null) {
+      setState(() => _selectedDate = picked);
+      if (_selectedClassroomId != null) {
+        _onClassroomChanged(_selectedClassroomId);
+      }
+    }
   }
 
   @override
@@ -52,7 +80,7 @@ class _AttendanceMarkingScreenState extends State<AttendanceMarkingScreen> {
         title: const Text('Appel — Présences'),
         actions: [
           TextButton.icon(
-            onPressed: _onSubmitAttendance,
+            onPressed: _submitting ? null : _onSubmitAttendance,
             icon: const Icon(Icons.check_circle, color: Colors.white),
             label: const Text('Valider', style: TextStyle(color: Colors.white)),
           ),
@@ -62,7 +90,7 @@ class _AttendanceMarkingScreenState extends State<AttendanceMarkingScreen> {
         children: [
           _buildHeader(),
           const Divider(height: 1),
-          Expanded(child: _buildStudentList()),
+          Expanded(child: _buildStudentListFromBloc()),
           _buildSummaryBar(),
         ],
       ),
@@ -77,18 +105,25 @@ class _AttendanceMarkingScreenState extends State<AttendanceMarkingScreen> {
       child: Row(
         children: [
           Expanded(
-            child: DropdownButtonFormField<String>(
-              initialValue: _selectedClassroom,
-              decoration: const InputDecoration(
-                labelText: 'Classe',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-              items: _classrooms
-                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                  .toList(),
-              onChanged: (v) => setState(() => _selectedClassroom = v),
-            ),
+            child: _loadingClassrooms
+                ? const LinearProgressIndicator()
+                : DropdownButtonFormField<String>(
+                    initialValue: _selectedClassroomId,
+                    decoration: const InputDecoration(
+                      labelText: 'Classe',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    items: _classrooms
+                        .map(
+                          (c) => DropdownMenuItem(
+                            value: c.id,
+                            child: Text(c.name),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: _onClassroomChanged,
+                  ),
           ),
           const SizedBox(width: 12),
           OutlinedButton.icon(
@@ -101,8 +136,8 @@ class _AttendanceMarkingScreenState extends State<AttendanceMarkingScreen> {
     );
   }
 
-  Widget _buildStudentList() {
-    if (_selectedClassroom == null) {
+  Widget _buildStudentListFromBloc() {
+    if (_selectedClassroomId == null) {
       return const Center(
         child: Text(
           'Sélectionnez une classe',
@@ -111,11 +146,71 @@ class _AttendanceMarkingScreenState extends State<AttendanceMarkingScreen> {
       );
     }
 
+    return BlocConsumer<TeacherBloc, TeacherState>(
+      listener: (context, state) {
+        if (state is TeacherAttendanceLoaded) {
+          // Initialize status from loaded records
+          for (final r in state.records) {
+            _attendanceStatus[r.studentId] = r.status;
+          }
+        }
+        if (state is TeacherAttendanceMarked) {
+          setState(() => _submitting = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Appel enregistré avec succès')),
+          );
+        }
+        if (state is TeacherError) {
+          setState(() => _submitting = false);
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Erreur: ${state.message}')));
+        }
+      },
+      builder: (context, state) {
+        if (state is TeacherLoading && !_submitting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (state is TeacherAttendanceLoaded) {
+          return _buildStudentList(state.records);
+        }
+        if (state is TeacherError) {
+          return Center(child: Text(state.message));
+        }
+        return const SizedBox.shrink();
+      },
+    );
+  }
+
+  Widget _buildStudentList(List<AttendanceRecord> records) {
+    if (records.isEmpty) {
+      return const Center(
+        child: Text('Aucun élève trouvé', style: TextStyle(color: Colors.grey)),
+      );
+    }
+
+    // Get unique students from records, defaulting to present
+    final students = <String, String>{};
+    final studentNames = <String, String>{};
+    for (final r in records) {
+      students.putIfAbsent(r.studentId, () => r.status);
+      if (r.studentName != null) {
+        studentNames[r.studentId] = r.studentName!;
+      }
+    }
+
+    // Merge with local state
+    for (final entry in students.entries) {
+      _attendanceStatus.putIfAbsent(entry.key, () => entry.value);
+    }
+
+    final studentIds = students.keys.toList();
+
     return ListView.builder(
-      itemCount: _students.length,
+      itemCount: studentIds.length,
       itemBuilder: (context, index) {
-        final student = _students[index];
-        final id = student['id']!;
+        final id = studentIds[index];
+        final name = studentNames[id] ?? 'Élève $id';
         final status = _attendanceStatus[id] ?? 'present';
 
         return Card(
@@ -125,7 +220,7 @@ class _AttendanceMarkingScreenState extends State<AttendanceMarkingScreen> {
               backgroundColor: _statusColor(status).withAlpha(50),
               child: Icon(_statusIcon(status), color: _statusColor(status)),
             ),
-            title: Text(student['name']!),
+            title: Text(name),
             trailing: ToggleButtons(
               borderRadius: BorderRadius.circular(8),
               isSelected: [
@@ -212,16 +307,21 @@ class _AttendanceMarkingScreenState extends State<AttendanceMarkingScreen> {
   };
 
   void _onSubmitAttendance() {
-    final summary = _attendanceStatus.values.fold<Map<String, int>>(
-      {},
-      (map, s) => map..update(s, (v) => v + 1, ifAbsent: () => 1),
-    );
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Appel enregistré: ${summary['present'] ?? 0} présents, '
-          '${summary['absent'] ?? 0} absents, ${summary['late'] ?? 0} retards',
-        ),
+    if (_selectedClassroomId == null || _attendanceStatus.isEmpty) return;
+
+    setState(() => _submitting = true);
+    final dateStr =
+        '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
+
+    final records = _attendanceStatus.entries
+        .map((e) => {'student': e.key, 'status': e.value})
+        .toList();
+
+    context.read<TeacherBloc>().add(
+      TeacherMarkAttendance(
+        classroomId: _selectedClassroomId!,
+        date: dateStr,
+        records: records,
       ),
     );
   }

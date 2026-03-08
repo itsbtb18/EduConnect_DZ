@@ -602,7 +602,7 @@ def admin_override_average(
         old_value,
         new_value,
         admin_user.pk,
-        admin_user.get_full_name(),
+        admin_user.full_name,
     )
 
     # ── Apply override ──────────────────────────────────────────────────
@@ -756,7 +756,7 @@ def lock_trimester(
                 title="Trimestre verrouillé",
                 body=(
                     f"Le trimestre {trimester} de la classe {classroom.name} "
-                    f"a été verrouillé par {director_user.get_full_name()}."
+                    f"a été verrouillé par {director_user.full_name}."
                 ),
                 notification_type="SYSTEM",
             )
@@ -1085,12 +1085,16 @@ def _calculate_annual_average_internal(
     save: bool = True,
 ) -> Optional[Decimal]:
     """
-    Internal: compute annual average = (T1 + T2 + T3) / 3.
+    Internal: compute annual average using TrimesterConfig weights.
+
+    Default (no config): (T1 + T2 + T3) / 3
+    With config: (T1×w1 + T2×w2 + T3×w3) / (w1 + w2 + w3)
+
     Only when all 3 trimesters have a non-null effective_average.
     """
     from apps.academics.models import Class as Classroom
     from apps.academics.models import StudentProfile
-    from apps.grades.models import AnnualAverage, TrimesterAverage
+    from apps.grades.models import AnnualAverage, TrimesterAverage, TrimesterConfig
     from apps.schools.models import AcademicYear
 
     student = _resolve(student_id, StudentProfile)
@@ -1106,21 +1110,34 @@ def _calculate_annual_average_internal(
     if trims.count() < 3:
         return None
 
-    total = Decimal("0")
-    count = 0
+    trim_map = {}
     for t in trims:
         avg = t.effective_average
         if avg is None:
             return None
-        total += avg
-        count += 1
+        trim_map[t.trimester] = avg
 
-    if count < 3:
+    if len(trim_map) < 3:
         return None
 
-    calculated = (total / Decimal("3")).quantize(
-        Decimal("0.01"), rounding=ROUND_HALF_UP
-    )
+    # ── Load TrimesterConfig weights (default: equal 1/1/1) ─────────
+    school = classroom.section.school if hasattr(classroom, "section") else None
+    config = None
+    if school:
+        config = TrimesterConfig.objects.filter(school=school).first()
+
+    w1 = config.weight_t1 if config else Decimal("1")
+    w2 = config.weight_t2 if config else Decimal("1")
+    w3 = config.weight_t3 if config else Decimal("1")
+    decimal_places = config.decimal_places if config else 2
+
+    total_weight = w1 + w2 + w3
+    if total_weight == 0:
+        return None
+
+    weighted_sum = trim_map[1] * w1 + trim_map[2] * w2 + trim_map[3] * w3
+    quant = Decimal("0.1") if decimal_places == 1 else Decimal("0.01")
+    calculated = (weighted_sum / total_weight).quantize(quant, rounding=ROUND_HALF_UP)
 
     if save:
         obj, _ = AnnualAverage.objects.update_or_create(
@@ -1133,3 +1150,566 @@ def _calculate_annual_average_internal(
         obj.save(update_fields=["appreciation"])
 
     return calculated
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 8. GRADE WORKFLOW — state transitions (DRAFT/SUBMITTED/PUBLISHED/RETURNED)
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class InvalidTransitionError(Exception):
+    """Raised when a grade workflow transition is invalid."""
+
+
+def submit_grades(
+    exam_type_id,
+    teacher_user,
+) -> dict:
+    """
+    Teacher submits grades for admin review.
+    DRAFT → SUBMITTED
+
+    Only DRAFT or RETURNED grades can be submitted.
+    """
+    from apps.grades.models import ExamType, Grade
+
+    exam_type = _resolve(exam_type_id, ExamType)
+    now = timezone.now()
+
+    grades = Grade.objects.filter(
+        exam_type=exam_type,
+        status__in=[Grade.Status.DRAFT, Grade.Status.RETURNED],
+    )
+
+    if not grades.exists():
+        raise InvalidTransitionError(
+            "Aucune note en brouillon ou retournée à soumettre pour cet examen."
+        )
+
+    count = grades.update(
+        status=Grade.Status.SUBMITTED,
+        submitted_at=now,
+        submitted_by=teacher_user,
+        admin_comment="",
+    )
+
+    logger.info(
+        "SUBMIT_GRADES: exam_type=%s count=%d by=%s",
+        exam_type,
+        count,
+        teacher_user.pk,
+    )
+    return {
+        "exam_type": str(exam_type),
+        "submitted_count": count,
+        "submitted_at": now.isoformat(),
+    }
+
+
+def publish_grades(
+    exam_type_id,
+    admin_user,
+) -> dict:
+    """
+    Admin approves and publishes submitted grades.
+    SUBMITTED → PUBLISHED
+
+    Also sets is_published=True for backward compatibility.
+    Triggers notification to students/parents.
+    """
+    from apps.accounts.models import User
+    from apps.grades.models import ExamType, Grade
+
+    exam_type = _resolve(exam_type_id, ExamType)
+
+    if admin_user.role not in (
+        User.Role.ADMIN,
+        User.Role.SECTION_ADMIN,
+        User.Role.SUPER_ADMIN,
+    ):
+        raise PermissionDeniedException(
+            "Seul un administrateur peut publier les notes."
+        )
+
+    now = timezone.now()
+    grades = Grade.objects.filter(
+        exam_type=exam_type,
+        status=Grade.Status.SUBMITTED,
+    )
+
+    if not grades.exists():
+        raise InvalidTransitionError(
+            "Aucune note soumise à publier pour cet examen."
+        )
+
+    count = grades.update(
+        status=Grade.Status.PUBLISHED,
+        is_published=True,
+        published_at=now,
+        published_by=admin_user,
+    )
+
+    # ── Notify students & parents ───────────────────────────────────────
+    try:
+        from apps.notifications.tasks import send_notification
+
+        student_grades = Grade.objects.filter(
+            exam_type=exam_type,
+            status=Grade.Status.PUBLISHED,
+        ).select_related("student__user", "student__parent_user")
+
+        notified = set()
+        for g in student_grades:
+            student_user_id = str(g.student.user_id)
+            if student_user_id not in notified:
+                send_notification.delay(
+                    user_id=student_user_id,
+                    title="Notes publiées",
+                    body=f"Vos notes de {exam_type.subject.name} ({exam_type.name}) sont disponibles.",
+                    notification_type="GRADE_PUBLISHED",
+                    related_object_id=str(exam_type.pk),
+                    related_object_type="ExamType",
+                )
+                notified.add(student_user_id)
+            # Notify parent
+            parent_user = getattr(g.student, "parent_user", None)
+            if parent_user:
+                parent_id = str(parent_user.pk)
+                if parent_id not in notified:
+                    send_notification.delay(
+                        user_id=parent_id,
+                        title="Notes publiées",
+                        body=f"Les notes de {g.student.user.full_name} en {exam_type.subject.name} sont disponibles.",
+                        notification_type="GRADE_PUBLISHED",
+                        related_object_id=str(exam_type.pk),
+                        related_object_type="ExamType",
+                    )
+                    notified.add(parent_id)
+    except Exception:
+        logger.exception("Failed to send publication notifications")
+
+    logger.info(
+        "PUBLISH_GRADES: exam_type=%s count=%d by=%s",
+        exam_type,
+        count,
+        admin_user.pk,
+    )
+    return {
+        "exam_type": str(exam_type),
+        "published_count": count,
+        "published_at": now.isoformat(),
+    }
+
+
+def return_grades(
+    exam_type_id,
+    admin_user,
+    comment: str,
+) -> dict:
+    """
+    Admin rejects submitted grades with a comment.
+    SUBMITTED → RETURNED
+
+    The teacher can then modify and re-submit.
+    """
+    from apps.accounts.models import User
+    from apps.grades.models import ExamType, Grade
+
+    exam_type = _resolve(exam_type_id, ExamType)
+
+    if admin_user.role not in (
+        User.Role.ADMIN,
+        User.Role.SECTION_ADMIN,
+        User.Role.SUPER_ADMIN,
+    ):
+        raise PermissionDeniedException(
+            "Seul un administrateur peut retourner les notes."
+        )
+
+    if not comment or not comment.strip():
+        raise ValueError("Un commentaire est obligatoire pour retourner les notes.")
+
+    now = timezone.now()
+    grades = Grade.objects.filter(
+        exam_type=exam_type,
+        status=Grade.Status.SUBMITTED,
+    )
+
+    if not grades.exists():
+        raise InvalidTransitionError(
+            "Aucune note soumise à retourner pour cet examen."
+        )
+
+    count = grades.update(
+        status=Grade.Status.RETURNED,
+        returned_at=now,
+        returned_by=admin_user,
+        admin_comment=comment.strip(),
+    )
+
+    # ── Notify the teacher ──────────────────────────────────────────────
+    try:
+        from apps.notifications.tasks import send_notification
+
+        if exam_type.created_by:
+            send_notification.delay(
+                user_id=str(exam_type.created_by_id),
+                title="Notes retournées",
+                body=f"Les notes de {exam_type.subject.name} ({exam_type.name}) ont été retournées. Motif : {comment[:100]}",
+                notification_type="GRADE_RETURNED",
+                related_object_id=str(exam_type.pk),
+                related_object_type="ExamType",
+            )
+    except Exception:
+        logger.exception("Failed to send return notification")
+
+    logger.info(
+        "RETURN_GRADES: exam_type=%s count=%d reason='%s' by=%s",
+        exam_type,
+        count,
+        comment[:50],
+        admin_user.pk,
+    )
+    return {
+        "exam_type": str(exam_type),
+        "returned_count": count,
+        "comment": comment,
+        "returned_at": now.isoformat(),
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 9. STUDENT AVERAGES — aggregated view for one student
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def get_student_averages(student_id, academic_year_id=None) -> dict:
+    """
+    Return a complete averages overview for a student:
+    - Subject averages per trimester
+    - Trimester averages
+    - Annual average
+    - Rankings
+    """
+    from apps.academics.models import StudentProfile
+    from apps.grades.models import AnnualAverage, SubjectAverage, TrimesterAverage
+
+    student = _resolve(student_id, StudentProfile)
+    classroom = student.current_class
+
+    if not classroom:
+        return {"error": "Élève sans classe assignée."}
+
+    filters = {"student": student, "classroom": classroom}
+    if academic_year_id:
+        from apps.schools.models import AcademicYear
+
+        academic_year = _resolve(academic_year_id, AcademicYear)
+        filters["academic_year"] = academic_year
+
+    # Subject averages
+    subject_avgs = (
+        SubjectAverage.objects.filter(**filters)
+        .select_related("subject")
+        .order_by("trimester", "subject__name")
+    )
+
+    # Trimester averages
+    trimester_avgs = TrimesterAverage.objects.filter(**filters).order_by("trimester")
+
+    # Annual average
+    annual_filters = {
+        "student": student,
+        "classroom": classroom,
+    }
+    if "academic_year" in filters:
+        annual_filters["academic_year"] = filters["academic_year"]
+
+    annual_avgs = AnnualAverage.objects.filter(**annual_filters)
+
+    result = {
+        "student_id": str(student.pk),
+        "student_name": student.user.full_name,
+        "classroom": str(classroom),
+        "subject_averages": [],
+        "trimester_averages": [],
+        "annual_averages": [],
+    }
+
+    for sa in subject_avgs:
+        result["subject_averages"].append(
+            {
+                "id": str(sa.pk),
+                "subject": sa.subject.name,
+                "trimester": sa.trimester,
+                "calculated_average": str(sa.calculated_average) if sa.calculated_average else None,
+                "manual_override": str(sa.manual_override) if sa.manual_override else None,
+                "effective_average": str(sa.effective_average) if sa.effective_average else None,
+                "is_published": sa.is_published,
+                "is_locked": sa.is_locked,
+            }
+        )
+
+    for ta in trimester_avgs:
+        result["trimester_averages"].append(
+            {
+                "id": str(ta.pk),
+                "trimester": ta.trimester,
+                "calculated_average": str(ta.calculated_average) if ta.calculated_average else None,
+                "manual_override": str(ta.manual_override) if ta.manual_override else None,
+                "effective_average": str(ta.effective_average) if ta.effective_average else None,
+                "rank_in_class": ta.rank_in_class,
+                "rank_in_stream": ta.rank_in_stream,
+                "rank_in_level": ta.rank_in_level,
+                "rank_in_section": ta.rank_in_section,
+                "appreciation": ta.appreciation,
+                "is_published": ta.is_published,
+                "is_locked": ta.is_locked,
+            }
+        )
+
+    for aa in annual_avgs:
+        result["annual_averages"].append(
+            {
+                "id": str(aa.pk),
+                "calculated_average": str(aa.calculated_average) if aa.calculated_average else None,
+                "manual_override": str(aa.manual_override) if aa.manual_override else None,
+                "effective_average": str(aa.effective_average) if aa.effective_average else None,
+                "rank_in_class": aa.rank_in_class,
+                "rank_in_level": aa.rank_in_level,
+                "appreciation": aa.appreciation,
+            }
+        )
+
+    return result
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 10. CSV GRADE IMPORT — parse, validate, preview, confirm
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class CSVImportError(Exception):
+    """Raised when CSV import fails validation."""
+
+
+def parse_csv_grades(
+    csv_content: str,
+    exam_type_id,
+    teacher_user,
+) -> dict:
+    """
+    Parse a CSV file with columns: nom, prénom, note
+    Match students against the classroom roster.
+
+    Returns a preview dict with matched/unmatched students.
+    Does NOT save any grades.
+    """
+    import csv
+    import io as _io
+    from difflib import SequenceMatcher
+
+    from apps.academics.models import StudentProfile
+    from apps.grades.models import ExamType
+
+    exam_type = _resolve(exam_type_id, ExamType)
+    classroom = exam_type.classroom
+
+    # Parse CSV
+    reader = csv.DictReader(_io.StringIO(csv_content), delimiter=";")
+
+    # Validate headers
+    if not reader.fieldnames:
+        raise CSVImportError("Fichier CSV vide ou invalide.")
+
+    # Normalise headers (case-insensitive, strip whitespace)
+    normalised_headers = [h.strip().lower() for h in reader.fieldnames]
+
+    # Accept common variations
+    nom_col = None
+    prenom_col = None
+    note_col = None
+
+    for i, h in enumerate(normalised_headers):
+        if h in ("nom", "last_name", "nom_famille", "lastname"):
+            nom_col = reader.fieldnames[i]
+        elif h in ("prénom", "prenom", "first_name", "firstname"):
+            prenom_col = reader.fieldnames[i]
+        elif h in ("note", "score", "grade", "mark"):
+            note_col = reader.fieldnames[i]
+
+    if not nom_col or not prenom_col or not note_col:
+        raise CSVImportError(
+            "Colonnes requises introuvables. "
+            "Le fichier doit contenir : nom, prénom, note (séparateur: ;)"
+        )
+
+    # Load classroom roster
+    roster = StudentProfile.objects.filter(
+        current_class=classroom,
+        is_deleted=False,
+    ).select_related("user")
+
+    roster_map = {}
+    for sp in roster:
+        key = f"{sp.user.last_name.lower().strip()} {sp.user.first_name.lower().strip()}"
+        roster_map[key] = sp
+
+    matched = []
+    unmatched = []
+    errors = []
+
+    for row_idx, row in enumerate(reader, start=2):
+        nom = (row.get(nom_col) or "").strip()
+        prenom = (row.get(prenom_col) or "").strip()
+        note_str = (row.get(note_col) or "").strip()
+
+        if not nom and not prenom:
+            continue  # Skip empty rows
+
+        # Parse note
+        score = None
+        if note_str:
+            note_str = note_str.replace(",", ".")
+            try:
+                score = Decimal(note_str)
+            except Exception:
+                errors.append(
+                    {"row": row_idx, "nom": nom, "prenom": prenom, "error": f"Note invalide: '{note_str}'"}
+                )
+                continue
+
+            if score < 0:
+                errors.append(
+                    {"row": row_idx, "nom": nom, "prenom": prenom, "error": "Note négative"}
+                )
+                continue
+            if score > exam_type.max_score:
+                errors.append(
+                    {"row": row_idx, "nom": nom, "prenom": prenom, "error": f"Note dépasse le barème ({exam_type.max_score})"}
+                )
+                continue
+
+        # Match student
+        lookup_key = f"{nom.lower()} {prenom.lower()}"
+        student = roster_map.get(lookup_key)
+
+        if not student:
+            # Fuzzy match
+            best_match = None
+            best_ratio = 0
+            for key, sp in roster_map.items():
+                ratio = SequenceMatcher(None, lookup_key, key).ratio()
+                if ratio > best_ratio:
+                    best_ratio = ratio
+                    best_match = sp
+
+            if best_ratio >= 0.8:
+                matched.append(
+                    {
+                        "row": row_idx,
+                        "csv_nom": nom,
+                        "csv_prenom": prenom,
+                        "student_id": str(best_match.pk),
+                        "student_name": best_match.user.full_name,
+                        "score": str(score) if score is not None else None,
+                        "fuzzy_match": True,
+                        "match_confidence": round(best_ratio, 2),
+                    }
+                )
+            else:
+                unmatched.append(
+                    {
+                        "row": row_idx,
+                        "csv_nom": nom,
+                        "csv_prenom": prenom,
+                        "score": str(score) if score is not None else None,
+                        "best_suggestion": best_match.user.full_name if best_match else None,
+                        "confidence": round(best_ratio, 2) if best_match else 0,
+                    }
+                )
+        else:
+            matched.append(
+                {
+                    "row": row_idx,
+                    "csv_nom": nom,
+                    "csv_prenom": prenom,
+                    "student_id": str(student.pk),
+                    "student_name": student.user.full_name,
+                    "score": str(score) if score is not None else None,
+                    "fuzzy_match": False,
+                    "match_confidence": 1.0,
+                }
+            )
+
+    return {
+        "exam_type_id": str(exam_type.pk),
+        "exam_type_name": str(exam_type),
+        "classroom": str(classroom),
+        "total_roster": roster.count(),
+        "matched": matched,
+        "unmatched": unmatched,
+        "errors": errors,
+    }
+
+
+def confirm_csv_import(
+    preview_data: dict,
+    teacher_user,
+) -> dict:
+    """
+    Confirm a CSV import preview and save grades as DRAFT.
+
+    Takes the matched list from parse_csv_grades result.
+    Creates/updates Grade records with status=DRAFT.
+    """
+    from apps.academics.models import StudentProfile
+    from apps.grades.models import ExamType, Grade
+
+    exam_type_id = preview_data.get("exam_type_id")
+    exam_type = _resolve(exam_type_id, ExamType)
+    matched = preview_data.get("matched", [])
+
+    saved = 0
+    errors = []
+
+    for item in matched:
+        student_id = item.get("student_id")
+        score_str = item.get("score")
+
+        if not student_id:
+            continue
+
+        try:
+            student = StudentProfile.objects.get(pk=student_id, is_deleted=False)
+        except StudentProfile.DoesNotExist:
+            errors.append({"student_id": student_id, "error": "Élève introuvable"})
+            continue
+
+        score = Decimal(score_str) if score_str else None
+        is_absent = score is None
+
+        grade, _ = Grade.objects.update_or_create(
+            student=student,
+            exam_type=exam_type,
+            defaults={
+                "score": score,
+                "is_absent": is_absent,
+                "entered_by": teacher_user,
+                "status": Grade.Status.DRAFT,
+            },
+        )
+        saved += 1
+
+    logger.info(
+        "CSV_IMPORT_CONFIRM: exam_type=%s saved=%d errors=%d by=%s",
+        exam_type,
+        saved,
+        len(errors),
+        teacher_user.pk,
+    )
+    return {
+        "exam_type": str(exam_type),
+        "saved": saved,
+        "errors": errors,
+    }

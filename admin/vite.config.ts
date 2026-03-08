@@ -39,4 +39,22 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          antd: ['antd', '@ant-design/icons'],
+          charts: ['recharts'],
+          query: ['@tanstack/react-query'],
+        },
+      },
+    },
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.ts',
+    css: false,
+  },
 })

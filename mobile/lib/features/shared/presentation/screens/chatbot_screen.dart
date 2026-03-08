@@ -1,56 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../bloc/chatbot_cubit.dart';
 
 /// Shared AI chatbot screen for students (educational Q&A).
-class ChatbotScreen extends StatefulWidget {
+class ChatbotScreen extends StatelessWidget {
   const ChatbotScreen({super.key});
 
   @override
-  State<ChatbotScreen> createState() => _ChatbotScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => ChatbotCubit(),
+      child: const _ChatbotBody(),
+    );
+  }
 }
 
-class _ChatbotScreenState extends State<ChatbotScreen> {
+class _ChatbotBody extends StatefulWidget {
+  const _ChatbotBody();
+
+  @override
+  State<_ChatbotBody> createState() => _ChatbotBodyState();
+}
+
+class _ChatbotBodyState extends State<_ChatbotBody> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
-  bool _isLoading = false;
-
-  final List<_ChatMessage> _messages = [
-    _ChatMessage(
-      text:
-          'Bonjour! Je suis EduBot, ton assistant éducatif.\n'
-          'Pose-moi des questions sur tes cours et je t\'aiderai!',
-      isBot: true,
-    ),
-  ];
 
   @override
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
-  }
-
-  void _sendMessage() {
-    final text = _messageController.text.trim();
-    if (text.isEmpty) return;
-
-    setState(() {
-      _messages.add(_ChatMessage(text: text, isBot: false));
-      _isLoading = true;
-    });
-    _messageController.clear();
-    _scrollToBottom();
-
-    // Simulating a response delay — will be replaced with AI chatbot repository call
-    Future.delayed(const Duration(seconds: 1), () {
-      if (!mounted) return;
-      setState(() {
-        _messages.add(
-          _ChatMessage(text: _getPlaceholderResponse(text), isBot: true),
-        );
-        _isLoading = false;
-      });
-      _scrollToBottom();
-    });
   }
 
   void _scrollToBottom() {
@@ -65,30 +46,12 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     });
   }
 
-  String _getPlaceholderResponse(String query) {
-    final q = query.toLowerCase();
-    if (q.contains('math') || q.contains('équation') || q.contains('calcul')) {
-      return 'Les mathématiques sont une matière fondamentale!\n\n'
-          'Pour résoudre une équation du 1er degré ax + b = 0:\n'
-          '1. Isoler le terme avec x\n'
-          '2. Diviser par le coefficient de x\n'
-          '3. Vérifier en remplaçant dans l\'équation\n\n'
-          'Tu veux un exemple concret?';
-    }
-    if (q.contains('physique') || q.contains('force') || q.contains('newton')) {
-      return 'En physique, les forces sont des interactions entre objets.\n\n'
-          'La deuxième loi de Newton: F = m × a\n'
-          'où F = force (Newton), m = masse (kg), a = accélération (m/s²)\n\n'
-          'Quel aspect de la physique t\'intéresse?';
-    }
-    if (q.contains('merci') || q.contains('شكرا')) {
-      return 'De rien! N\'hésite pas à revenir si tu as d\'autres questions. '
-          'Bon courage dans tes études!';
-    }
-    return 'C\'est une bonne question! Laisse-moi chercher dans tes cours...\n\n'
-        'Je suis connecté à la base de connaissances de ton école. '
-        'Pour une réponse plus précise, essaie de mentionner '
-        'la matière ou le sujet spécifique.';
+  void _sendMessage() {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+    context.read<ChatbotCubit>().sendMessage(text);
+    _messageController.clear();
+    _scrollToBottom();
   }
 
   @override
@@ -112,44 +75,48 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           IconButton(
             icon: const Icon(Icons.delete_outline),
             tooltip: 'Nouvelle conversation',
-            onPressed: () => setState(() {
-              _messages.clear();
-              _messages.add(
-                _ChatMessage(
-                  text: 'Conversation réinitialisée. Comment puis-je t\'aider?',
-                  isBot: true,
-                ),
-              );
-            }),
+            onPressed: () => context.read<ChatbotCubit>().clearConversation(),
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Messages
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(12),
-              itemCount: _messages.length + (_isLoading ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index == _messages.length) {
-                  return _buildTypingIndicator();
-                }
-                return _buildMessageBubble(_messages[index], theme);
-              },
-            ),
-          ),
-          // Suggestion chips
-          _buildSuggestionChips(),
-          // Input bar
-          _buildInputBar(theme),
-        ],
+      body: BlocConsumer<ChatbotCubit, ChatbotState>(
+        listener: (context, state) {
+          _scrollToBottom();
+          if (state is ChatbotError) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.error)));
+          }
+        },
+        builder: (context, state) {
+          final messages = state.messages;
+          final isThinking = state is ChatbotThinking;
+
+          return Column(
+            children: [
+              Expanded(
+                child: ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(12),
+                  itemCount: messages.length + (isThinking ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index == messages.length) {
+                      return _buildTypingIndicator(theme);
+                    }
+                    return _buildMessageBubble(messages[index], theme);
+                  },
+                ),
+              ),
+              _buildSuggestionChips(messages),
+              _buildInputBar(theme, isThinking),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildMessageBubble(_ChatMessage msg, ThemeData theme) {
+  Widget _buildMessageBubble(ChatbotMessage msg, ThemeData theme) {
     return Align(
       alignment: msg.isBot ? Alignment.centerLeft : Alignment.centerRight,
       child: Container(
@@ -183,14 +150,14 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     );
   }
 
-  Widget _buildTypingIndicator() {
+  Widget _buildTypingIndicator(ThemeData theme) {
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(top: 4, bottom: 4, right: 48),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          color: theme.colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(16),
         ),
         child: const Row(
@@ -212,13 +179,13 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     );
   }
 
-  Widget _buildSuggestionChips() {
-    if (_messages.length > 3) return const SizedBox.shrink();
+  Widget _buildSuggestionChips(List<ChatbotMessage> messages) {
+    if (messages.length > 3) return const SizedBox.shrink();
 
     final suggestions = [
       'Comment résoudre une équation?',
       'Explique la photosynthèse',
-      'C\'est quoi la 2ème loi de Newton?',
+      "C'est quoi la 2ème loi de Newton?",
     ];
 
     return SizedBox(
@@ -244,7 +211,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     );
   }
 
-  Widget _buildInputBar(ThemeData theme) {
+  Widget _buildInputBar(ThemeData theme, bool isThinking) {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
@@ -279,18 +246,11 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           ),
           const SizedBox(width: 8),
           FloatingActionButton.small(
-            onPressed: _isLoading ? null : _sendMessage,
+            onPressed: isThinking ? null : _sendMessage,
             child: const Icon(Icons.send),
           ),
         ],
       ),
     );
   }
-}
-
-class _ChatMessage {
-  final String text;
-  final bool isBot;
-
-  _ChatMessage({required this.text, required this.isBot});
 }

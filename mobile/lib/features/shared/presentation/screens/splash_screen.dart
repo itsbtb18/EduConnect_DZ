@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-
+import '../../../../core/context/context_cubit.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 
@@ -14,6 +14,18 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  static String _homePathForRole(String role) => switch (role) {
+    'student' => '/student',
+    'teacher' => '/teacher',
+    'parent' => '/parent',
+    'admin' ||
+    'superadmin' ||
+    'super_admin' ||
+    'director' ||
+    'accountant' => '/teacher',
+    _ => '/student',
+  };
+
   @override
   void initState() {
     super.initState();
@@ -30,16 +42,25 @@ class _SplashScreenState extends State<SplashScreen> {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
-          final role = state.user.role;
-          switch (role) {
-            case 'student':
-              context.go('/student');
-            case 'teacher':
-              context.go('/teacher');
-            case 'parent':
-              context.go('/parent');
-            default:
-              context.go('/student');
+          // Load contexts into ContextCubit
+          final contextCubit = context.read<ContextCubit>();
+          contextCubit.loadContexts(state.contexts);
+
+          // Navigate based on context count
+          if (state.contexts.length > 1) {
+            final ctxState = contextCubit.state;
+            // If previously active context was restored, go to its home
+            if (ctxState.active != null) {
+              final role = ctxState.active!.routeRole;
+              context.go(_homePathForRole(role));
+            } else {
+              context.go('/context-selector');
+            }
+          } else {
+            final role = state.contexts.isNotEmpty
+                ? state.contexts.first.routeRole
+                : state.user.role.toLowerCase();
+            context.go(_homePathForRole(role));
           }
         } else if (state is AuthUnauthenticated) {
           context.go('/login');

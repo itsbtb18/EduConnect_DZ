@@ -5,6 +5,7 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from apps.academics.models import ParentProfile, StudentProfile, TeacherProfile
 
 from .forms import CustomUserChangeForm, CustomUserCreationForm
+from .models import UserContext
 
 User = get_user_model()
 
@@ -30,13 +31,26 @@ class ParentProfileInline(admin.StackedInline):
     extra = 0
 
 
+class UserContextInline(admin.TabularInline):
+    model = UserContext
+    extra = 0
+    fields = ("role", "school", "context_type", "is_active")
+
+
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     # ── Custom forms for our phone_number‑based User model ──
     form = CustomUserChangeForm
     add_form = CustomUserCreationForm
 
-    list_display = ("phone_number", "first_name", "last_name", "role", "school", "is_active")
+    list_display = (
+        "phone_number",
+        "first_name",
+        "last_name",
+        "role",
+        "school",
+        "is_active",
+    )
     list_filter = ("role", "school", "is_active")
     search_fields = ("phone_number", "first_name", "last_name", "email")
     ordering = ("last_name",)
@@ -86,7 +100,12 @@ class UserAdmin(BaseUserAdmin):
             },
         ),
     )
-    inlines = [StudentProfileInline, TeacherProfileInline, ParentProfileInline]
+    inlines = [
+        StudentProfileInline,
+        TeacherProfileInline,
+        ParentProfileInline,
+        UserContextInline,
+    ]
 
     def save_model(self, request, obj, form, change):
         """
@@ -103,3 +122,11 @@ class UserAdmin(BaseUserAdmin):
             obj.is_superuser = True
 
         super().save_model(request, obj, form, change)
+
+
+@admin.register(UserContext)
+class UserContextAdmin(admin.ModelAdmin):
+    list_display = ("user", "role", "school", "context_type", "is_active")
+    list_filter = ("role", "context_type", "is_active")
+    search_fields = ("user__phone_number", "user__first_name", "user__last_name")
+    raw_id_fields = ("user", "school")

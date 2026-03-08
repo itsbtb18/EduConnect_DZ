@@ -841,7 +841,7 @@ export function useSetupWizard() {
     try {
       await completeSetup.mutateAsync();
       localStorage.removeItem(STORAGE_KEY);
-      message.success('🎉 Configuration terminée ! Bienvenue sur ILMI');
+      message.success('Configuration terminée ! Bienvenue sur ILMI');
     } catch {
       message.error('Erreur lors de la finalisation');
     } finally {

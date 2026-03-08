@@ -10,6 +10,9 @@ django-filter>=24.0,<25.0
 # Authentication
 djangorestframework-simplejwt>=5.3,<6.0
 django-allauth>=65.0,<66.0
+django-argon2-hasher>=1.0,<2.0
+argon2-cffi>=23.1,<24.0
+pyotp>=2.9,<3.0
 
 # Database
 psycopg2-binary>=2.9,<3.0

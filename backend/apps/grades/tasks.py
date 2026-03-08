@@ -9,6 +9,8 @@
 ║    4. generate_report_card_pdf      — single student PDF bulletin      ║
 ║    5. generate_class_report_cards   — all students → ZIP bundle        ║
 ║    6. recalculate_classroom_task    — full pipeline (bulk)             ║
+║    7. generate_school_report_cards  — school-wide ZIP + progress       ║
+║    8. send_report_cards_to_parents  — notify parents with PDF link     ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 """
 
@@ -511,3 +513,252 @@ def recalculate_classroom_task(
     except Exception as exc:
         logger.exception("Recalculation task failed — classroom=%s", classroom_id)
         raise self.retry(exc=exc)
+
+
+# ---------------------------------------------------------------------------
+# 7. generate_school_report_cards — school-wide ZIP with progress tracking
+# ---------------------------------------------------------------------------
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=120)
+def generate_school_report_cards(
+    self,
+    school_id: str,
+    academic_year_id: str,
+    trimester: int,
+    template_id: str | None = None,
+    send_to_parents: bool = False,
+) -> str | None:
+    """
+    Generate report card PDFs for ALL classes in a school, bundle into ZIP.
+    Progress is tracked via Django cache (key: report_cards_progress_{task_id}).
+    """
+    from django.core.cache import cache
+    from django.core.files.base import ContentFile
+    from django.core.files.storage import default_storage
+
+    from apps.academics.models import Class, StudentProfile
+    from apps.schools.models import AcademicYear, School
+
+    try:
+        school = School.objects.get(pk=school_id)
+        academic_year = AcademicYear.objects.get(pk=academic_year_id)
+
+        classes = Class.objects.filter(
+            section__school=school,
+            academic_year=academic_year,
+        ).select_related("section", "level")
+
+        # Count total students for progress tracking
+        total_students = StudentProfile.objects.filter(
+            current_class__in=classes,
+            is_deleted=False,
+        ).count()
+
+        if total_students == 0:
+            return None
+
+        progress_key = f"report_cards_progress_{self.request.id}"
+        cache.set(progress_key, {
+            "status": "running",
+            "total": total_students,
+            "completed": 0,
+            "current_class": "",
+            "errors": [],
+        }, timeout=7200)
+
+        completed = 0
+        errors = []
+
+        for class_obj in classes:
+            students = (
+                StudentProfile.objects.filter(
+                    current_class=class_obj,
+                    is_deleted=False,
+                )
+                .select_related("user")
+                .order_by("user__last_name", "user__first_name")
+            )
+
+            cache.set(progress_key, {
+                "status": "running",
+                "total": total_students,
+                "completed": completed,
+                "current_class": class_obj.name,
+                "errors": errors[-10:],  # Keep last 10 errors
+            }, timeout=7200)
+
+            for student in students:
+                try:
+                    generate_report_card_pdf(
+                        str(student.pk),
+                        trimester,
+                        academic_year_id,
+                    )
+                except Exception as e:
+                    errors.append({
+                        "student": str(student.pk),
+                        "name": student.user.get_full_name(),
+                        "error": str(e)[:200],
+                    })
+                    logger.exception(
+                        "PDF failed for student %s in school-wide gen",
+                        student.pk,
+                    )
+                completed += 1
+
+        # Bundle all PDFs into a school ZIP
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+            for class_obj in classes:
+                students = StudentProfile.objects.filter(
+                    current_class=class_obj,
+                    is_deleted=False,
+                ).select_related("user")
+
+                for student in students:
+                    storage_path = (
+                        f"report_cards/{school.pk}/"
+                        f"{academic_year.name}/T{trimester}/"
+                        f"{student.user.last_name}_{student.user.first_name}_{student.pk}.pdf"
+                    )
+                    if default_storage.exists(storage_path):
+                        with default_storage.open(storage_path, "rb") as f:
+                            arc_name = (
+                                f"{class_obj.name}/"
+                                f"{student.user.last_name}_{student.user.first_name}.pdf"
+                            )
+                            zf.writestr(arc_name, f.read())
+
+        zip_buffer.seek(0)
+        zip_filename = (
+            f"report_cards/{school.pk}/"
+            f"{academic_year.name}/T{trimester}/"
+            f"school_T{trimester}_all_classes.zip"
+        )
+        saved_zip = default_storage.save(zip_filename, ContentFile(zip_buffer.read()))
+        zip_url = default_storage.url(saved_zip)
+
+        # Update progress to completed
+        cache.set(progress_key, {
+            "status": "completed",
+            "total": total_students,
+            "completed": completed,
+            "current_class": "",
+            "errors": errors[-10:],
+            "zip_url": zip_url,
+        }, timeout=7200)
+
+        # Send to parents if requested
+        if send_to_parents:
+            send_report_cards_to_parents.delay(
+                school_id, academic_year_id, trimester
+            )
+
+        # Notify admins
+        from apps.accounts.models import User
+        from apps.notifications.tasks import send_notification
+
+        admins = User.objects.filter(
+            school=school,
+            role__in=[User.Role.ADMIN, User.Role.SECTION_ADMIN],
+            is_active=True,
+        )
+        for admin_user in admins:
+            send_notification.delay(
+                user_id=str(admin_user.pk),
+                title="Bulletins de l'école prêts",
+                body=(
+                    f"Tous les bulletins T{trimester} ({academic_year.name}) "
+                    f"ont été générés. {completed} élèves traités, "
+                    f"{len(errors)} erreur(s)."
+                ),
+                notification_type="REPORT_CARD",
+                related_object_id=str(school.pk),
+                related_object_type="School",
+            )
+
+        logger.info(
+            "School report cards ZIP — school=%s T%d url=%s (%d OK, %d errors)",
+            school_id, trimester, zip_url, completed - len(errors), len(errors),
+        )
+        return zip_url
+
+    except Exception as exc:
+        logger.exception("School report cards failed — school=%s", school_id)
+        progress_key = f"report_cards_progress_{self.request.id}"
+        from django.core.cache import cache
+        cache.set(progress_key, {
+            "status": "failed",
+            "error": str(exc)[:500],
+        }, timeout=7200)
+        raise self.retry(exc=exc)
+
+
+# ---------------------------------------------------------------------------
+# 8. send_report_cards_to_parents — notify parents with PDF links
+# ---------------------------------------------------------------------------
+
+
+@shared_task
+def send_report_cards_to_parents(
+    school_id: str,
+    academic_year_id: str,
+    trimester: int,
+) -> dict:
+    """
+    Send notification to parents for each student's report card with PDF link.
+    Also marks report cards as sent_to_parents=True.
+    """
+    from django.utils import timezone as tz
+
+    from apps.grades.models import ReportCard
+    from apps.notifications.models import Notification
+    from apps.schools.models import School
+
+    try:
+        school = School.objects.get(pk=school_id)
+
+        report_cards = ReportCard.objects.filter(
+            class_obj__section__school=school,
+            academic_year_id=academic_year_id,
+            trimester=trimester,
+            pdf_url__gt="",
+            sent_to_parents=False,
+        ).select_related("student__user", "student")
+
+        sent = 0
+        for rc in report_cards:
+            student = rc.student
+            parent_profiles = student.parents.select_related("user").all()
+
+            for pp in parent_profiles:
+                Notification.objects.create(
+                    user=pp.user,
+                    school=school,
+                    title=f"Bulletin T{trimester} — {student.user.get_full_name()}",
+                    body=(
+                        f"Le bulletin du trimestre {trimester} de "
+                        f"{student.user.first_name} est disponible."
+                    ),
+                    notification_type=Notification.NotificationType.ACADEMIC
+                    if hasattr(Notification.NotificationType, "ACADEMIC")
+                    else "ACADEMIC",
+                    related_object_id=rc.pk,
+                    related_object_type="ReportCard",
+                )
+
+            rc.sent_to_parents = True
+            rc.sent_at = tz.now()
+            rc.save(update_fields=["sent_to_parents", "sent_at"])
+            sent += 1
+
+        logger.info(
+            "Report cards sent to parents — school=%s T%d, %d cards",
+            school_id, trimester, sent,
+        )
+        return {"status": "sent", "count": sent}
+
+    except Exception as exc:
+        logger.exception("Send to parents failed — school=%s", school_id)
+        return {"status": "failed", "error": str(exc)[:200]}

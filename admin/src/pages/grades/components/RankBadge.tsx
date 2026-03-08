@@ -10,9 +10,9 @@ interface RankBadgeProps {
 }
 
 const MEDALS: Record<number, { emoji: string; color: string }> = {
-  1: { emoji: '🥇', color: 'gold' },
-  2: { emoji: '🥈', color: 'blue' },
-  3: { emoji: '🥉', color: 'orange' },
+  1: { emoji: '', color: 'gold' },
+  2: { emoji: '', color: 'blue' },
+  3: { emoji: '', color: 'orange' },
 };
 
 const RankBadge: React.FC<RankBadgeProps> = ({ rank, total }) => {

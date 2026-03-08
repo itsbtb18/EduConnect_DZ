@@ -35,4 +35,30 @@ urlpatterns = [
         views.ExcuseReviewView.as_view(),
         name="excuse-review",
     ),
+    # ── Reports ────────────────────────────────────────────────────────
+    path(
+        "reports/monthly/",
+        views.MonthlyAttendanceReportView.as_view(),
+        name="attendance-report-monthly",
+    ),
+    path(
+        "reports/calendar/",
+        views.StudentAttendanceCalendarView.as_view(),
+        name="attendance-report-calendar",
+    ),
+    path(
+        "reports/annual/",
+        views.AnnualAttendanceReportView.as_view(),
+        name="attendance-report-annual",
+    ),
+    path(
+        "reports/ranking/",
+        views.AttendanceRankingView.as_view(),
+        name="attendance-report-ranking",
+    ),
+    path(
+        "reports/excel/",
+        views.AttendanceExcelExportView.as_view(),
+        name="attendance-report-excel",
+    ),
 ]

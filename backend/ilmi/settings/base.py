@@ -65,6 +65,18 @@ LOCAL_APPS = [
     "apps.finance",
     "apps.notifications",
     "apps.ai_chatbot",
+    "apps.canteen",
+    "apps.transport",
+    "apps.library",
+    "apps.extracurricular",
+    "apps.discipline",
+    "apps.fingerprint",
+    "apps.infirmerie",
+    "apps.elearning",
+    "apps.sms",
+    "apps.staff",
+    "apps.gamification",
+    "apps.formation",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -85,6 +97,10 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "core.middleware.tenant.TenantMiddleware",
+    "core.middleware.security.ReadOnlyRoleMiddleware",
+    "core.middleware.security.ScopeEnforcementMiddleware",
+    "core.middleware.security.IPWhitelistMiddleware",
+    "core.middleware.security.AuditAccessDeniedMiddleware",
 ]
 
 ROOT_URLCONF = "ilmi.urls"
@@ -130,6 +146,13 @@ DATABASES = {
 # ===========================================================================
 
 AUTH_USER_MODEL = "accounts.User"
+
+# Use Argon2 as primary password hasher (OWASP recommended)
+PASSWORD_HASHERS = [
+    "django.contrib.auth.hashers.Argon2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher",
+]
 
 AUTH_PASSWORD_VALIDATORS = [
     {

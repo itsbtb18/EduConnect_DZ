@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Secure storage service for sensitive data (JWT tokens, PIN, etc.)
@@ -16,6 +18,8 @@ class SecureStorageService {
   static const String _userIdKey = 'user_id';
   static const String _userRoleKey = 'user_role';
   static const String _schoolIdKey = 'school_id';
+  static const String _activeContextIdKey = 'active_context_id';
+  static const String _contextsJsonKey = 'contexts_json';
 
   // Access Token
   Future<void> saveAccessToken(String token) async {
@@ -72,5 +76,47 @@ class SecureStorageService {
   Future<bool> isLoggedIn() async {
     final token = await getAccessToken();
     return token != null && token.isNotEmpty;
+  }
+
+  // ── Context persistence ─────────────────────────────────────────────────
+
+  /// Save the active context ID
+  Future<void> saveActiveContextId(String contextId) async {
+    await _storage.write(key: _activeContextIdKey, value: contextId);
+  }
+
+  /// Get the active context ID
+  Future<String?> getActiveContextId() async {
+    return await _storage.read(key: _activeContextIdKey);
+  }
+
+  /// Save contexts list as JSON
+  Future<void> saveContextsJson(List<Map<String, dynamic>> contexts) async {
+    await _storage.write(key: _contextsJsonKey, value: jsonEncode(contexts));
+  }
+
+  /// Get stored contexts list
+  Future<List<Map<String, dynamic>>?> getContextsJson() async {
+    final raw = await _storage.read(key: _contextsJsonKey);
+    if (raw == null || raw.isEmpty) return null;
+    final decoded = jsonDecode(raw) as List<dynamic>;
+    return decoded.cast<Map<String, dynamic>>();
+  }
+
+  // ── Generic key-value access (for security features) ──────────────────
+
+  /// Read a value by arbitrary key.
+  Future<String?> readGeneric(String key) async {
+    return await _storage.read(key: key);
+  }
+
+  /// Write a value by arbitrary key.
+  Future<void> writeGeneric(String key, String value) async {
+    await _storage.write(key: key, value: value);
+  }
+
+  /// Delete a value by arbitrary key.
+  Future<void> deleteGeneric(String key) async {
+    await _storage.delete(key: key);
   }
 }

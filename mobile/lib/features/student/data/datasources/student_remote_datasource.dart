@@ -104,4 +104,14 @@ class StudentRemoteDatasource {
     final response = await _dioClient.dio.get(ApiEndpoints.classrooms);
     return response.data as Map<String, dynamic>;
   }
+
+  // ── Student ID Card ───────────────────────────────────────────────────────
+
+  /// Fetch consolidated card data (identity + school + QR).
+  Future<Map<String, dynamic>> getStudentCard(String studentId) async {
+    final response = await _dioClient.dio.get(
+      ApiEndpoints.studentCard(studentId),
+    );
+    return response.data as Map<String, dynamic>;
+  }
 }

@@ -6,6 +6,27 @@ import '../../../../core/network/api_response.dart';
 import '../../../../core/storage/secure_storage_service.dart';
 import '../models/user_model.dart';
 
+/// Auth result returned after login: full User (from /me) + contexts.
+class AuthResult {
+  final User user;
+  final List<UserContext> contexts;
+
+  const AuthResult({required this.user, required this.contexts});
+}
+
+/// Intermediate result when login requires OTP/TOTP verification.
+class AuthOtpRequired {
+  final bool requiresOtp;
+  final bool requiresTotp;
+  final String tempToken;
+
+  const AuthOtpRequired({
+    this.requiresOtp = false,
+    this.requiresTotp = false,
+    required this.tempToken,
+  });
+}
+
 /// Repository handling all authentication-related API calls.
 class AuthRepository {
   final DioClient _dioClient;
@@ -14,7 +35,9 @@ class AuthRepository {
   AuthRepository(this._dioClient, this._storage);
 
   /// Login with phone number and password.
-  Future<LoginResponse> login({
+  /// Returns AuthResult if login is complete, or throws AuthOtpRequired
+  /// if OTP/TOTP verification is needed.
+  Future<AuthResult> login({
     required String phoneNumber,
     required String password,
   }) async {
@@ -26,18 +49,84 @@ class AuthRepository {
 
       final loginResponse = LoginResponse.fromJson(response.data);
 
-      // Store tokens and user info
+      // Check if multi-step auth is required
+      if (!loginResponse.isComplete) {
+        throw AuthOtpRequired(
+          requiresOtp: loginResponse.requiresOtp,
+          requiresTotp: loginResponse.requiresTotp,
+          tempToken: loginResponse.tempToken ?? '',
+        );
+      }
+
+      // Store tokens
       await _storage.saveTokens(
-        accessToken: loginResponse.accessToken,
-        refreshToken: loginResponse.refreshToken,
-      );
-      await _storage.saveUserInfo(
-        userId: loginResponse.user.id,
-        role: loginResponse.user.role,
-        schoolId: loginResponse.user.schoolId,
+        accessToken: loginResponse.accessToken!,
+        refreshToken: loginResponse.refreshToken!,
       );
 
-      return loginResponse;
+      // Fetch full user profile (now that we have a valid token)
+      final user = await getMe();
+
+      // Use contexts from /me (which includes the latest data)
+      return AuthResult(user: user, contexts: user.contexts);
+    } on AuthOtpRequired {
+      rethrow;
+    } on DioException catch (e) {
+      throw ApiException.fromResponse(
+        e.response?.data as Map<String, dynamic>?,
+        e.response?.statusCode,
+      );
+    }
+  }
+
+  /// Verify OTP code (SMS) to complete login.
+  Future<AuthResult> verifyOtp({
+    required String tempToken,
+    required String code,
+  }) async {
+    try {
+      final response = await _dioClient.dio.post(
+        ApiEndpoints.verifyOtp,
+        data: {'temp_token': tempToken, 'code': code},
+      );
+
+      final loginResponse = LoginResponse.fromJson(response.data);
+
+      await _storage.saveTokens(
+        accessToken: loginResponse.accessToken!,
+        refreshToken: loginResponse.refreshToken!,
+      );
+
+      final user = await getMe();
+      return AuthResult(user: user, contexts: user.contexts);
+    } on DioException catch (e) {
+      throw ApiException.fromResponse(
+        e.response?.data as Map<String, dynamic>?,
+        e.response?.statusCode,
+      );
+    }
+  }
+
+  /// Verify TOTP code (authenticator app) to complete login.
+  Future<AuthResult> verifyTotp({
+    required String tempToken,
+    required String code,
+  }) async {
+    try {
+      final response = await _dioClient.dio.post(
+        ApiEndpoints.verifyTotp,
+        data: {'temp_token': tempToken, 'code': code},
+      );
+
+      final loginResponse = LoginResponse.fromJson(response.data);
+
+      await _storage.saveTokens(
+        accessToken: loginResponse.accessToken!,
+        refreshToken: loginResponse.refreshToken!,
+      );
+
+      final user = await getMe();
+      return AuthResult(user: user, contexts: user.contexts);
     } on DioException catch (e) {
       throw ApiException.fromResponse(
         e.response?.data as Map<String, dynamic>?,
@@ -47,7 +136,7 @@ class AuthRepository {
   }
 
   /// Login with phone + PIN (for young students)
-  Future<LoginResponse> pinLogin({
+  Future<AuthResult> pinLogin({
     required String phone,
     required String pin,
   }) async {
@@ -60,16 +149,14 @@ class AuthRepository {
       final loginResponse = LoginResponse.fromJson(response.data);
 
       await _storage.saveTokens(
-        accessToken: loginResponse.accessToken,
-        refreshToken: loginResponse.refreshToken,
-      );
-      await _storage.saveUserInfo(
-        userId: loginResponse.user.id,
-        role: loginResponse.user.role,
-        schoolId: loginResponse.user.schoolId,
+        accessToken: loginResponse.accessToken!,
+        refreshToken: loginResponse.refreshToken!,
       );
 
-      return loginResponse;
+      // Fetch full user profile
+      final user = await getMe();
+
+      return AuthResult(user: user, contexts: user.contexts);
     } on DioException catch (e) {
       throw ApiException.fromResponse(
         e.response?.data as Map<String, dynamic>?,
@@ -121,8 +208,19 @@ class AuthRepository {
     }
   }
 
-  /// Logout — clear stored tokens
+  /// Logout — call backend + clear stored tokens
   Future<void> logout() async {
+    try {
+      final refreshToken = await _storage.getRefreshToken();
+      if (refreshToken != null) {
+        await _dioClient.dio.post(
+          ApiEndpoints.logout,
+          data: {'refresh': refreshToken},
+        );
+      }
+    } catch (_) {
+      // Non-critical — always clear tokens even if server call fails
+    }
     await _storage.clearTokens();
   }
 

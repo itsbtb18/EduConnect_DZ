@@ -69,6 +69,40 @@ class ChatRepository {
     _wsChannel?.sink.add('{"message": "$content"}');
   }
 
+  /// Send mark-read through WebSocket
+  void sendMarkRead() {
+    _wsChannel?.sink.add('{"type": "mark_read"}');
+  }
+
+  /// Upload a file attachment to a conversation via REST
+  Future<Message> uploadAttachment({
+    required String conversationId,
+    required String filePath,
+    required String fileName,
+    String? content,
+  }) async {
+    try {
+      final formData = FormData.fromMap({
+        'conversation': conversationId,
+        'content': content ?? '',
+        'attachment': await MultipartFile.fromFile(
+          filePath,
+          filename: fileName,
+        ),
+      });
+      final response = await _dioClient.dio.post(
+        '${ApiEndpoints.conversations}$conversationId/upload/',
+        data: formData,
+      );
+      return Message.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw ApiException.fromResponse(
+        e.response?.data as Map<String, dynamic>?,
+        e.response?.statusCode,
+      );
+    }
+  }
+
   /// Disconnect WebSocket
   void disconnect() {
     _wsChannel?.sink.close();

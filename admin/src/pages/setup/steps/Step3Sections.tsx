@@ -15,9 +15,9 @@ interface Props {
 }
 
 const SECTION_LABELS: Record<string, { name: string; icon: string; cycle: CycleType }> = {
-  PRIMARY: { name: 'Section Primaire', icon: '🏫', cycle: 'PRIMARY' },
-  MIDDLE:  { name: 'Section Moyenne (CEM)', icon: '🏢', cycle: 'MIDDLE' },
-  HIGH:    { name: 'Section Secondaire (Lycée)', icon: '🎓', cycle: 'HIGH' },
+  PRIMARY: { name: 'Section Primaire', icon: '', cycle: 'PRIMARY' },
+  MIDDLE:  { name: 'Section Moyenne (CEM)', icon: '', cycle: 'MIDDLE' },
+  HIGH:    { name: 'Section Secondaire (Lycée)', icon: '', cycle: 'HIGH' },
 };
 
 const Step3Sections: React.FC<Props> = ({ data, school, onChange }) => {

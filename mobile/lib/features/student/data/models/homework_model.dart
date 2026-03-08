@@ -54,6 +54,23 @@ class HomeworkTask {
     totalStudents: json['total_students'] as int? ?? 0,
     hasSubmitted: json['has_submitted'] as bool? ?? false,
   );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'title': title,
+    'description': description,
+    'subject': subjectId,
+    'subject_name': subjectName,
+    'classroom': classroomId,
+    'classroom_name': classroomName,
+    'teacher_name': teacherName,
+    'due_date': dueDate.toIso8601String(),
+    'attachment': attachmentUrl,
+    'created_at': createdAt.toIso8601String(),
+    'submission_count': submissionCount,
+    'total_students': totalStudents,
+    'has_submitted': hasSubmitted,
+  };
 }
 
 class HomeworkSubmission {

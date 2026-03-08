@@ -1,5 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/di/injection.dart';
+import '../../../student/data/models/academic_model.dart';
+import '../../../student/data/models/grade_model.dart';
+import '../../../student/data/repositories/academic_repository.dart';
+import '../../../student/data/repositories/grade_repository.dart';
+import '../../../shared/data/models/communication_model.dart';
+import '../../data/repositories/attendance_repository.dart';
+
 /// Teacher screen for entering and managing student grades.
 class GradeEntryScreen extends StatefulWidget {
   const GradeEntryScreen({super.key});
@@ -9,22 +17,25 @@ class GradeEntryScreen extends StatefulWidget {
 }
 
 class _GradeEntryScreenState extends State<GradeEntryScreen> {
-  String? _selectedClassroom;
-  String? _selectedSubject;
-  String? _selectedExamType;
+  String? _selectedClassroomId;
+  String? _selectedSubjectId;
+  String? _selectedExamTypeId;
   final Map<String, TextEditingController> _gradeControllers = {};
 
-  // Placeholder data — replace with BLoC/repository calls
-  final _classrooms = ['1AM - A', '1AM - B', '2AM - A', '2AM - B'];
-  final _subjects = ['Mathématiques', 'Physique', 'Français', 'Arabe'];
-  final _examTypes = ['Devoir 1', 'Devoir 2', 'Composition'];
-  final _students = [
-    {'id': '1', 'name': 'Ahmed Benali'},
-    {'id': '2', 'name': 'Fatima Rahmani'},
-    {'id': '3', 'name': 'Youcef Mansouri'},
-    {'id': '4', 'name': 'Sara Boudiaf'},
-    {'id': '5', 'name': 'Khalil Haddad'},
-  ];
+  List<Classroom> _classrooms = [];
+  List<Subject> _subjects = [];
+  List<ExamType> _examTypes = [];
+  List<AttendanceRecord> _students =
+      []; // used to get student list from attendance
+  bool _loading = true;
+  bool _saving = false;
+  bool _loadingStudents = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFilters();
+  }
 
   @override
   void dispose() {
@@ -34,6 +45,54 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
     super.dispose();
   }
 
+  Future<void> _loadFilters() async {
+    try {
+      final results = await Future.wait([
+        getIt<AcademicRepository>().getClassrooms(),
+        getIt<AcademicRepository>().getSubjects(),
+        getIt<GradeRepository>().getExamTypes(),
+      ]);
+      setState(() {
+        _classrooms = results[0] as List<Classroom>;
+        _subjects = results[1] as List<Subject>;
+        _examTypes = results[2] as List<ExamType>;
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _loadStudents() async {
+    if (_selectedClassroomId == null) return;
+    setState(() => _loadingStudents = true);
+    try {
+      // Load students via attendance records for this classroom
+      final records = await getIt<AttendanceRepository>().getRecords(
+        classroomId: _selectedClassroomId,
+      );
+      // De-duplicate by studentId
+      final seen = <String>{};
+      final unique = <AttendanceRecord>[];
+      for (final r in records) {
+        if (seen.add(r.studentId)) {
+          unique.add(r);
+        }
+      }
+      setState(() {
+        _students = unique;
+        _loadingStudents = false;
+        // Reset controllers
+        for (final c in _gradeControllers.values) {
+          c.dispose();
+        }
+        _gradeControllers.clear();
+      });
+    } catch (e) {
+      setState(() => _loadingStudents = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -41,7 +100,7 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
         title: const Text('Saisie des notes'),
         actions: [
           TextButton.icon(
-            onPressed: _onSaveGrades,
+            onPressed: _saving ? null : _onSaveGrades,
             icon: const Icon(Icons.save, color: Colors.white),
             label: const Text(
               'Enregistrer',
@@ -50,15 +109,15 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Filters
-          _buildFilters(),
-          const Divider(),
-          // Student grade list
-          Expanded(child: _buildStudentList()),
-        ],
-      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                _buildFilters(),
+                const Divider(),
+                Expanded(child: _buildStudentList()),
+              ],
+            ),
     );
   }
 
@@ -69,56 +128,69 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
         spacing: 12,
         runSpacing: 8,
         children: [
-          _buildDropdown(
-            label: 'Classe',
-            value: _selectedClassroom,
-            items: _classrooms,
-            onChanged: (v) => setState(() => _selectedClassroom = v),
+          SizedBox(
+            width: 180,
+            child: DropdownButtonFormField<String>(
+              initialValue: _selectedClassroomId,
+              decoration: const InputDecoration(
+                labelText: 'Classe',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              items: _classrooms
+                  .map(
+                    (c) => DropdownMenuItem(value: c.id, child: Text(c.name)),
+                  )
+                  .toList(),
+              onChanged: (v) {
+                setState(() => _selectedClassroomId = v);
+                _loadStudents();
+              },
+            ),
           ),
-          _buildDropdown(
-            label: 'Matière',
-            value: _selectedSubject,
-            items: _subjects,
-            onChanged: (v) => setState(() => _selectedSubject = v),
+          SizedBox(
+            width: 180,
+            child: DropdownButtonFormField<String>(
+              initialValue: _selectedSubjectId,
+              decoration: const InputDecoration(
+                labelText: 'Matière',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              items: _subjects
+                  .map(
+                    (s) => DropdownMenuItem(value: s.id, child: Text(s.name)),
+                  )
+                  .toList(),
+              onChanged: (v) => setState(() => _selectedSubjectId = v),
+            ),
           ),
-          _buildDropdown(
-            label: 'Type d\'examen',
-            value: _selectedExamType,
-            items: _examTypes,
-            onChanged: (v) => setState(() => _selectedExamType = v),
+          SizedBox(
+            width: 180,
+            child: DropdownButtonFormField<String>(
+              initialValue: _selectedExamTypeId,
+              decoration: const InputDecoration(
+                labelText: 'Type d\'examen',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              items: _examTypes
+                  .map(
+                    (e) => DropdownMenuItem(value: e.id, child: Text(e.name)),
+                  )
+                  .toList(),
+              onChanged: (v) => setState(() => _selectedExamTypeId = v),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDropdown({
-    required String label,
-    required String? value,
-    required List<String> items,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return SizedBox(
-      width: 180,
-      child: DropdownButtonFormField<String>(
-        initialValue: value,
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-          isDense: true,
-        ),
-        items: items
-            .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-            .toList(),
-        onChanged: onChanged,
-      ),
-    );
-  }
-
   Widget _buildStudentList() {
-    if (_selectedClassroom == null ||
-        _selectedSubject == null ||
-        _selectedExamType == null) {
+    if (_selectedClassroomId == null ||
+        _selectedSubjectId == null ||
+        _selectedExamTypeId == null) {
       return const Center(
         child: Text(
           'Sélectionnez une classe, une matière et un type d\'examen',
@@ -127,18 +199,28 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
       );
     }
 
+    if (_loadingStudents) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_students.isEmpty) {
+      return const Center(
+        child: Text('Aucun élève trouvé', style: TextStyle(color: Colors.grey)),
+      );
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       itemCount: _students.length,
       itemBuilder: (context, index) {
         final student = _students[index];
-        final id = student['id']!;
+        final id = student.studentId;
         _gradeControllers.putIfAbsent(id, () => TextEditingController());
 
         return Card(
           child: ListTile(
             leading: CircleAvatar(child: Text('${index + 1}')),
-            title: Text(student['name']!),
+            title: Text(student.studentName ?? 'Élève $id'),
             trailing: SizedBox(
               width: 80,
               child: TextFormField(
@@ -152,14 +234,6 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
                   border: OutlineInputBorder(),
                   isDense: true,
                 ),
-                validator: (v) {
-                  if (v == null || v.isEmpty) return null;
-                  final score = double.tryParse(v);
-                  if (score == null || score < 0 || score > 20) {
-                    return '0-20';
-                  }
-                  return null;
-                },
               ),
             ),
           ),
@@ -168,14 +242,16 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
     );
   }
 
-  void _onSaveGrades() {
-    final entries = <Map<String, dynamic>>[];
+  Future<void> _onSaveGrades() async {
+    if (_selectedSubjectId == null || _selectedExamTypeId == null) return;
+
+    final entries = <MapEntry<String, double>>[];
     for (final e in _gradeControllers.entries) {
       if (e.value.text.isNotEmpty) {
-        entries.add({
-          'student_id': e.key,
-          'score': double.tryParse(e.value.text) ?? 0,
-        });
+        final score = double.tryParse(e.value.text);
+        if (score != null && score >= 0 && score <= 20) {
+          entries.add(MapEntry(e.key, score));
+        }
       }
     }
     if (entries.isEmpty) {
@@ -184,9 +260,31 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
       ).showSnackBar(const SnackBar(content: Text('Aucune note saisie')));
       return;
     }
-    // Dispatch grades to backend
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${entries.length} notes enregistrées')),
-    );
+
+    setState(() => _saving = true);
+    try {
+      final gradeRepo = getIt<GradeRepository>();
+      for (final entry in entries) {
+        await gradeRepo.createGrade(
+          studentId: entry.key,
+          subjectId: _selectedSubjectId!,
+          examTypeId: _selectedExamTypeId!,
+          score: entry.value,
+        );
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${entries.length} notes enregistrées')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 }

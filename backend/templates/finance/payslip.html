@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Fiche de paie - {{ payslip.reference }}</title>
+    <style>
+        @page { size: A4; margin: 1.5cm; }
+        body { font-family: Arial, sans-serif; font-size: 10pt; color: #333; }
+        .header { text-align: center; border-bottom: 3px solid #1a5276; padding-bottom: 12px; margin-bottom: 20px; }
+        .header h1 { font-size: 16pt; color: #1a5276; margin: 0; }
+        .header h2 { font-size: 12pt; color: #555; margin: 4px 0 0; }
+        .header .ref { font-size: 9pt; color: #888; margin-top: 4px; }
+        .section-title { font-size: 11pt; font-weight: bold; color: #1a5276; margin: 18px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #ddd; }
+        .info-grid { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .info-box { width: 48%; }
+        .info-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+        .info-table td { padding: 3px 6px; font-size: 9pt; }
+        .info-table .label { font-weight: bold; color: #555; width: 45%; }
+        .calc-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+        .calc-table th, .calc-table td { padding: 6px 10px; border: 1px solid #e5e7eb; text-align: left; font-size: 9pt; }
+        .calc-table th { background: #f3f4f6; color: #6b7280; text-transform: uppercase; font-size: 8pt; }
+        .calc-table .amount { text-align: right; font-family: 'Courier New', monospace; }
+        .calc-table .positive { color: #059669; }
+        .calc-table .negative { color: #dc2626; }
+        .total-row { font-weight: bold; background: #f0f9ff !important; }
+        .net-box { text-align: center; padding: 15px; border: 3px solid #1a5276; border-radius: 8px; margin: 20px 0; background: #f0f9ff; }
+        .net-box .amount { font-size: 22pt; font-weight: bold; color: #1a5276; }
+        .net-box .label { font-size: 10pt; color: #666; margin-top: 2px; }
+        .footer { margin-top: 30px; font-size: 8pt; color: #999; border-top: 1px solid #ddd; padding-top: 8px; }
+        .signatures { display: flex; justify-content: space-between; margin-top: 40px; }
+        .sig-box { text-align: center; width: 40%; }
+        .sig-box p { margin: 4px 0; font-size: 9pt; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        {% if school.logo %}
+        <img src="{{ school.logo.url }}" alt="Logo" style="max-height:60px;margin-bottom:8px;">
+        {% endif %}
+        <h1>{{ school.name }}</h1>
+        <h2>Fiche de Paie</h2>
+        <div class="ref">Référence : {{ payslip.reference }}</div>
+    </div>
+
+    <div class="info-grid">
+        <div class="info-box">
+            <div class="section-title">Employé</div>
+            <table class="info-table">
+                <tr><td class="label">Nom complet :</td><td>{{ teacher.last_name }} {{ teacher.first_name }}</td></tr>
+                <tr><td class="label">Téléphone :</td><td>{{ teacher.phone_number }}</td></tr>
+                {% if config %}
+                <tr><td class="label">Qualification :</td><td>{{ config.get_qualification_display }}</td></tr>
+                <tr><td class="label">Heures/semaine :</td><td>{{ config.weekly_hours }}h</td></tr>
+                {% if config.bank_account %}<tr><td class="label">Compte bancaire :</td><td>{{ config.bank_account }}</td></tr>{% endif %}
+                {% if config.hire_date %}<tr><td class="label">Date d'embauche :</td><td>{{ config.hire_date|date:"d/m/Y" }}</td></tr>{% endif %}
+                {% endif %}
+            </table>
+        </div>
+        <div class="info-box">
+            <div class="section-title">Période</div>
+            <table class="info-table">
+                <tr><td class="label">Mois :</td><td>{{ period }}</td></tr>
+                <tr><td class="label">Statut :</td><td>{{ payslip.get_status_display }}</td></tr>
+                {% if payslip.paid_on %}<tr><td class="label">Payé le :</td><td>{{ payslip.paid_on|date:"d/m/Y" }}</td></tr>{% endif %}
+            </table>
+        </div>
+    </div>
+
+    <div class="section-title">Détail du Calcul</div>
+    <table class="calc-table">
+        <thead>
+            <tr><th>Désignation</th><th class="amount">Montant (DZD)</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Salaire de base</td>
+                <td class="amount">{{ payslip.base_salary|floatformat:2 }}</td>
+            </tr>
+            {% if payslip.overtime_hours > 0 %}
+            <tr>
+                <td>Heures supplémentaires ({{ payslip.overtime_hours }}h)</td>
+                <td class="amount positive">+ {{ payslip.overtime_amount|floatformat:2 }}</td>
+            </tr>
+            {% endif %}
+            {% if payslip.leave_days_unpaid > 0 %}
+            <tr>
+                <td>Retenue congé sans solde ({{ payslip.leave_days_unpaid }} jours)</td>
+                <td class="amount negative">- {{ payslip.leave_deduction|floatformat:2 }}</td>
+            </tr>
+            {% endif %}
+            <tr class="total-row">
+                <td>Salaire Brut</td>
+                <td class="amount">{{ payslip.gross_salary|floatformat:2 }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    {% if payslip.deductions_detail %}
+    <div class="section-title">Retenues</div>
+    <table class="calc-table">
+        <thead>
+            <tr><th>Retenue</th><th class="amount">Montant (DZD)</th></tr>
+        </thead>
+        <tbody>
+            {% for d in payslip.deductions_detail %}
+            <tr>
+                <td>{{ d.name }}</td>
+                <td class="amount negative">- {{ d.amount }}</td>
+            </tr>
+            {% endfor %}
+            <tr class="total-row">
+                <td>Total Retenues</td>
+                <td class="amount negative">- {{ payslip.total_deductions|floatformat:2 }}</td>
+            </tr>
+        </tbody>
+    </table>
+    {% endif %}
+
+    <div class="net-box">
+        <div class="amount">{{ payslip.net_salary|floatformat:0 }} DZD</div>
+        <div class="label">Salaire Net à Payer</div>
+    </div>
+
+    {% if payslip.notes %}
+    <p><strong>Notes :</strong> {{ payslip.notes }}</p>
+    {% endif %}
+
+    <div class="signatures">
+        <div class="sig-box">
+            <p><strong>L'employeur</strong></p>
+            <br><br><br>
+            <p>_________________________</p>
+            <p>Cachet et signature</p>
+        </div>
+        <div class="sig-box">
+            <p><strong>L'employé</strong></p>
+            <br><br><br>
+            <p>_________________________</p>
+            <p>Signature</p>
+        </div>
+    </div>
+
+    <div class="footer">
+        ILMI — Fiche de paie générée automatiquement le {{ generated_at|date:"d/m/Y à H:i" }}
+        <br>Ce document est confidentiel et destiné uniquement à l'employé concerné.
+    </div>
+</body>
+</html>

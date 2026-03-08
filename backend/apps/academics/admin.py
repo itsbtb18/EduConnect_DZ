@@ -6,10 +6,12 @@ from .models import (
     Level,
     LevelSubject,
     Resource,
+    Room,
     ScheduleSlot,
     Stream,
     Subject,
     TeacherAssignment,
+    TimeSlotConfig,
     Timetable,
 )
 
@@ -144,3 +146,19 @@ class TimetableAdmin(admin.ModelAdmin):
         "created_at",
     )
     list_filter = ("school", "academic_year")
+
+
+# ── Room & TimeSlotConfig ────────────────────────────────────────────────
+
+
+@admin.register(Room)
+class RoomAdmin(admin.ModelAdmin):
+    list_display = ("name", "code", "room_type", "capacity", "is_available", "school")
+    list_filter = ("school", "room_type", "is_available")
+
+
+@admin.register(TimeSlotConfig)
+class TimeSlotConfigAdmin(admin.ModelAdmin):
+    list_display = ("label", "start_time", "end_time", "order", "is_break", "school")
+    list_filter = ("school", "is_break")
+    ordering = ("school", "order")

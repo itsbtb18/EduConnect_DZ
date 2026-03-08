@@ -13,10 +13,10 @@ import {
 import type { GradeAppeal, AppealRespondPayload } from '../../../types/grades';
 
 const STATUS_CONFIG: Record<string, { color: string; icon: React.ReactNode; emoji: string }> = {
-  PENDING:      { color: 'red',     icon: <ExclamationCircleOutlined />, emoji: '🔴' },
-  UNDER_REVIEW: { color: 'orange',  icon: <ClockCircleOutlined />,      emoji: '🟠' },
-  ACCEPTED:     { color: 'green',   icon: <CheckCircleOutlined />,      emoji: '🟢' },
-  REJECTED:     { color: 'default', icon: <CloseCircleOutlined />,      emoji: '⚫' },
+  PENDING:      { color: 'red',     icon: <ExclamationCircleOutlined />, emoji: '' },
+  UNDER_REVIEW: { color: 'orange',  icon: <ClockCircleOutlined />,      emoji: '' },
+  ACCEPTED:     { color: 'green',   icon: <CheckCircleOutlined />,      emoji: '' },
+  REJECTED:     { color: 'default', icon: <CloseCircleOutlined />,      emoji: '' },
 };
 
 interface AppealCardProps {
@@ -182,7 +182,7 @@ const AppealCard: React.FC<AppealCardProps> = ({ appeal, onRespond, loading }) =
 
       {/* Accept modal */}
       <Modal
-        title="✅ Accepter le recours + Corriger"
+        title="Accepter le recours + Corriger"
         open={acceptModalOpen}
         onCancel={() => setAcceptModalOpen(false)}
         onOk={handleAccept}
@@ -219,7 +219,7 @@ const AppealCard: React.FC<AppealCardProps> = ({ appeal, onRespond, loading }) =
 
       {/* Reject modal */}
       <Modal
-        title="❌ Rejeter le recours"
+        title="Rejeter le recours"
         open={rejectModalOpen}
         onCancel={() => setRejectModalOpen(false)}
         onOk={handleReject}

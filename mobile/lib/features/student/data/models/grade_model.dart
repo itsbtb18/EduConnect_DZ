@@ -1,6 +1,8 @@
 /// Grade models matching Django grades app
 library;
 
+import 'package:equatable/equatable.dart';
+
 class ExamType {
   final String id;
   final String name;
@@ -22,7 +24,7 @@ class ExamType {
   );
 }
 
-class Grade {
+class Grade extends Equatable {
   final String id;
   final String studentId;
   final String? studentName;
@@ -51,6 +53,22 @@ class Grade {
     this.gradedAt,
   });
 
+  @override
+  List<Object?> get props => [
+    id,
+    studentId,
+    studentName,
+    subjectId,
+    subjectName,
+    examTypeId,
+    examTypeName,
+    score,
+    maxScore,
+    remark,
+    status,
+    gradedAt,
+  ];
+
   double get percentage => (score / maxScore) * 100;
   double get normalizedScore => (score / maxScore) * 20; // Normalize to /20
 
@@ -70,6 +88,21 @@ class Grade {
         ? DateTime.parse(json['graded_at'] as String)
         : null,
   );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'student': studentId,
+    'student_name': studentName,
+    'subject': subjectId,
+    'subject_name': subjectName,
+    'exam_type': examTypeId,
+    'exam_type_name': examTypeName,
+    'score': score,
+    'max_score': maxScore,
+    'remark': remark,
+    'status': status,
+    'graded_at': gradedAt?.toIso8601String(),
+  };
 }
 
 class ReportCard {

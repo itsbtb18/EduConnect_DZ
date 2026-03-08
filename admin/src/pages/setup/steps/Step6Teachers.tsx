@@ -51,9 +51,9 @@ function generatePassword(length = 12): string {
 
 /** Map cycle type to section type label */
 const SECTION_OPTIONS: { value: CycleType; label: string; emoji: string; color: string }[] = [
-  { value: 'PRIMARY', label: 'Primaire',      emoji: '🟢', color: CYCLE_COLORS.PRIMARY.bg },
-  { value: 'MIDDLE',  label: 'CEM (Moyen)',   emoji: '🟡', color: CYCLE_COLORS.MIDDLE.bg },
-  { value: 'HIGH',    label: 'Lycée',         emoji: '🔴', color: CYCLE_COLORS.HIGH.bg },
+  { value: 'PRIMARY', label: 'Primaire',      emoji: '', color: CYCLE_COLORS.PRIMARY.bg },
+  { value: 'MIDDLE',  label: 'CEM (Moyen)',   emoji: '', color: CYCLE_COLORS.MIDDLE.bg },
+  { value: 'HIGH',    label: 'Lycée',         emoji: '', color: CYCLE_COLORS.HIGH.bg },
 ];
 
 // ── Props ─────────────────────────────────────────────────────────────

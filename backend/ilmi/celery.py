@@ -69,6 +69,77 @@ app.conf.beat_schedule = {
         "task": "apps.finance.tasks.send_payment_reminders",
         "schedule": crontab(minute=0, hour=9, day_of_week=0),
     },
+    # Detect chronic absenteeism — daily at 07:00 (Africa/Algiers)
+    "detect-chronic-absenteeism": {
+        "task": "apps.attendance.tasks.detect_chronic_absenteeism",
+        "schedule": crontab(minute=0, hour=7),
+    },
+    # Refresh fee enrollment statuses — daily at 08:30
+    "refresh-enrollment-statuses": {
+        "task": "apps.finance.tasks.refresh_enrollment_statuses",
+        "schedule": crontab(minute=30, hour=8),
+    },
+    # Auto-generate monthly payslips — 1st of each month at 06:00
+    "generate-monthly-payslips": {
+        "task": "apps.finance.tasks.generate_monthly_payslips",
+        "schedule": crontab(minute=0, hour=6, day_of_month=1),
+    },
+    # Send next-week canteen menu to parents — every Saturday at 18:00
+    "send-weekly-canteen-menu": {
+        "task": "apps.canteen.tasks.send_weekly_menu_to_parents",
+        "schedule": crontab(minute=0, hour=18, day_of_week=6),
+    },
+    # Transport departure reminder — school days (Sun-Thu) at 06:30
+    "send-transport-departure-reminder": {
+        "task": "apps.transport.tasks.send_transport_departure_reminder",
+        "schedule": crontab(minute=30, hour=6, day_of_week="0,1,2,3,6"),
+    },
+    # Transport return reminder — school days (Sun-Thu) at 14:00
+    "send-transport-return-reminder": {
+        "task": "apps.transport.tasks.send_transport_return_reminder",
+        "schedule": crontab(minute=0, hour=14, day_of_week="0,1,2,3,6"),
+    },
+    # Library — check overdue loans daily at 07:30
+    "check-overdue-loans": {
+        "task": "apps.library.tasks.check_overdue_loans",
+        "schedule": crontab(minute=30, hour=7),
+    },
+    # Library — send due-date reminders daily at 08:00
+    "send-due-date-reminders": {
+        "task": "apps.library.tasks.send_due_date_reminders",
+        "schedule": crontab(minute=0, hour=8),
+    },
+    # Subscription renewal check — daily at 06:00
+    "check-subscription-renewals": {
+        "task": "apps.schools.tasks.check_subscription_renewals",
+        "schedule": crontab(minute=0, hour=6),
+    },
+    # Weekly notification summary — every Sunday at 20:00
+    "send-weekly-notification-summary": {
+        "task": "apps.notifications.tasks.send_weekly_notification_summary",
+        "schedule": crontab(minute=0, hour=20, day_of_week=0),
+    },
+    # ── Security tasks ──
+    # Check dormant accounts — daily at 02:00
+    "check-dormant-accounts": {
+        "task": "apps.accounts.tasks.check_dormant_accounts",
+        "schedule": crontab(minute=0, hour=2),
+    },
+    # Cleanup expired sessions — daily at 03:30
+    "cleanup-expired-sessions": {
+        "task": "apps.accounts.tasks.cleanup_expired_sessions",
+        "schedule": crontab(minute=30, hour=3),
+    },
+    # Cleanup expired OTPs — every 6 hours
+    "cleanup-expired-otps": {
+        "task": "apps.accounts.tasks.cleanup_expired_otps",
+        "schedule": crontab(minute=0, hour="*/6"),
+    },
+    # Cleanup old login attempts — weekly on Monday at 04:00
+    "cleanup-old-login-attempts": {
+        "task": "apps.accounts.tasks.cleanup_old_login_attempts",
+        "schedule": crontab(minute=0, hour=4, day_of_week=1),
+    },
 }
 
 

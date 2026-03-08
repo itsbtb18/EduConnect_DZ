@@ -109,7 +109,7 @@ const AverageCell: React.FC<AverageCellProps> = ({
       )}
       {isLocked && (
         <Tag color="red" style={{ width: '100%', textAlign: 'center' }}>
-          🔒 Trimestre verrouillé
+          Trimestre verrouillé
         </Tag>
       )}
     </div>
@@ -137,8 +137,8 @@ const AverageCell: React.FC<AverageCellProps> = ({
         }}
       >
         {avg != null ? avg.toFixed(2) : '—'}
-        {hasOverride && <span style={{ fontSize: 10, color: '#F59E0B' }}>✏️</span>}
-        {isPublished && <span style={{ fontSize: 10 }}>✅</span>}
+        {hasOverride && <span style={{ fontSize: 10, color: '#F59E0B' }}>•</span>}
+        {isPublished && <span style={{ fontSize: 10 }}>✓</span>}
       </div>
     </Popover>
   );

@@ -2,54 +2,89 @@
 class Announcement {
   final String id;
   final String title;
-  final String content;
-  final String targetAudience; // general, teachers, students, parents
+  final String body;
+  final String
+  targetAudience; // ALL, PARENTS, STUDENTS, TEACHERS, SPECIFIC_SECTION, SPECIFIC_CLASS
   final String? authorName;
-  final String? attachmentUrl;
-  final bool isPublished;
   final bool isPinned;
+  final bool isUrgent;
+  final String? imageUrl;
+  final int viewsCount;
+  final String? publishAt;
+  final String? publishedAt;
+  final List<AnnouncementAttachment> attachments;
   final DateTime createdAt;
-  final DateTime? updatedAt;
 
   const Announcement({
     required this.id,
     required this.title,
-    required this.content,
-    required this.targetAudience,
+    required this.body,
+    this.targetAudience = 'ALL',
     this.authorName,
-    this.attachmentUrl,
-    this.isPublished = true,
     this.isPinned = false,
+    this.isUrgent = false,
+    this.imageUrl,
+    this.viewsCount = 0,
+    this.publishAt,
+    this.publishedAt,
+    this.attachments = const [],
     required this.createdAt,
-    this.updatedAt,
   });
 
   factory Announcement.fromJson(Map<String, dynamic> json) {
     return Announcement(
       id: json['id'] as String,
       title: json['title'] as String? ?? '',
-      content: json['content'] as String? ?? '',
-      targetAudience: json['target_audience'] as String? ?? 'general',
+      body: json['body'] as String? ?? json['content'] as String? ?? '',
+      targetAudience: json['target_audience'] as String? ?? 'ALL',
       authorName: json['author_name'] as String?,
-      attachmentUrl: json['attachment'] as String?,
-      isPublished: json['is_published'] as bool? ?? true,
       isPinned: json['is_pinned'] as bool? ?? false,
+      isUrgent: json['is_urgent'] as bool? ?? false,
+      imageUrl: json['image_url'] as String?,
+      viewsCount: json['views_count'] as int? ?? 0,
+      publishAt: json['publish_at'] as String?,
+      publishedAt: json['published_at'] as String?,
+      attachments:
+          (json['attachments'] as List?)
+              ?.map(
+                (e) =>
+                    AnnouncementAttachment.fromJson(e as Map<String, dynamic>),
+              )
+              .toList() ??
+          [],
       createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'] as String)
-          : null,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'title': title,
-      'content': content,
+      'body': body,
       'target_audience': targetAudience,
-      'is_published': isPublished,
       'is_pinned': isPinned,
+      'is_urgent': isUrgent,
     };
   }
+}
+
+/// Attachment for an announcement
+class AnnouncementAttachment {
+  final String id;
+  final String file;
+  final String? fileName;
+
+  const AnnouncementAttachment({
+    required this.id,
+    required this.file,
+    this.fileName,
+  });
+
+  factory AnnouncementAttachment.fromJson(Map<String, dynamic> json) =>
+      AnnouncementAttachment(
+        id: json['id'] as String,
+        file: json['file'] as String,
+        fileName: json['file_name'] as String?,
+      );
 }
 
 /// Event model (subtype of announcements with date/location)

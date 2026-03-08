@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Card, Spin, Empty, Table, Tag, Button, InputNumber, Space, Tooltip, message } from 'antd';
+import { Card, Spin, Empty, Table, Tag, Button, InputNumber, Space, Tooltip, message, Select } from 'antd';
 import {
   TeamOutlined,
   SolutionOutlined,
@@ -11,12 +11,15 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ClockCircleOutlined,
+  LineChartOutlined,
+  AlertOutlined,
+  TrophyOutlined,
 } from '@ant-design/icons';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
+  PieChart, Pie, Cell, Legend, LineChart, Line,
 } from 'recharts';
-import { useDashboardStats, useClasses, usePayments, useAttendance, useTeachers } from '../../hooks/useApi';
+import { useDashboardStats, useClasses, usePayments, useAttendance, useTeachers, useGradeAnalytics, useAcademicYears } from '../../hooks/useApi';
 import dayjs from 'dayjs';
 import './AnalyticsPage.css';
 
@@ -28,8 +31,20 @@ const AnalyticsPage: React.FC = () => {
   const { data: paymentData } = usePayments({ page_size: 100 });
   const { data: attendanceData } = useAttendance({ page_size: 5000 });
   const { data: teacherData } = useTeachers({ page_size: 200 });
+  const { data: yearData } = useAcademicYears();
 
   const [absentThreshold, setAbsentThreshold] = useState(3);
+  const [selectedTrimester, setSelectedTrimester] = useState<number>(1);
+
+  const years = Array.isArray(yearData) ? yearData : yearData?.results || [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const currentYear = years.find((y: any) => y.is_current) || years[0];
+  const [selectedYearId, setSelectedYearId] = useState<string | undefined>(undefined);
+  const yearId = selectedYearId || currentYear?.id;
+
+  const { data: gradeAnalytics, isLoading: analyticsLoading } = useGradeAnalytics(
+    yearId ? { academic_year_id: yearId, trimester: selectedTrimester } : undefined
+  );
 
   const overviewData = [
     { name: 'Élèves', value: studentCount, icon: <TeamOutlined />, colorClass: 'stat-card__icon--blue' },
@@ -380,6 +395,7 @@ const AnalyticsPage: React.FC = () => {
                 title: 'Jours actifs',
                 dataIndex: 'daysActive',
                 key: 'daysActive',
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 render: (v: number, r: any) => `${v} / ${r.schoolDays} jours`,
               },
               {
@@ -391,6 +407,7 @@ const AnalyticsPage: React.FC = () => {
                 title: 'Taux de soumission',
                 dataIndex: 'submissionRate',
                 key: 'submissionRate',
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 sorter: (a: any, b: any) => a.submissionRate - b.submissionRate,
                 render: (v: number) => {
                   const color = v >= 80 ? 'green' : v >= 50 ? 'orange' : 'red';
@@ -401,6 +418,7 @@ const AnalyticsPage: React.FC = () => {
               {
                 title: 'Statut',
                 key: 'status',
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 render: (_: unknown, r: any) => {
                   if (r.submissionRate >= 80) return <Tag color="success">Actif</Tag>;
                   if (r.submissionRate >= 50) return <Tag color="warning">Attention</Tag>;
@@ -416,6 +434,226 @@ const AnalyticsPage: React.FC = () => {
           />
         )}
       </Card>
+
+      {/* ═══════════════════ GRADE ANALYTICS (Prompt V) ═══════════════════ */}
+      <Card style={{ marginTop: 24, marginBottom: 16 }}>
+        <Space>
+          <strong><LineChartOutlined /> Analytiques des Notes</strong>
+          <Select
+            value={selectedYearId || currentYear?.id}
+            onChange={setSelectedYearId}
+            style={{ width: 200 }}
+            placeholder="Année scolaire"
+          >
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+            {years.map((y: any) => (
+              <Select.Option key={y.id} value={y.id}>{y.name || `${y.start_date} — ${y.end_date}`}</Select.Option>
+            ))}
+          </Select>
+          <Select value={selectedTrimester} onChange={setSelectedTrimester} style={{ width: 140 }}>
+            <Select.Option value={1}>Trimestre 1</Select.Option>
+            <Select.Option value={2}>Trimestre 2</Select.Option>
+            <Select.Option value={3}>Trimestre 3</Select.Option>
+          </Select>
+        </Space>
+      </Card>
+
+      {analyticsLoading ? (
+        <Card style={{ textAlign: 'center', padding: 40 }}><Spin size="large" /></Card>
+      ) : gradeAnalytics ? (
+        <>
+          {/* Subject Averages */}
+          {gradeAnalytics.subject_averages && Object.keys(gradeAnalytics.subject_averages).length > 0 && (
+            <Card
+              title={<span className="section-title"><BookOutlined /> Moyennes par matière</span>}
+              style={{ marginTop: 16 }}
+            >
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={Object.entries(gradeAnalytics.subject_averages).map(([name, avg]) => ({ name, moyenne: Number(avg) }))}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6B7280' }} angle={-20} textAnchor="end" height={60} />
+                  <YAxis domain={[0, 20]} tick={{ fontSize: 12, fill: '#6B7280' }} />
+                  <RechartsTooltip />
+                  <Bar dataKey="moyenne" fill="#1B5C7A" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+          )}
+
+          {/* Pass/Fail Rates + Class Comparison */}
+          <div className="grid-2" style={{ marginTop: 16 }}>
+            {gradeAnalytics.pass_fail_rates && (
+              <Card title={<span className="section-title"><CheckCircleOutlined /> Taux de réussite / échec</span>}>
+                <ResponsiveContainer width="100%" height={280}>
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'Réussite', value: gradeAnalytics.pass_fail_rates.pass_count || 0 },
+                        { name: 'Échec', value: gradeAnalytics.pass_fail_rates.fail_count || 0 },
+                      ]}
+                      cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={4} dataKey="value"
+                      label={({ name, value }) => `${name}: ${value}`}
+                    >
+                      <Cell fill="#10B981" />
+                      <Cell fill="#EF4444" />
+                    </Pie>
+                    <RechartsTooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div style={{ textAlign: 'center', marginTop: 8 }}>
+                  <Tag color="green">Moy. réussites: {gradeAnalytics.pass_fail_rates.pass_avg?.toFixed(2) || '—'}</Tag>
+                  <Tag color="red">Moy. échecs: {gradeAnalytics.pass_fail_rates.fail_avg?.toFixed(2) || '—'}</Tag>
+                </div>
+              </Card>
+            )}
+
+            {gradeAnalytics.class_comparison && gradeAnalytics.class_comparison.length > 0 && (
+              <Card title={<span className="section-title"><BarChartOutlined /> Comparaison des classes</span>}>
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={gradeAnalytics.class_comparison} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                    <XAxis type="number" domain={[0, 20]} tick={{ fontSize: 12 }} />
+                    <YAxis dataKey="class_name" type="category" tick={{ fontSize: 11 }} width={100} />
+                    <RechartsTooltip />
+                    <Bar dataKey="average" fill="#00C9A7" radius={[0, 6, 6, 0]} name="Moyenne" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Card>
+            )}
+          </div>
+
+          {/* Trimester Evolution */}
+          {gradeAnalytics.trimester_evolution && gradeAnalytics.trimester_evolution.length > 0 && (
+            <Card
+              title={<span className="section-title"><LineChartOutlined /> Évolution trimestrielle</span>}
+              style={{ marginTop: 16 }}
+            >
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={gradeAnalytics.trimester_evolution}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                  <XAxis dataKey="trimester" tick={{ fontSize: 12, fill: '#6B7280' }} />
+                  <YAxis domain={[0, 20]} tick={{ fontSize: 12, fill: '#6B7280' }} />
+                  <RechartsTooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="average" stroke="#1B5C7A" strokeWidth={2} name="Moyenne" dot={{ r: 5 }} />
+                  <Line type="monotone" dataKey="highest" stroke="#10B981" strokeWidth={2} name="Max" dot={{ r: 4 }} />
+                  <Line type="monotone" dataKey="lowest" stroke="#EF4444" strokeWidth={2} name="Min" dot={{ r: 4 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </Card>
+          )}
+
+          {/* Top Students by Level */}
+          {gradeAnalytics.top_students_by_level && Object.keys(gradeAnalytics.top_students_by_level).length > 0 && (
+            <Card
+              title={<span className="section-title"><TrophyOutlined /> Meilleurs élèves par niveau</span>}
+              style={{ marginTop: 16 }}
+            >
+              {Object.entries(gradeAnalytics.top_students_by_level).map(([level, students]) => (
+                <div key={level} style={{ marginBottom: 16 }}>
+                  <Tag color="blue" style={{ marginBottom: 8, fontSize: 14 }}>{level}</Tag>
+                  <Table
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    dataSource={students as any[]}
+                    rowKey="student_id"
+                    size="small"
+                    pagination={false}
+                    columns={[
+                      { title: 'Rang', dataIndex: 'rank', key: 'rank', width: 60 },
+                      { title: 'Élève', dataIndex: 'student_name', key: 'name' },
+                      { title: 'Classe', dataIndex: 'class_name', key: 'class' },
+                      {
+                        title: 'Moyenne',
+                        dataIndex: 'average',
+                        key: 'average',
+                        render: (v: number) => <Tag color={v >= 16 ? 'gold' : v >= 10 ? 'green' : 'red'}>{v?.toFixed(2)}</Tag>,
+                      },
+                    ]}
+                  />
+                </div>
+              ))}
+            </Card>
+          )}
+
+          {/* At-Risk Students */}
+          {gradeAnalytics.at_risk_students && gradeAnalytics.at_risk_students.length > 0 && (
+            <Card
+              title={
+                <Space>
+                  <AlertOutlined style={{ color: '#EF4444' }} />
+                  <span className="section-title">Élèves à risque — Baisse de performance</span>
+                  <Tag color="red">{gradeAnalytics.at_risk_students.length}</Tag>
+                </Space>
+              }
+              style={{ marginTop: 16 }}
+            >
+              <Table
+                dataSource={gradeAnalytics.at_risk_students}
+                rowKey="student_id"
+                size="small"
+                pagination={{ pageSize: 10 }}
+                columns={[
+                  { title: 'Élève', dataIndex: 'student_name', key: 'name' },
+                  { title: 'Classe', dataIndex: 'class_name', key: 'class', render: (v: string) => <Tag color="blue">{v}</Tag> },
+                  {
+                    title: 'Moy. précédente',
+                    dataIndex: 'previous_average',
+                    key: 'prev',
+                    render: (v: number) => v?.toFixed(2),
+                  },
+                  {
+                    title: 'Moy. actuelle',
+                    dataIndex: 'current_average',
+                    key: 'curr',
+                    render: (v: number) => <Tag color={v < 10 ? 'red' : 'orange'}>{v?.toFixed(2)}</Tag>,
+                  },
+                  {
+                    title: 'Baisse',
+                    dataIndex: 'drop',
+                    key: 'drop',
+                    render: (v: number) => <Tag color="red">-{v?.toFixed(2)} pts</Tag>,
+                  },
+                ]}
+              />
+            </Card>
+          )}
+
+          {/* Teacher Analytics */}
+          {gradeAnalytics.teacher_analytics && gradeAnalytics.teacher_analytics.length > 0 && (
+            <Card
+              title={<span className="section-title"><SolutionOutlined /> Analytiques enseignants — Notes</span>}
+              style={{ marginTop: 16 }}
+            >
+              <Table
+                dataSource={gradeAnalytics.teacher_analytics}
+                rowKey="teacher_id"
+                size="small"
+                pagination={{ pageSize: 10 }}
+                columns={[
+                  { title: 'Enseignant', dataIndex: 'teacher_name', key: 'name' },
+                  { title: 'Matière', dataIndex: 'subject', key: 'subject', render: (v: string) => <Tag>{v}</Tag> },
+                  {
+                    title: 'Moy. des classes',
+                    dataIndex: 'class_average',
+                    key: 'avg',
+                    render: (v: number) => <Tag color={v >= 10 ? 'green' : 'red'}>{v?.toFixed(2)}</Tag>,
+                  },
+                  {
+                    title: 'Taux de soumission',
+                    dataIndex: 'submission_rate',
+                    key: 'rate',
+                    render: (v: number) => {
+                      const color = v >= 80 ? 'green' : v >= 50 ? 'orange' : 'red';
+                      return <Tag color={color}>{v}%</Tag>;
+                    },
+                  },
+                ]}
+              />
+            </Card>
+          )}
+        </>
+      ) : null}
     </div>
   );
 };

@@ -207,6 +207,8 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - static_files:/var/www/static:ro
       - media_files:/var/www/media:ro
+      - certbot_www:/var/www/certbot:ro
+      - certbot_conf:/etc/letsencrypt:ro
     depends_on:
       api:
         condition: service_healthy
@@ -225,6 +227,18 @@ services:
         limits:
           memory: 128M
 
+  # ──────────────────────────────────────────────
+  # Certbot (Let's Encrypt — enable with profile)
+  # ──────────────────────────────────────────────
+  certbot:
+    image: certbot/certbot:latest
+    profiles: ["ssl"]
+    volumes:
+      - certbot_www:/var/www/certbot
+      - certbot_conf:/etc/letsencrypt
+    depends_on:
+      - nginx
+
 # ──────────────────────────────────────────────
 # Volumes (persistent data)
 # ──────────────────────────────────────────────
@@ -236,6 +250,10 @@ volumes:
   static_files:
     driver: local
   media_files:
+    driver: local
+  certbot_www:
+    driver: local
+  certbot_conf:
     driver: local
 
 # ──────────────────────────────────────────────

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-
+import '../../../../core/context/context_cubit.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../bloc/auth_bloc.dart';
 
@@ -52,7 +52,16 @@ class _PinLoginScreenState extends State<PinLoginScreen> {
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthAuthenticated) {
-            context.go('/student');
+            // Load contexts into ContextCubit
+            final contextCubit = context.read<ContextCubit>();
+            contextCubit.loadContexts(state.contexts);
+
+            if (state.contexts.length > 1) {
+              context.go('/context-selector');
+            } else {
+              // PIN login is typically student → go to student
+              context.go('/student');
+            }
           } else if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(

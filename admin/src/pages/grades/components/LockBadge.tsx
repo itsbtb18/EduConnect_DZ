@@ -35,7 +35,7 @@ const LockBadge: React.FC<LockBadgeProps> = ({
         icon={<LockOutlined />}
         style={{ fontSize: 13, padding: '4px 12px', fontWeight: 600 }}
       >
-        🔒 Trimestre verrouillé
+        Trimestre verrouillé
       </Tag>
       {lockDate && (
         <span style={{ fontSize: 11, color: '#888' }}>
@@ -50,7 +50,7 @@ const LockBadge: React.FC<LockBadgeProps> = ({
             style={{ cursor: 'pointer', fontWeight: 500 }}
             onClick={onUnlock}
           >
-            🔓 Déverrouiller
+            Déverrouiller
           </Tag>
         </Tooltip>
       )}

@@ -115,7 +115,7 @@ const GradesFullPage: React.FC = () => {
       {/* Page header */}
       <div className="page-header">
         <div className="page-header__info">
-          <h1 className="page-header__title">📊 Notes & Bulletins</h1>
+          <h1 className="page-header__title">Notes & Bulletins</h1>
           <p className="page-header__subtitle">
             Gestion complète des notes, moyennes, classements et recours
           </p>
@@ -130,7 +130,7 @@ const GradesFullPage: React.FC = () => {
             </Tag>
             {classInfo.student_count != null && (
               <Tag style={{ fontSize: 13, padding: '4px 10px' }}>
-                👥 {classInfo.student_count} élèves
+                {classInfo.student_count} élèves
               </Tag>
             )}
           </div>

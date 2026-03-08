@@ -2,11 +2,22 @@
  * Step 1 — Profil de l'école
  * Logo upload + school information form
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Form, Input, Select, Upload, Button, Card, Row, Col } from 'antd';
 import { UploadOutlined, CameraOutlined } from '@ant-design/icons';
 import { wilayas } from '../../../data/mockData';
 import type { ProfileData } from '../../../types/wizard';
+
+/** Convert an absolute logo URL to a relative path usable by the browser */
+const normalizeLogoUrl = (url: string | null | undefined): string | null => {
+  if (!url || url.trim() === '') return null;
+  try {
+    const parsed = new URL(url);
+    return parsed.pathname;           // e.g. /media/schools/logos/pic.png
+  } catch {
+    return url.startsWith('/') ? url : `/${url}`;
+  }
+};
 
 interface Props {
   data: ProfileData;
@@ -14,9 +25,17 @@ interface Props {
 }
 
 const Step1Profile: React.FC<Props> = ({ data, onChange }) => {
-  const [logoPreview, setLogoPreview] = useState<string | null>(
-    typeof data.logo === 'string' ? data.logo : null,
-  );
+  const [logoPreview, setLogoPreview] = useState<string | null>(() => {
+    if (typeof data.logo === 'string') return normalizeLogoUrl(data.logo);
+    return null;
+  });
+
+  // Sync logoPreview when data.logo changes from outside (e.g. API loaded after mount)
+  useEffect(() => {
+    if (typeof data.logo === 'string' && data.logo) {
+      setLogoPreview(normalizeLogoUrl(data.logo));
+    }
+  }, [data.logo]);
 
   const handleLogoChange = (info: { file: File }) => {
     const file = info.file;

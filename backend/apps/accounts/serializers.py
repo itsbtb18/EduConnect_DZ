@@ -34,7 +34,7 @@ _SCHOOL_REQUIRED_ROLES = {
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
     Adds custom claims to the JWT payload:
-    user_id, role, school_id, is_first_login.
+    user_id, role, school_id, is_first_login, scopes.
 
     Also enriches the HTTP response body with the same fields so the
     client doesn't have to decode the JWT to read them.
@@ -44,11 +44,43 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
     @classmethod
     def get_token(cls, user):
+        from datetime import timedelta
+        from .models_security import (
+            ROLE_REFRESH_LIFETIMES,
+            ROLE_SCOPES,
+            READ_ONLY_ROLES,
+        )
+
         token = super().get_token(user)
         # Custom payload claims
         token["role"] = user.role
         token["school_id"] = str(user.school_id) if user.school_id else None
         token["is_first_login"] = user.is_first_login
+
+        # JWT scopes — strictly defined per role, non-modifiable
+        token["scopes"] = ROLE_SCOPES.get(user.role, [])
+
+        # Read-only flag for supervisor role
+        if user.role in READ_ONLY_ROLES:
+            token["read_only"] = True
+
+        # Role-based refresh token lifetime
+        lifetime_seconds = ROLE_REFRESH_LIFETIMES.get(user.role, 30 * 86400)
+        token.set_exp(
+            claim="exp",
+            from_time=token.current_time,
+            lifetime=timedelta(seconds=lifetime_seconds),
+        )
+
+        # Active modules — lets the frontend gate UI without extra API calls
+        if user.school_id:
+            try:
+                token["active_modules"] = user.school.subscription.get_active_modules()
+            except Exception:
+                token["active_modules"] = []
+        else:
+            token["active_modules"] = []
+
         return token
 
     def validate(self, attrs):
@@ -84,7 +116,9 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                         logger.warning(
                             "Login still failed after rehash for %s "
                             "(is_active=%s, has_usable_pw=%s)",
-                            phone, user.is_active, user.has_usable_password(),
+                            phone,
+                            user.is_active,
+                            user.has_usable_password(),
                         )
                         raise
                 else:
@@ -92,7 +126,9 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                     logger.warning(
                         "Login failed for existing user %s "
                         "(is_active=%s, has_usable_pw=%s)",
-                        phone, user.is_active, user.has_usable_password(),
+                        phone,
+                        user.is_active,
+                        user.has_usable_password(),
                     )
                     raise
             else:
@@ -102,7 +138,115 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data["role"] = self.user.role
         data["is_first_login"] = self.user.is_first_login
         data["school_id"] = str(self.user.school_id) if self.user.school_id else None
+        data["contexts"] = build_user_contexts(self.user)
         return data
+
+
+# ---------------------------------------------------------------------------
+# Multi-context builder
+# ---------------------------------------------------------------------------
+
+
+def _school_category_to_context_type(school):
+    """Map SchoolCategory to context_type string."""
+    if school and school.school_category == "TRAINING_CENTER":
+        return "FORMATION"
+    return "SCHOOL"
+
+
+def _get_modules(school):
+    """Safely fetch active modules for a school."""
+    try:
+        return school.subscription.get_active_modules()
+    except Exception:
+        return []
+
+
+def _get_children_for_parent(user, school):
+    """Return children list for a PARENT user at a specific school."""
+    try:
+        profile = user.parent_profile
+        children = []
+        for sp in profile.children.select_related(
+            "user", "current_class", "current_class__level"
+        ).filter(user__school=school, user__is_active=True):
+            children.append(
+                {
+                    "id": str(sp.user_id),
+                    "first_name": sp.user.first_name,
+                    "last_name": sp.user.last_name,
+                    "class_name": (sp.current_class.name if sp.current_class else None),
+                    "photo": sp.user.photo.url if sp.user.photo else None,
+                }
+            )
+        return children
+    except Exception:
+        return []
+
+
+def build_user_contexts(user):
+    """
+    Build the full list of contexts for a user.
+
+    1. The primary context comes from user.role + user.school.
+    2. Additional contexts come from UserContext rows.
+    3. Each context has: context_id, type, role, school_id, school_name,
+       school_logo, modules_active, and (for PARENT) children[].
+    """
+    from .models import UserContext
+
+    contexts = []
+
+    # ── Primary context (from User model) ──
+    if user.school_id:
+        school = user.school
+        ctx = {
+            "context_id": f"{user.id}_{user.school_id}_{user.role}",
+            "type": _school_category_to_context_type(school),
+            "role": user.role,
+            "school_id": str(school.id),
+            "school_name": school.name,
+            "school_logo": school.logo.url if school.logo else None,
+            "modules_active": _get_modules(school),
+        }
+        if user.role == "PARENT":
+            ctx["children"] = _get_children_for_parent(user, school)
+        contexts.append(ctx)
+    elif user.role == "SUPER_ADMIN":
+        contexts.append(
+            {
+                "context_id": f"{user.id}_superadmin",
+                "type": "PLATFORM",
+                "role": "SUPER_ADMIN",
+                "school_id": None,
+                "school_name": "Plateforme ILMI",
+                "school_logo": None,
+                "modules_active": [],
+            }
+        )
+
+    # ── Additional contexts (from UserContext table) ──
+    extra = UserContext.objects.filter(user=user, is_active=True).select_related(
+        "school", "school__subscription"
+    )
+    for uc in extra:
+        # Skip if same as primary
+        if str(uc.school_id) == str(user.school_id or "") and uc.role == user.role:
+            continue
+        ctx = {
+            "context_id": f"{user.id}_{uc.school_id}_{uc.role}",
+            "type": uc.context_type,
+            "role": uc.role,
+            "school_id": str(uc.school_id),
+            "school_name": uc.school.name,
+            "school_logo": uc.school.logo.url if uc.school.logo else None,
+            "modules_active": _get_modules(uc.school),
+        }
+        if uc.role == "PARENT":
+            ctx["children"] = _get_children_for_parent(user, uc.school)
+        contexts.append(ctx)
+
+    return contexts
 
 
 # ---------------------------------------------------------------------------
@@ -128,6 +272,7 @@ class UserSerializer(serializers.ModelSerializer):
     """Read serializer for user display."""
 
     school_detail = SchoolMinimalSerializer(source="school", read_only=True)
+    contexts = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -144,8 +289,12 @@ class UserSerializer(serializers.ModelSerializer):
             "is_active",
             "is_first_login",
             "created_at",
+            "contexts",
         ]
-        read_only_fields = ["id", "created_at"]
+        read_only_fields = ["id", "created_at", "contexts"]
+
+    def get_contexts(self, obj):
+        return build_user_contexts(obj)
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
@@ -215,6 +364,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
             else:
                 # SUPER_ADMIN fallback: auto-assign the only school if there is exactly one
                 from apps.schools.models import School as _School
+
                 schools = _School.objects.filter(is_deleted=False)
                 if schools.count() == 1:
                     attrs["school"] = schools.first()

@@ -7,6 +7,7 @@ import {
   GlobalOutlined,
   SaveOutlined,
 } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { useUpdateProfile, useChangePassword } from '../../hooks/useApi';
 
@@ -54,6 +55,7 @@ function getAcademicYears(): string[] {
 
 const SettingsPage: React.FC = () => {
   const { user } = useAuth();
+  const { t, i18n } = useTranslation();
   const [profileForm] = Form.useForm();
   const [passwordForm] = Form.useForm();
   const [generalForm] = Form.useForm();
@@ -72,7 +74,7 @@ const SettingsPage: React.FC = () => {
     setNotifPrefs((prev) => {
       const updated = { ...prev, [key]: checked };
       localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(updated));
-      message.success('Préférence enregistrée');
+      message.success(t('settings.prefSaved'));
       return updated;
     });
   }, []);
@@ -93,7 +95,10 @@ const SettingsPage: React.FC = () => {
     try {
       const values = await generalForm.validateFields();
       localStorage.setItem(GENERAL_STORAGE_KEY, JSON.stringify(values));
-      message.success('Paramètres généraux enregistrés');
+      if (values.language && values.language !== i18n.language) {
+        i18n.changeLanguage(values.language);
+      }
+      message.success(t('settings.generalSaved'));
     } catch { /* validation */ }
   };
 
@@ -101,7 +106,7 @@ const SettingsPage: React.FC = () => {
     try {
       const values = await profileForm.validateFields();
       if (!user?.id) {
-        message.error('Utilisateur non identifié');
+        message.error(t('settings.userNotFound'));
         return;
       }
       await updateProfile.mutateAsync({ id: user.id, ...values });
@@ -114,7 +119,7 @@ const SettingsPage: React.FC = () => {
     try {
       const values = await passwordForm.validateFields();
       if (values.new_password !== values.confirm_password) {
-        message.error('Les mots de passe ne correspondent pas');
+        message.error(t('settings.passwordMismatch'));
         return;
       }
       await changePassword.mutateAsync({
@@ -132,7 +137,7 @@ const SettingsPage: React.FC = () => {
       key: 'profile',
       label: (
         <span className="settings-tab-label">
-          <UserOutlined /> Profil
+          <UserOutlined /> {t('settings.profile')}
         </span>
       ),
       children: (
@@ -161,23 +166,23 @@ const SettingsPage: React.FC = () => {
             }}
           >
             <div className="grid-2col">
-              <Form.Item label="Prénom" name="first_name">
+              <Form.Item label={t('settings.firstName')} name="first_name">
                 <Input />
               </Form.Item>
-              <Form.Item label="Nom" name="last_name">
+              <Form.Item label={t('settings.lastName')} name="last_name">
                 <Input />
               </Form.Item>
             </div>
             <div className="grid-2col">
-              <Form.Item label="Email" name="email">
+              <Form.Item label={t('settings.email')} name="email">
                 <Input />
               </Form.Item>
-              <Form.Item label="Téléphone" name="phone_number">
+              <Form.Item label={t('settings.phone')} name="phone_number">
                 <Input disabled />
               </Form.Item>
             </div>
             <Button type="primary" icon={<SaveOutlined />} onClick={handleProfileSave} loading={updateProfile.isPending}>
-              Enregistrer
+              {t('common.save')}
             </Button>
           </Form>
         </Card>
@@ -187,24 +192,24 @@ const SettingsPage: React.FC = () => {
       key: 'security',
       label: (
         <span className="settings-tab-label">
-          <LockOutlined /> Sécurité
+          <LockOutlined /> {t('settings.security')}
         </span>
       ),
       children: (
         <Card>
-          <h3 className="settings-section-title">Changer le mot de passe</h3>
+          <h3 className="settings-section-title">{t('settings.changePassword')}</h3>
           <Form form={passwordForm} layout="vertical" className="settings-form--narrow">
-            <Form.Item label="Mot de passe actuel" name="current_password" rules={[{ required: true, message: 'Requis' }]}>
+            <Form.Item label={t('settings.currentPassword')} name="current_password" rules={[{ required: true, message: t('common.required') }]}>
               <Input.Password />
             </Form.Item>
-            <Form.Item label="Nouveau mot de passe" name="new_password" rules={[{ required: true, message: 'Requis' }]}>
+            <Form.Item label={t('settings.newPassword')} name="new_password" rules={[{ required: true, message: t('common.required') }]}>
               <Input.Password />
             </Form.Item>
-            <Form.Item label="Confirmer" name="confirm_password" rules={[{ required: true, message: 'Requis' }]}>
+            <Form.Item label={t('settings.confirmPassword')} name="confirm_password" rules={[{ required: true, message: t('common.required') }]}>
               <Input.Password />
             </Form.Item>
             <Button type="primary" icon={<LockOutlined />} onClick={handlePasswordChange} loading={changePassword.isPending}>
-              Modifier le mot de passe
+              {t('settings.changePassword')}
             </Button>
           </Form>
         </Card>
@@ -214,19 +219,19 @@ const SettingsPage: React.FC = () => {
       key: 'notifications',
       label: (
         <span className="settings-tab-label">
-          <BellOutlined /> Notifications
+          <BellOutlined /> {t('settings.notifications')}
         </span>
       ),
       children: (
         <Card>
-          <h3 className="settings-section-title">Préférences de notification</h3>
+          <h3 className="settings-section-title">{t('settings.notificationPrefs')}</h3>
           <div className="settings-notif-list">
             {([
-              { key: 'email' as const, label: 'Notifications par email', desc: 'Recevoir les notifications importantes par email' },
-              { key: 'sms' as const, label: 'Notifications SMS', desc: 'Recevoir les alertes urgentes par SMS' },
-              { key: 'enrollments' as const, label: 'Nouvelles inscriptions', desc: 'Notifier lors de nouvelles inscriptions' },
-              { key: 'payments' as const, label: 'Paiements', desc: 'Notifier lors de nouveaux paiements' },
-              { key: 'absences' as const, label: 'Absences', desc: "Alertes d'absences non justifiées" },
+              { key: 'email' as const, label: t('settings.emailNotif'), desc: t('settings.emailNotifDesc') },
+              { key: 'sms' as const, label: t('settings.smsNotif'), desc: t('settings.smsNotifDesc') },
+              { key: 'enrollments' as const, label: t('settings.enrollmentNotif'), desc: t('settings.enrollmentNotifDesc') },
+              { key: 'payments' as const, label: t('settings.paymentNotif'), desc: t('settings.paymentNotifDesc') },
+              { key: 'absences' as const, label: t('settings.absenceNotif'), desc: t('settings.absenceNotifDesc') },
             ]).map((item) => (
               <div key={item.key} className="settings-notif-item">
                 <div>
@@ -247,25 +252,25 @@ const SettingsPage: React.FC = () => {
       key: 'general',
       label: (
         <span className="settings-tab-label">
-          <GlobalOutlined /> Général
+          <GlobalOutlined /> {t('settings.general')}
         </span>
       ),
       children: (
         <Card>
-          <h3 className="settings-section-title">Paramètres généraux</h3>
+          <h3 className="settings-section-title">{t('settings.generalSettings')}</h3>
           <Form form={generalForm} layout="vertical" className="settings-form--narrow">
-            <Form.Item label="Langue" name="language">
+            <Form.Item label={t('settings.language')} name="language">
               <Select>
-                <Select.Option value="fr">Français</Select.Option>
-                <Select.Option value="ar">Arabe</Select.Option>
+                <Select.Option value="fr">{t('settings.french')}</Select.Option>
+                <Select.Option value="ar">{t('settings.arabic')}</Select.Option>
               </Select>
             </Form.Item>
-            <Form.Item label="Fuseau horaire" name="timezone">
+            <Form.Item label={t('settings.timezone')} name="timezone">
               <Select>
-                <Select.Option value="africa_algiers">Afrique/Alger (UTC+1)</Select.Option>
+                <Select.Option value="africa_algiers">{t('settings.algiersTimezone')}</Select.Option>
               </Select>
             </Form.Item>
-            <Form.Item label="Année scolaire" name="academic_year">
+            <Form.Item label={t('settings.academicYear')} name="academic_year">
               <Select>
                 {getAcademicYears().map((y) => (
                   <Select.Option key={y} value={y}>{y}</Select.Option>
@@ -273,7 +278,7 @@ const SettingsPage: React.FC = () => {
               </Select>
             </Form.Item>
             <Button type="primary" icon={<SaveOutlined />} onClick={handleGeneralSave}>
-              Enregistrer
+              {t('common.save')}
             </Button>
           </Form>
         </Card>
@@ -285,8 +290,8 @@ const SettingsPage: React.FC = () => {
     <div className="page animate-fade-in">
       <div className="page-header">
         <div className="page-header__info">
-          <h1>Paramètres</h1>
-          <p>Configuration de votre compte et de l'application</p>
+          <h1>{t('settings.title')}</h1>
+          <p>{t('settings.subtitle')}</p>
         </div>
       </div>
 

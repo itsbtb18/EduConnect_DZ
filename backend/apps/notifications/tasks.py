@@ -200,3 +200,61 @@ def send_bulk_notification(
         "success_count": result["success_count"],
         "failure_count": result["failure_count"],
     }
+
+
+# ---------------------------------------------------------------------------
+# 6. Weekly notification summary (Celery beat)
+# ---------------------------------------------------------------------------
+
+
+@shared_task
+def send_weekly_notification_summary():
+    """
+    Send a weekly summary notification to users who opted in.
+    Runs every Sunday at 20:00 via Celery beat.
+    """
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from .models import Notification, NotificationPreference
+
+    now = timezone.now()
+    week_ago = now - timedelta(days=7)
+
+    prefs = NotificationPreference.objects.filter(
+        weekly_summary_enabled=True
+    ).select_related("user")
+
+    for pref in prefs:
+        user = pref.user
+        # Count notifications from the past week
+        week_notifs = Notification.objects.filter(user=user, created_at__gte=week_ago)
+        total = week_notifs.count()
+        unread = week_notifs.filter(is_read=False).count()
+
+        if total == 0:
+            continue
+
+        # Build summary
+        by_type = {}
+        for n in week_notifs.values("notification_type"):
+            t = n["notification_type"]
+            by_type[t] = by_type.get(t, 0) + 1
+
+        type_summary = ", ".join(f"{v} {k.lower()}" for k, v in by_type.items())
+
+        Notification.objects.create(
+            user=user,
+            school=user.school,
+            title="Résumé hebdomadaire",
+            body=(
+                f"Cette semaine : {total} notifications ({unread} non lues). "
+                f"Détail : {type_summary}."
+            ),
+            notification_type="SYSTEM",
+            priority="INFO",
+            category="SYSTEM",
+        )
+
+    return {"status": "done", "users_notified": prefs.count()}

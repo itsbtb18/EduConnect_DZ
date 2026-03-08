@@ -2,13 +2,13 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Reçu de paiement - {{ payment.reference_number }}</title>
+    <title>Reçu de paiement - {{ payment.receipt_number }}</title>
     <style>
         @page { size: A5; margin: 1cm; }
         body { font-family: Arial, sans-serif; font-size: 10pt; color: #333; }
         .header { text-align: center; border-bottom: 2px solid #1a5276; padding-bottom: 10px; margin-bottom: 15px; }
-        .header h1 { font-size: 14pt; color: #1a5276; }
-        .header h2 { font-size: 11pt; color: #555; }
+        .header h1 { font-size: 14pt; color: #1a5276; margin: 0; }
+        .header h2 { font-size: 11pt; color: #555; margin: 4px 0 0; }
         .info-table { width: 100%; margin-bottom: 15px; }
         .info-table td { padding: 4px 8px; }
         .info-table .label { font-weight: bold; color: #1a5276; width: 40%; }
@@ -21,23 +21,34 @@
 </head>
 <body>
     <div class="header">
+        {% if school.logo %}
+        <img src="{{ school.logo.url }}" alt="Logo" style="max-height:50px;margin-bottom:6px;">
+        {% endif %}
         <h1>{{ school.name }}</h1>
         <h2>Reçu de paiement</h2>
     </div>
 
     <table class="info-table">
-        <tr><td class="label">Numéro de référence:</td><td>{{ payment.reference_number }}</td></tr>
+        <tr><td class="label">Numéro de reçu:</td><td>{{ payment.receipt_number }}</td></tr>
         <tr><td class="label">Élève:</td><td>{{ student.last_name }} {{ student.first_name }}</td></tr>
+        {% if class_name %}<tr><td class="label">Classe:</td><td>{{ class_name }}</td></tr>{% endif %}
         <tr><td class="label">Frais:</td><td>{{ fee.name }}</td></tr>
         <tr><td class="label">Année scolaire:</td><td>{{ fee.academic_year.name }}</td></tr>
-        <tr><td class="label">Date de paiement:</td><td>{{ payment.paid_at|date:"d/m/Y" }}</td></tr>
+        {% if fee.section %}<tr><td class="label">Section:</td><td>{{ fee.section.name }}</td></tr>{% endif %}
+        <tr><td class="label">Type de paiement:</td><td>{{ payment.get_payment_type_display }}</td></tr>
+        <tr><td class="label">Date de paiement:</td><td>{{ payment.payment_date|date:"d/m/Y" }}</td></tr>
+        <tr><td class="label">Période:</td><td>{{ payment.period_start|date:"d/m/Y" }} — {{ payment.period_end|date:"d/m/Y" }}</td></tr>
         <tr><td class="label">Méthode:</td><td>{{ payment.get_payment_method_display }}</td></tr>
     </table>
 
     <div class="amount-box">
-        <div class="amount">{{ payment.amount|floatformat:0 }} DZD</div>
+        <div class="amount">{{ payment.amount_paid|floatformat:0 }} DZD</div>
         <div class="label">Montant payé</div>
     </div>
+
+    {% if payment.notes %}
+    <p><strong>Notes:</strong> {{ payment.notes }}</p>
+    {% endif %}
 
     <div class="stamp">
         <p><strong>Cachet et signature</strong></p>
@@ -46,7 +57,7 @@
     </div>
 
     <div class="footer">
-        ILMI — Reçu généré automatiquement
+        ILMI — Reçu généré automatiquement le {{ generated_at|date:"d/m/Y à H:i" }}
     </div>
 </body>
 </html>

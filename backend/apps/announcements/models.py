@@ -1,5 +1,5 @@
 """
-Announcement models: posts, attachments, and read tracking.
+Announcement models: posts, attachments, read tracking, urgency.
 """
 
 import uuid
@@ -57,6 +57,20 @@ class Announcement(models.Model):
         db_column="target_class_id",
     )
     is_pinned = models.BooleanField(default=False)
+    is_urgent = models.BooleanField(
+        default=False,
+        help_text="Urgent announcements show a red banner.",
+    )
+    image = models.ImageField(
+        upload_to="announcements/images/",
+        null=True,
+        blank=True,
+        help_text="Optional cover image for the announcement.",
+    )
+    views_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of times this announcement has been viewed.",
+    )
     publish_at = models.DateTimeField(
         null=True, blank=True, help_text="Scheduled publication time"
     )

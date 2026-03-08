@@ -35,3 +35,25 @@ class AuthPinLoginRequested extends AuthEvent {
 
 /// Logout the current user.
 class AuthLogoutRequested extends AuthEvent {}
+
+/// Verify OTP code (SMS) to complete multi-step login.
+class AuthVerifyOtpRequested extends AuthEvent {
+  final String tempToken;
+  final String code;
+
+  const AuthVerifyOtpRequested({required this.tempToken, required this.code});
+
+  @override
+  List<Object?> get props => [tempToken, code];
+}
+
+/// Verify TOTP code (authenticator app) to complete multi-step login.
+class AuthVerifyTotpRequested extends AuthEvent {
+  final String tempToken;
+  final String code;
+
+  const AuthVerifyTotpRequested({required this.tempToken, required this.code});
+
+  @override
+  List<Object?> get props => [tempToken, code];
+}

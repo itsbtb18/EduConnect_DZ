@@ -21,8 +21,10 @@ from .models import (
     GradeAppeal,
     GradeAuditLog,
     ReportCard,
+    ReportCardTemplate,
     SubjectAverage,
     TrimesterAverage,
+    TrimesterConfig,
 )
 
 
@@ -161,9 +163,15 @@ class GradeSerializer(serializers.ModelSerializer):
             "max_score",
             "effective_score",
             "is_absent",
+            "status",
             "is_published",
             "published_at",
             "published_by",
+            "submitted_at",
+            "submitted_by",
+            "returned_at",
+            "returned_by",
+            "admin_comment",
             "entered_by",
             "entered_at",
             "updated_at",
@@ -174,6 +182,10 @@ class GradeSerializer(serializers.ModelSerializer):
             "updated_at",
             "published_at",
             "published_by",
+            "submitted_at",
+            "submitted_by",
+            "returned_at",
+            "returned_by",
         ]
 
     def get_student_name(self, obj):
@@ -568,6 +580,9 @@ class GradeAppealRespondSerializer(serializers.Serializer):
 
 class ReportCardSerializer(serializers.ModelSerializer):
     student_name = serializers.SerializerMethodField()
+    template_name = serializers.CharField(
+        source="template.name", read_only=True, default=""
+    )
 
     class Meta:
         model = ReportCard
@@ -585,6 +600,10 @@ class ReportCardSerializer(serializers.ModelSerializer):
             "teacher_comment",
             "pdf_url",
             "is_published",
+            "template",
+            "template_name",
+            "sent_to_parents",
+            "sent_at",
             "created_at",
             "updated_at",
         ]
@@ -594,6 +613,8 @@ class ReportCardSerializer(serializers.ModelSerializer):
             "rank",
             "total_students",
             "pdf_url",
+            "sent_to_parents",
+            "sent_at",
             "created_at",
             "updated_at",
         ]
@@ -639,3 +660,126 @@ class GradeAuditLogSerializer(serializers.ModelSerializer):
 
     def get_action_label(self, obj):
         return obj.get_action_display()
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# WORKFLOW SERIALIZERS — submit / return
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class GradeSubmitSerializer(serializers.Serializer):
+    """POST /api/grades/submit/ — teacher submits grades for admin review."""
+
+    exam_type_id = serializers.UUIDField()
+
+
+class GradeReturnSerializer(serializers.Serializer):
+    """POST /api/grades/return/ — admin returns grades with comment."""
+
+    exam_type_id = serializers.UUIDField()
+    comment = serializers.CharField(min_length=1, help_text="Motif du rejet")
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# CSV IMPORT SERIALIZERS
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class CSVImportPreviewSerializer(serializers.Serializer):
+    """POST /api/grades/csv-import/preview/ — upload CSV for preview."""
+
+    exam_type_id = serializers.UUIDField()
+    csv_file = serializers.FileField(
+        help_text="Fichier CSV avec colonnes: nom;prénom;note",
+    )
+
+
+class CSVImportConfirmSerializer(serializers.Serializer):
+    """POST /api/grades/csv-import/confirm/ — confirm import from preview."""
+
+    exam_type_id = serializers.UUIDField()
+    matched = serializers.ListField(
+        child=serializers.DictField(),
+        help_text="Liste des étudiants matchés (provenant du preview).",
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# TRIMESTER CONFIG SERIALIZER
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class TrimesterConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TrimesterConfig
+        fields = [
+            "id",
+            "school",
+            "weight_t1",
+            "weight_t2",
+            "weight_t3",
+            "decimal_places",
+            "pass_threshold",
+            "use_level_subject_coefficients",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# REPORT CARD TEMPLATE
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class ReportCardTemplateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReportCardTemplate
+        fields = [
+            "id",
+            "school",
+            "name",
+            "is_default",
+            "logo_url",
+            "primary_color",
+            "secondary_color",
+            "header_text",
+            "footer_text",
+            "show_school_logo",
+            "show_student_photo",
+            "show_appreciation",
+            "show_ranking",
+            "show_absence_count",
+            "signatures",
+            "sections_config",
+            "show_coefficient",
+            "show_class_average",
+            "show_min_max",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# GENERATION & ANALYTICS INPUT SERIALIZERS
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class GenerateSchoolReportCardsSerializer(serializers.Serializer):
+    """POST /api/grades/report-cards/generate-school/"""
+
+    academic_year_id = serializers.UUIDField()
+    trimester = serializers.IntegerField(min_value=1, max_value=3)
+    template_id = serializers.UUIDField(required=False, allow_null=True)
+    send_to_parents = serializers.BooleanField(default=False)
+
+
+class GenerateClassReportCardsSerializer(serializers.Serializer):
+    """POST /api/grades/report-cards/generate-class/"""
+
+    class_id = serializers.UUIDField()
+    academic_year_id = serializers.UUIDField()
+    trimester = serializers.IntegerField(min_value=1, max_value=3)
+    template_id = serializers.UUIDField(required=False, allow_null=True)
+    send_to_parents = serializers.BooleanField(default=False)

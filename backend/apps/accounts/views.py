@@ -14,6 +14,24 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from core.permissions import IsSchoolAdmin, IsSuperAdmin
 
+from .security import (
+    compute_device_fingerprint,
+    create_session,
+    detect_token_reuse,
+    generate_otp,
+    get_client_ip,
+    get_device_info,
+    get_lockout_remaining_seconds,
+    get_remaining_attempts,
+    is_account_locked,
+    is_trusted_device,
+    log_audit,
+    record_login_attempt,
+    register_trusted_device,
+    revoke_all_sessions,
+    verify_otp,
+    verify_totp,
+)
 from .serializers import (
     ChangePasswordSerializer,
     CustomTokenObtainPairSerializer,
@@ -22,6 +40,7 @@ from .serializers import (
     UserCreateSerializer,
     UserSerializer,
     UserUpdateSerializer,
+    build_user_contexts,
 )
 
 User = get_user_model()
@@ -61,14 +80,413 @@ _DetailSchema = inline_serializer(
         401: OpenApiResponse(description="Invalid credentials."),
     },
 )
-class LoginView(TokenObtainPairView):
+class LoginView(APIView):
     """
     POST /api/v1/auth/login/
     Authenticate with phone_number + password.
     Returns: access, refresh, role, is_first_login, school_id.
+
+    Security features:
+    - Account lockout after 5 failed attempts (30 min)
+    - Remaining attempts returned in response
+    - Device trust checking (new device → requires OTP per role)
+    - Audit logging of all attempts
+    - TOTP enforcement for Super Admin
     """
 
-    serializer_class = CustomTokenObtainPairSerializer
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(
+        tags=["auth"],
+        summary="Login with phone number & password",
+        description=(
+            "Authenticate using **phone_number** + **password**. "
+            "Returns JWT access/refresh tokens along with user role and school ID. "
+            "May require additional 2FA verification for certain roles."
+        ),
+        responses={
+            200: _TokenResponseSchema,
+            401: OpenApiResponse(description="Invalid credentials."),
+            423: OpenApiResponse(description="Account locked."),
+        },
+    )
+    def post(self, request):
+        from .models_security import (
+            ROLES_REQUIRING_DEVICE_OTP,
+            ROLES_REQUIRING_TOTP,
+            ROLES_WITH_LOGIN_ALERT,
+        )
+
+        phone_number = request.data.get("phone_number", "")
+
+        # ── Check lockout ──
+        if is_account_locked(phone_number):
+            remaining = get_lockout_remaining_seconds(phone_number)
+            return Response(
+                {
+                    "detail": "Compte verrouillé suite à trop de tentatives échouées.",
+                    "locked": True,
+                    "lockout_remaining_seconds": remaining,
+                },
+                status=status.HTTP_423_LOCKED,
+            )
+
+        # ── Authenticate ──
+        serializer = CustomTokenObtainPairSerializer(data=request.data)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except Exception:
+            record_login_attempt(
+                phone_number,
+                request,
+                success=False,
+                failure_reason="invalid_credentials",
+            )
+            remaining = get_remaining_attempts(phone_number)
+            response_data = {
+                "detail": "Identifiants incorrects.",
+                "remaining_attempts": remaining,
+            }
+            if remaining <= 0:
+                response_data["locked"] = True
+                response_data["lockout_remaining_seconds"] = 1800
+            return Response(response_data, status=status.HTTP_401_UNAUTHORIZED)
+
+        user = serializer.user
+        data = serializer.validated_data
+
+        # ── Device trust check ──
+        fingerprint = compute_device_fingerprint(request)
+        is_new_device = not is_trusted_device(user, fingerprint)
+
+        # ── TOTP required for Super Admin ──
+        if user.role in ROLES_REQUIRING_TOTP:
+            from .models_security import TOTPDevice
+
+            try:
+                totp_device = TOTPDevice.objects.get(user=user, is_confirmed=True)
+            except TOTPDevice.DoesNotExist:
+                totp_device = None
+
+            if totp_device:
+                # Require TOTP verification as second step
+                record_login_attempt(phone_number, request, success=True)
+                log_audit(
+                    action="LOGIN",
+                    request=request,
+                    user=user,
+                    metadata={"step": "totp_required"},
+                )
+                return Response(
+                    {
+                        "requires_totp": True,
+                        "access": data["access"],
+                        "refresh": data["refresh"],
+                        "message": "Veuillez entrer votre code TOTP.",
+                    }
+                )
+
+        # ── SMS OTP required for new device (role-dependent) ──
+        if is_new_device and user.role in ROLES_REQUIRING_DEVICE_OTP:
+            otp_code = generate_otp(user, "DEVICE_TRUST", fingerprint)
+            # In production, send SMS via the SMS app
+            try:
+                from apps.sms.utils import send_sms
+
+                send_sms(
+                    user.phone_number,
+                    f"ILMI - Code de vérification: {otp_code}. Ce code expire dans 5 minutes.",
+                )
+            except Exception:
+                pass  # SMS service may not be configured in dev
+
+            log_audit(
+                action="OTP_SENT",
+                request=request,
+                user=user,
+                metadata={"purpose": "device_trust"},
+            )
+            record_login_attempt(phone_number, request, success=True)
+
+            return Response(
+                {
+                    "requires_otp": True,
+                    "access": data["access"],
+                    "refresh": data["refresh"],
+                    "message": "Nouvel appareil détecté. Un code de vérification a été envoyé par SMS.",
+                }
+            )
+
+        # ── Full success — record and return ──
+        record_login_attempt(phone_number, request, success=True)
+
+        # Register device as trusted
+        device = register_trusted_device(user, fingerprint, request)
+
+        # Create session
+        jti = data.get("refresh", "")
+        try:
+            from rest_framework_simplejwt.tokens import RefreshToken
+
+            token_obj = RefreshToken(data["refresh"])
+            jti = str(token_obj.get("jti", ""))
+        except Exception:
+            jti = ""
+        if jti:
+            create_session(user, jti, request, device=device)
+
+        # Audit log
+        log_audit(
+            action="LOGIN",
+            request=request,
+            user=user,
+            metadata={"device": fingerprint[:12]},
+        )
+
+        # Email alert for certain roles
+        if user.role in ROLES_WITH_LOGIN_ALERT and user.email:
+            try:
+                from django.core.mail import send_mail
+
+                send_mail(
+                    subject="ILMI — Nouvelle connexion détectée",
+                    message=f"Une connexion à votre compte a été détectée depuis {get_client_ip(request)}.",
+                    from_email=None,
+                    recipient_list=[user.email],
+                    fail_silently=True,
+                )
+            except Exception:
+                pass
+
+        return Response(
+            {
+                "access": data["access"],
+                "refresh": data["refresh"],
+                "role": data["role"],
+                "is_first_login": data["is_first_login"],
+                "school_id": data.get("school_id"),
+                "contexts": data.get("contexts", []),
+            }
+        )
+
+
+# ---------------------------------------------------------------------------
+# OTP Verification (post-login step)
+# ---------------------------------------------------------------------------
+
+
+class VerifyOTPView(APIView):
+    """
+    POST /api/v1/auth/verify-otp/
+    Verify SMS OTP for new device trust.
+    """
+
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(
+        tags=["auth"],
+        summary="Verify SMS OTP for device trust",
+        request=inline_serializer(
+            "OTPVerifyRequest",
+            fields={
+                "access": serializers.CharField(),
+                "refresh": serializers.CharField(),
+                "otp_code": serializers.CharField(),
+            },
+        ),
+        responses={
+            200: _TokenResponseSchema,
+            401: OpenApiResponse(description="Invalid or expired OTP."),
+        },
+    )
+    def post(self, request):
+        from rest_framework_simplejwt.tokens import AccessToken
+
+        access_token = request.data.get("access", "")
+        refresh_token = request.data.get("refresh", "")
+        otp_code = request.data.get("otp_code", "")
+
+        if not access_token or not otp_code:
+            return Response(
+                {"detail": "Token et code OTP requis."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Decode access token to get user
+        try:
+            token_data = AccessToken(access_token)
+            user_id = token_data.get("user_id")
+            user = User.objects.get(id=user_id)
+        except Exception:
+            return Response(
+                {"detail": "Token invalide."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        if not verify_otp(user, otp_code, "DEVICE_TRUST"):
+            return Response(
+                {"detail": "Code OTP invalide ou expiré."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        # OTP verified — register device
+        fingerprint = compute_device_fingerprint(request)
+        device = register_trusted_device(user, fingerprint, request)
+
+        # Create session
+        try:
+            from rest_framework_simplejwt.tokens import RefreshToken
+
+            token_obj = RefreshToken(refresh_token)
+            jti = str(token_obj.get("jti", ""))
+            if jti:
+                create_session(user, jti, request, device=device)
+        except Exception:
+            pass
+
+        log_audit(
+            action="OTP_VERIFIED",
+            request=request,
+            user=user,
+            metadata={"purpose": "device_trust"},
+        )
+        log_audit(
+            action="DEVICE_NEW",
+            request=request,
+            user=user,
+            metadata={"fingerprint": fingerprint[:12]},
+        )
+
+        return Response(
+            {
+                "access": access_token,
+                "refresh": refresh_token,
+                "role": user.role,
+                "is_first_login": user.is_first_login,
+                "school_id": str(user.school_id) if user.school_id else None,
+                "contexts": build_user_contexts(user),
+            }
+        )
+
+
+# ---------------------------------------------------------------------------
+# TOTP Verification (Super Admin)
+# ---------------------------------------------------------------------------
+
+
+class VerifyTOTPView(APIView):
+    """
+    POST /api/v1/auth/verify-totp/
+    Verify TOTP code for Super Admin 2FA.
+    """
+
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(
+        tags=["auth"],
+        summary="Verify TOTP code (Super Admin 2FA)",
+        request=inline_serializer(
+            "TOTPVerifyRequest",
+            fields={
+                "access": serializers.CharField(),
+                "refresh": serializers.CharField(),
+                "totp_code": serializers.CharField(),
+            },
+        ),
+        responses={
+            200: _TokenResponseSchema,
+            401: OpenApiResponse(description="Invalid TOTP code."),
+        },
+    )
+    def post(self, request):
+        from rest_framework_simplejwt.tokens import AccessToken
+
+        access_token = request.data.get("access", "")
+        refresh_token = request.data.get("refresh", "")
+        totp_code = request.data.get("totp_code", "")
+
+        try:
+            token_data = AccessToken(access_token)
+            user_id = token_data.get("user_id")
+            user = User.objects.get(id=user_id)
+        except Exception:
+            return Response(
+                {"detail": "Token invalide."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        if not verify_totp(user, totp_code):
+            return Response(
+                {"detail": "Code TOTP invalide."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        # Register device as trusted
+        fingerprint = compute_device_fingerprint(request)
+        device = register_trusted_device(user, fingerprint, request)
+
+        # Create session
+        try:
+            from rest_framework_simplejwt.tokens import RefreshToken
+
+            token_obj = RefreshToken(refresh_token)
+            jti = str(token_obj.get("jti", ""))
+            if jti:
+                create_session(user, jti, request, device=device)
+        except Exception:
+            pass
+
+        log_audit(
+            action="LOGIN",
+            request=request,
+            user=user,
+            metadata={"2fa": "totp_verified"},
+        )
+
+        return Response(
+            {
+                "access": access_token,
+                "refresh": refresh_token,
+                "role": user.role,
+                "is_first_login": user.is_first_login,
+                "school_id": str(user.school_id) if user.school_id else None,
+                "contexts": build_user_contexts(user),
+            }
+        )
+
+
+# ---------------------------------------------------------------------------
+# TOTP Setup (Super Admin)
+# ---------------------------------------------------------------------------
+
+
+class TOTPSetupView(APIView):
+    """
+    POST /api/v1/auth/totp/setup/
+    Generate TOTP secret and return provisioning URI for Google Authenticator.
+    GET  /api/v1/auth/totp/setup/
+    Check if TOTP is configured.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsSuperAdmin]
+
+    @extend_schema(tags=["auth"], summary="Check TOTP status")
+    def get(self, request):
+        from .models_security import TOTPDevice
+
+        try:
+            device = TOTPDevice.objects.get(user=request.user)
+            return Response({"configured": device.is_confirmed})
+        except TOTPDevice.DoesNotExist:
+            return Response({"configured": False})
+
+    @extend_schema(tags=["auth"], summary="Setup TOTP for Super Admin")
+    def post(self, request):
+        from .security import setup_totp
+
+        uri = setup_totp(request.user)
+        log_audit(action="TOTP_SETUP", request=request, user=request.user)
+        return Response({"provisioning_uri": uri})
 
 
 # ---------------------------------------------------------------------------
@@ -168,6 +586,7 @@ class PINLoginView(APIView):
                 "role": user.role,
                 "is_first_login": user.is_first_login,
                 "school_id": str(user.school_id) if user.school_id else None,
+                "contexts": build_user_contexts(user),
             }
         )
 
@@ -192,13 +611,103 @@ class PINLoginView(APIView):
         401: OpenApiResponse(description="Token is invalid or expired."),
     },
 )
-class TokenRefreshAPIView(TokenRefreshView):
+class TokenRefreshAPIView(APIView):
     """
     POST /api/v1/auth/refresh/
     Refresh an expired access token.
+
+    Security: detects refresh token reuse (double-use = stolen token).
+    If reuse is detected, ALL sessions for that user are revoked.
     """
 
-    pass
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(
+        tags=["auth"],
+        summary="Refresh access token",
+        description=(
+            "Exchange a valid refresh token for a new access/refresh pair. "
+            "If token reuse is detected, all sessions are revoked."
+        ),
+        request=inline_serializer(
+            "RefreshRequest",
+            fields={"refresh": serializers.CharField()},
+        ),
+        responses={
+            200: OpenApiResponse(description="New token pair returned."),
+            401: OpenApiResponse(description="Token is invalid, expired, or revoked."),
+        },
+    )
+    def post(self, request):
+        from rest_framework_simplejwt.tokens import RefreshToken
+        from rest_framework_simplejwt.exceptions import TokenError
+        from .models_security import ActiveSession
+
+        refresh_str = request.data.get("refresh", "")
+        if not refresh_str:
+            return Response(
+                {"detail": "Refresh token is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            old_token = RefreshToken(refresh_str)
+            old_jti = str(old_token.get("jti", ""))
+        except TokenError:
+            return Response(
+                {"detail": "Token invalide ou expiré."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        # ── Detect token reuse ──
+        if old_jti and detect_token_reuse(old_jti):
+            return Response(
+                {
+                    "detail": "Session révoquée pour raison de sécurité. Veuillez vous reconnecter."
+                },
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        # ── Check if session is revoked ──
+        if old_jti:
+            try:
+                session = ActiveSession.objects.get(refresh_token_jti=old_jti)
+                if session.is_revoked:
+                    return Response(
+                        {"detail": "Session révoquée. Veuillez vous reconnecter."},
+                        status=status.HTTP_401_UNAUTHORIZED,
+                    )
+            except ActiveSession.DoesNotExist:
+                pass  # Session tracking may not exist for older tokens
+
+        try:
+            # Blacklist old token and get new pair
+            old_token.blacklist()
+            user_id = old_token.get("user_id")
+            user = User.objects.get(id=user_id)
+            new_token = CustomTokenObtainPairSerializer.get_token(user)
+
+            # Update session with new JTI
+            new_jti = str(new_token.get("jti", ""))
+            if old_jti:
+                # Mark old session as revoked
+                ActiveSession.objects.filter(refresh_token_jti=old_jti).update(
+                    is_revoked=True
+                )
+            if new_jti:
+                create_session(user, new_jti, request)
+
+            return Response(
+                {
+                    "access": str(new_token.access_token),
+                    "refresh": str(new_token),
+                }
+            )
+        except (TokenError, User.DoesNotExist):
+            return Response(
+                {"detail": "Token invalide ou expiré."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -236,9 +745,21 @@ class LogoutView(APIView):
             )
         try:
             token = RefreshToken(refresh)
+            jti = str(token.get("jti", ""))
             token.blacklist()
+            # Revoke session
+            if jti:
+                revoke_session(jti)
         except TokenError:
             pass  # Token already expired / blacklisted — that's fine
+
+        # Audit log
+        log_audit(
+            user=request.user,
+            action="LOGOUT",
+            request=request,
+        )
+
         return Response(status=status.HTTP_205_RESET_CONTENT)
 
 
@@ -453,7 +974,11 @@ class MeView(generics.RetrieveUpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
-        return self.request.user
+        return (
+            User.objects.select_related("school", "school__subscription")
+            .prefetch_related("extra_contexts__school__subscription")
+            .get(pk=self.request.user.pk)
+        )
 
     @extend_schema(
         tags=["auth"],
@@ -779,3 +1304,235 @@ class SystemHealthView(APIView):
             health["storage"] = {"status": "unhealthy", "error": str(exc)}
 
         return Response(health)
+
+
+# ---------------------------------------------------------------------------
+# Device management
+# ---------------------------------------------------------------------------
+
+
+@extend_schema(tags=["security"])
+class DeviceListView(generics.ListAPIView):
+    """GET /api/v1/auth/devices/ — List current user's trusted devices."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        from .models_security import TrustedDevice
+
+        return TrustedDevice.objects.filter(
+            user=self.request.user, is_revoked=False
+        ).order_by("-last_used")
+
+    def list(self, request, *args, **kwargs):
+        qs = self.get_queryset()
+        data = [
+            {
+                "id": str(d.id),
+                "device_name": d.device_name,
+                "device_os": d.device_os,
+                "last_ip": d.last_ip,
+                "last_used": d.last_used.isoformat() if d.last_used else None,
+                "created_at": d.created_at.isoformat(),
+            }
+            for d in qs
+        ]
+        return Response(data)
+
+
+@extend_schema(tags=["security"])
+class DeviceRevokeView(APIView):
+    """POST /api/v1/auth/devices/<pk>/revoke/ — Revoke a trusted device."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        from .models_security import TrustedDevice
+
+        try:
+            device = TrustedDevice.objects.get(
+                id=pk, user=request.user, is_revoked=False
+            )
+        except TrustedDevice.DoesNotExist:
+            return Response(
+                {"detail": "Appareil non trouvé."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        device.is_revoked = True
+        device.save(update_fields=["is_revoked"])
+
+        log_audit(
+            user=request.user,
+            action="DEVICE_REVOKED",
+            request=request,
+            metadata={"device_id": str(pk), "device_name": device.device_name},
+        )
+
+        return Response({"detail": "Appareil révoqué."})
+
+
+# ---------------------------------------------------------------------------
+# Session management
+# ---------------------------------------------------------------------------
+
+
+@extend_schema(tags=["security"])
+class SessionListView(generics.ListAPIView):
+    """GET /api/v1/auth/sessions/ — List current user's active sessions."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        from .models_security import ActiveSession
+
+        return (
+            ActiveSession.objects.filter(user=self.request.user, is_revoked=False)
+            .select_related("device")
+            .order_by("-created_at")
+        )
+
+    def list(self, request, *args, **kwargs):
+        qs = self.get_queryset()
+        data = [
+            {
+                "id": str(s.id),
+                "device_name": s.device.device_name if s.device else None,
+                "device_os": s.device.device_os if s.device else None,
+                "ip_address": s.ip_address,
+                "user_agent": s.user_agent,
+                "created_at": s.created_at.isoformat(),
+                "expires_at": s.expires_at.isoformat() if s.expires_at else None,
+            }
+            for s in qs
+        ]
+        return Response(data)
+
+
+@extend_schema(tags=["security"])
+class SessionRevokeView(APIView):
+    """POST /api/v1/auth/sessions/<pk>/revoke/ — Revoke a specific session."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        from .models_security import ActiveSession
+
+        try:
+            session = ActiveSession.objects.get(
+                id=pk, user=request.user, is_revoked=False
+            )
+        except ActiveSession.DoesNotExist:
+            return Response(
+                {"detail": "Session non trouvée."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        revoke_session(session.refresh_token_jti)
+
+        log_audit(
+            user=request.user,
+            action="SESSION_REVOKED",
+            request=request,
+            metadata={"session_id": str(pk)},
+        )
+
+        return Response({"detail": "Session révoquée."})
+
+
+@extend_schema(tags=["security"])
+class RevokeAllSessionsView(APIView):
+    """POST /api/v1/auth/sessions/revoke-all/ — Revoke all user sessions (except current)."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        current_jti = request.data.get("current_jti")
+        revoke_all_sessions(request.user, exclude_jti=current_jti)
+
+        log_audit(
+            user=request.user,
+            action="ALL_SESSIONS_REVOKED",
+            request=request,
+        )
+
+        return Response({"detail": "Toutes les sessions ont été révoquées."})
+
+
+# ---------------------------------------------------------------------------
+# Audit log (enhanced — school-scoped for school admins)
+# ---------------------------------------------------------------------------
+
+
+@extend_schema(tags=["security"])
+class AuditLogListView(generics.ListAPIView):
+    """
+    GET /api/v1/auth/audit-logs/
+    Paginated audit logs with filters.
+    - Super admin: all logs
+    - School admin: logs scoped to their school
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        from .models_security import AuditLog
+
+        user = self.request.user
+
+        if user.role == "SUPER_ADMIN":
+            qs = AuditLog.objects.all()
+        elif user.role in ("ADMIN", "SECTION_ADMIN"):
+            qs = AuditLog.objects.filter(school=user.school)
+        else:
+            return AuditLog.objects.none()
+
+        # Filters
+        params = self.request.query_params
+        if params.get("action"):
+            qs = qs.filter(action=params["action"])
+        if params.get("user_id"):
+            qs = qs.filter(user_id=params["user_id"])
+        if params.get("model"):
+            qs = qs.filter(model_name__icontains=params["model"])
+        if params.get("ip"):
+            qs = qs.filter(ip_address=params["ip"])
+        if params.get("role"):
+            qs = qs.filter(role=params["role"])
+        if params.get("date_from"):
+            qs = qs.filter(timestamp__date__gte=params["date_from"])
+        if params.get("date_to"):
+            qs = qs.filter(timestamp__date__lte=params["date_to"])
+        if params.get("search"):
+            from django.db.models import Q
+
+            qs = qs.filter(
+                Q(model_name__icontains=params["search"])
+                | Q(ip_address__icontains=params["search"])
+            )
+
+        return qs.select_related("user", "school").order_by("-timestamp")
+
+    def list(self, request, *args, **kwargs):
+        qs = self.get_queryset()
+        page = self.paginate_queryset(qs)
+        results = page if page is not None else qs[:100]
+        data = [
+            {
+                "id": str(log.id),
+                "user": log.user.full_name if log.user else "System",
+                "user_id": str(log.user_id) if log.user_id else None,
+                "action": log.action,
+                "model_name": log.model_name,
+                "object_id": str(log.object_id) if log.object_id else None,
+                "changes": log.changes,
+                "metadata": log.metadata,
+                "ip_address": log.ip_address,
+                "user_agent": log.user_agent,
+                "role": log.role,
+                "school": log.school.name if log.school else None,
+                "timestamp": log.timestamp.isoformat(),
+            }
+            for log in results
+        ]
+        if page is not None:
+            return self.get_paginated_response(data)
+        return Response({"count": len(data), "results": data})

@@ -35,7 +35,7 @@ const Step9Finish: React.FC<Props> = ({ saving, onComplete, summaryStats }) => {
       <div className="wizard-step-content" style={{ textAlign: 'center', padding: '60px 0' }}>
         <Result
           icon={<CheckCircleOutlined style={{ color: '#0d9488', fontSize: 72 }} />}
-          title="Configuration Terminée ! 🎉"
+          title="Configuration Terminée !"
           subTitle="Votre école est maintenant configurée et prête à utiliser ILMI"
           extra={[
             <Button
@@ -73,14 +73,13 @@ const Step9Finish: React.FC<Props> = ({ saving, onComplete, summaryStats }) => {
   return (
     <div className="wizard-step-content" style={{ textAlign: 'center' }}>
       <div className="step-header">
-        <h2>Prêt à Lancer ! 🚀</h2>
+        <h2>Prêt à Lancer !</h2>
         <p>Toute la configuration sera sauvegardée et votre école sera opérationnelle</p>
       </div>
 
       <Row gutter={16} justify="center" style={{ marginBottom: 40 }}>
         <Col>
           <Card style={{ textAlign: 'center', padding: 16, borderRadius: 16 }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>🏫</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px 32px' }}>
               {stats.map(s => (
                 <div key={s.label}>
@@ -101,7 +100,7 @@ const Step9Finish: React.FC<Props> = ({ saving, onComplete, summaryStats }) => {
         loading={saving}
         className="launch-button"
       >
-        {saving ? 'Lancement en cours...' : 'Lancer ILMI 🚀'}
+        {saving ? 'Lancement en cours...' : 'Lancer ILMI'}
       </Button>
 
       <div style={{ marginTop: 16, color: '#94a3b8', fontSize: 13 }}>

@@ -258,7 +258,7 @@ const IDCard: React.FC<IDCardProps> = ({ type, data, schoolInfo, hideActions }) 
         {/* ── Footer ── */}
         <div className="idcard__footer" style={{ borderTopColor: bannerColor }}>
           <span className="idcard__footer-validity">
-            ⚠️ Valable jusqu'au : {validityDate()}
+            Valable jusqu'au : {validityDate()}
           </span>
           {isStudent && schoolInfo.phone && (
             <span className="idcard__footer-phone">

@@ -21,92 +21,295 @@ import {
   AuditOutlined,
   HeartOutlined,
   AppstoreOutlined,
+  MedicineBoxOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  EyeOutlined,
+  CoffeeOutlined,
+  CarOutlined,
+  PhoneOutlined,
+  ScanOutlined,
+  IdcardOutlined,
+  ReadOutlined,
+  ContainerOutlined,
+  TruckOutlined,
+  ReconciliationOutlined,
+  ScheduleOutlined,
+  StopOutlined,
+  TrophyOutlined,
 } from '@ant-design/icons';
-import { Tooltip } from 'antd';
-import { useAuth } from '../../context/AuthContext';
+import { Tooltip, Tag } from 'antd';
+import { useTranslation } from 'react-i18next';
+import { useAuth, type OperationalRole } from '../../context/AuthContext';
 import { useSchoolProfile } from '../../hooks/useApi';
+import { ROLE_CONFIGS, DEDICATED_DASHBOARD_ROLES } from '../guards/RoleGuard';
 import ilmiLogo from '../../assets/ilmi-logo.png';
 import './Sidebar.css';
 
 interface NavItem {
   path: string;
   icon: React.ReactNode;
-  label: string;
+  labelKey: string;
+  requiredModule?: string;
+  /** Show a read-only icon indicator */
+  readOnlyBadge?: boolean;
 }
 
 interface NavSection {
-  title: string;
+  titleKey: string;
   items: NavItem[];
 }
 
 /* ── Super Admin navigation ── */
 const superAdminSections: NavSection[] = [
   {
-    title: 'Plateforme',
+    titleKey: 'nav.platform',
     items: [
-      { path: '/platform/dashboard', icon: <DashboardOutlined />, label: 'Tableau de bord' },
-      { path: '/platform/schools', icon: <BankOutlined />, label: 'Écoles' },
-      { path: '/platform/users', icon: <UserOutlined />, label: 'Utilisateurs' },
-      { path: '/platform/plans', icon: <CrownOutlined />, label: 'Abonnements' },
+      { path: '/platform/dashboard', icon: <DashboardOutlined />, labelKey: 'nav.dashboard' },
+      { path: '/platform/schools', icon: <BankOutlined />, labelKey: 'nav.schools' },
+      { path: '/platform/users', icon: <UserOutlined />, labelKey: 'nav.users' },
+      { path: '/platform/plans', icon: <CrownOutlined />, labelKey: 'nav.subscriptions' },
+      { path: '/platform/invoices', icon: <SafetyCertificateOutlined />, labelKey: 'nav.invoices' },
+      { path: '/platform/content', icon: <BookOutlined />, labelKey: 'nav.content' },
+      { path: '/platform/impersonation', icon: <EyeOutlined />, labelKey: 'nav.impersonation' },
     ],
   },
   {
-    title: 'Configuration',
+    titleKey: 'nav.platformSettings',
     items: [
-      { path: '/platform/analytics', icon: <BarChartOutlined />, label: 'Analytiques' },
-      { path: '/platform/activity-logs', icon: <AuditOutlined />, label: 'Journal d\'activité' },
-      { path: '/platform/system-health', icon: <HeartOutlined />, label: 'Santé système' },
-      { path: '/platform/notifications', icon: <BellOutlined />, label: 'Notifications' },
-      { path: '/platform/settings', icon: <SettingOutlined />, label: 'Paramètres' },
+      { path: '/platform/analytics', icon: <BarChartOutlined />, labelKey: 'nav.platformAnalytics' },
+      { path: '/platform/activity-logs', icon: <AuditOutlined />, labelKey: 'nav.activityLogs' },
+      { path: '/platform/system-health', icon: <HeartOutlined />, labelKey: 'nav.systemHealth' },
+      { path: '/platform/notifications', icon: <BellOutlined />, labelKey: 'nav.notifications' },
+      { path: '/platform/settings', icon: <SettingOutlined />, labelKey: 'nav.settings' },
     ],
   },
 ];
 
-/* ── School Admin navigation ── */
+/* ── School Admin (Director) navigation — full access ── */
 const schoolAdminSections: NavSection[] = [
   {
-    title: 'Principal',
+    titleKey: 'nav.principal',
     items: [
-      { path: '/dashboard', icon: <DashboardOutlined />, label: 'Tableau de bord' },
+      { path: '/dashboard', icon: <DashboardOutlined />, labelKey: 'nav.dashboard' },
     ],
   },
   {
-    title: 'Gestion',
+    titleKey: 'nav.users',
     items: [
-      { path: '/users', icon: <UserOutlined />, label: 'Utilisateurs' },
+      { path: '/users', icon: <UserOutlined />, labelKey: 'nav.users' },
     ],
   },
   {
-    title: 'Académique',
+    titleKey: 'nav.academic',
     items: [
-      { path: '/students', icon: <TeamOutlined />, label: 'Élèves' },
-      { path: '/teachers', icon: <SolutionOutlined />, label: 'Enseignants' },
-      { path: '/classes', icon: <AppstoreOutlined />, label: 'Classes' },
-      { path: '/notes-bulletins', icon: <FileTextOutlined />, label: 'Notes & Bulletins' },
-      { path: '/attendance', icon: <CheckCircleOutlined />, label: 'Absences' },
-      { path: '/homework', icon: <BookOutlined />, label: 'Devoirs' },
-      { path: '/timetable', icon: <CalendarOutlined />, label: 'Emploi du temps' },
+      { path: '/students', icon: <TeamOutlined />, labelKey: 'nav.students' },
+      { path: '/teachers', icon: <SolutionOutlined />, labelKey: 'nav.teachers' },
+      { path: '/classes', icon: <AppstoreOutlined />, labelKey: 'nav.classes' },
+      { path: '/notes-bulletins', icon: <FileTextOutlined />, labelKey: 'nav.gradesAndReports' },
+      { path: '/report-cards', icon: <FileTextOutlined />, labelKey: 'nav.reportCards' },
+      { path: '/attendance', icon: <CheckCircleOutlined />, labelKey: 'nav.attendance' },
+      { path: '/attendance/reports', icon: <BarChartOutlined />, labelKey: 'nav.attendanceReports' },
+      { path: '/homework', icon: <BookOutlined />, labelKey: 'nav.homework' },
+      { path: '/timetable', icon: <CalendarOutlined />, labelKey: 'nav.timetable' },
+      { path: '/discipline', icon: <SafetyCertificateOutlined />, labelKey: 'nav.discipline' },
     ],
   },
   {
-    title: 'Communication',
+    titleKey: 'nav.communication',
     items: [
-      { path: '/announcements', icon: <NotificationOutlined />, label: 'Annonces' },
-      { path: '/messaging', icon: <MessageOutlined />, label: 'Messagerie' },
-      { path: '/notifications', icon: <BellOutlined />, label: 'Notifications' },
+      { path: '/announcements', icon: <NotificationOutlined />, labelKey: 'nav.announcements' },
+      { path: '/messaging', icon: <MessageOutlined />, labelKey: 'nav.messaging' },
+      { path: '/notifications', icon: <BellOutlined />, labelKey: 'nav.notifications' },
     ],
   },
   {
-    title: 'Administration',
+    titleKey: 'nav.administration',
     items: [
-      { path: '/financial', icon: <DollarOutlined />, label: 'Paiements' },
-      { path: '/analytics', icon: <BarChartOutlined />, label: 'Analytiques' },
-      { path: '/settings', icon: <SettingOutlined />, label: 'Paramètres' },
+      { path: '/financial', icon: <DollarOutlined />, labelKey: 'nav.payments', requiredModule: 'finance' },
+      { path: '/infirmerie', icon: <MedicineBoxOutlined />, labelKey: 'nav.infirmary', requiredModule: 'infirmerie' },
+      { path: '/cantine', icon: <CoffeeOutlined />, labelKey: 'nav.canteen', requiredModule: 'cantine' },
+      { path: '/transport', icon: <CarOutlined />, labelKey: 'nav.transport', requiredModule: 'transport' },
+      { path: '/library', icon: <BookOutlined />, labelKey: 'nav.library', requiredModule: 'bibliotheque' },
+      { path: '/elearning', icon: <AppstoreOutlined />, labelKey: 'nav.elearning', requiredModule: 'auto_education' },
+      { path: '/sms', icon: <PhoneOutlined />, labelKey: 'nav.sms', requiredModule: 'sms' },
+      { path: '/fingerprint', icon: <ScanOutlined />, labelKey: 'nav.fingerprint', requiredModule: 'empreintes' },
+      { path: '/staff', icon: <AuditOutlined />, labelKey: 'nav.staff' },
+      { path: '/analytics', icon: <BarChartOutlined />, labelKey: 'nav.analytics' },
+      { path: '/settings', icon: <SettingOutlined />, labelKey: 'nav.settings' },
     ],
   },
 ];
+
+/* ── General Supervisor — read-only access to everything ── */
+const supervisorSections: NavSection[] = [
+  {
+    titleKey: 'nav.principal',
+    items: [
+      { path: '/dashboard', icon: <DashboardOutlined />, labelKey: 'nav.dashboard', readOnlyBadge: true },
+    ],
+  },
+  {
+    titleKey: 'nav.academic',
+    items: [
+      { path: '/students', icon: <TeamOutlined />, labelKey: 'nav.students', readOnlyBadge: true },
+      { path: '/teachers', icon: <SolutionOutlined />, labelKey: 'nav.teachers', readOnlyBadge: true },
+      { path: '/classes', icon: <AppstoreOutlined />, labelKey: 'nav.classes', readOnlyBadge: true },
+      { path: '/notes-bulletins', icon: <FileTextOutlined />, labelKey: 'nav.gradesAndReports', readOnlyBadge: true },
+      { path: '/report-cards', icon: <FileTextOutlined />, labelKey: 'nav.reportCards', readOnlyBadge: true },
+      { path: '/attendance', icon: <CheckCircleOutlined />, labelKey: 'nav.attendance', readOnlyBadge: true },
+      { path: '/attendance/reports', icon: <BarChartOutlined />, labelKey: 'nav.attendanceReports', readOnlyBadge: true },
+      { path: '/homework', icon: <BookOutlined />, labelKey: 'nav.homework', readOnlyBadge: true },
+      { path: '/timetable', icon: <CalendarOutlined />, labelKey: 'nav.timetable', readOnlyBadge: true },
+      { path: '/discipline', icon: <SafetyCertificateOutlined />, labelKey: 'nav.discipline', readOnlyBadge: true },
+    ],
+  },
+  {
+    titleKey: 'nav.communication',
+    items: [
+      { path: '/announcements', icon: <NotificationOutlined />, labelKey: 'nav.announcements' },
+      { path: '/notifications', icon: <BellOutlined />, labelKey: 'nav.notifications', readOnlyBadge: true },
+    ],
+  },
+  {
+    titleKey: 'nav.supervision',
+    items: [
+      { path: '/financial', icon: <DollarOutlined />, labelKey: 'nav.payments', requiredModule: 'finance', readOnlyBadge: true },
+      { path: '/infirmerie', icon: <MedicineBoxOutlined />, labelKey: 'nav.infirmary', requiredModule: 'infirmerie', readOnlyBadge: true },
+      { path: '/cantine', icon: <CoffeeOutlined />, labelKey: 'nav.canteen', requiredModule: 'cantine', readOnlyBadge: true },
+      { path: '/transport', icon: <CarOutlined />, labelKey: 'nav.transport', requiredModule: 'transport', readOnlyBadge: true },
+      { path: '/library', icon: <BookOutlined />, labelKey: 'nav.library', requiredModule: 'bibliotheque', readOnlyBadge: true },
+      { path: '/elearning', icon: <AppstoreOutlined />, labelKey: 'nav.elearning', requiredModule: 'auto_education', readOnlyBadge: true },
+      { path: '/fingerprint', icon: <ScanOutlined />, labelKey: 'nav.fingerprint', requiredModule: 'empreintes', readOnlyBadge: true },
+      { path: '/staff', icon: <AuditOutlined />, labelKey: 'nav.staff', readOnlyBadge: true },
+      { path: '/analytics', icon: <BarChartOutlined />, labelKey: 'nav.analytics', readOnlyBadge: true },
+    ],
+  },
+];
+
+/* ── Finance Manager ── */
+const financeManagerSections: NavSection[] = [
+  {
+    titleKey: 'nav.finance',
+    items: [
+      { path: '/finance/dashboard', icon: <DashboardOutlined />, labelKey: 'nav.dashboard' },
+      { path: '/financial', icon: <DollarOutlined />, labelKey: 'nav.payments' },
+      { path: '/students', icon: <TeamOutlined />, labelKey: 'nav.students', readOnlyBadge: true },
+    ],
+  },
+];
+
+/* ── Librarian ── */
+const librarianSections: NavSection[] = [
+  {
+    titleKey: 'nav.library',
+    items: [
+      { path: '/librarian/dashboard', icon: <DashboardOutlined />, labelKey: 'nav.dashboard' },
+      { path: '/library/catalog', icon: <ReadOutlined />, labelKey: 'nav.catalog' },
+      { path: '/library/loans', icon: <ContainerOutlined />, labelKey: 'nav.loans' },
+      { path: '/library/requests', icon: <ReconciliationOutlined />, labelKey: 'nav.requests' },
+      { path: '/library/reports', icon: <BarChartOutlined />, labelKey: 'nav.reports' },
+    ],
+  },
+];
+
+/* ── Canteen Manager ── */
+const canteenManagerSections: NavSection[] = [
+  {
+    titleKey: 'nav.canteen',
+    items: [
+      { path: '/canteen-manager/dashboard', icon: <DashboardOutlined />, labelKey: 'nav.dashboard' },
+      { path: '/cantine/enrollments', icon: <TeamOutlined />, labelKey: 'nav.enrollments' },
+      { path: '/cantine/menus', icon: <CoffeeOutlined />, labelKey: 'nav.menus' },
+      { path: '/cantine/reports', icon: <BarChartOutlined />, labelKey: 'nav.reports' },
+    ],
+  },
+];
+
+/* ── Transport Manager ── */
+const transportManagerSections: NavSection[] = [
+  {
+    titleKey: 'nav.transport',
+    items: [
+      { path: '/transport-manager/dashboard', icon: <DashboardOutlined />, labelKey: 'nav.dashboard' },
+      { path: '/transport/lines', icon: <TruckOutlined />, labelKey: 'nav.lines' },
+      { path: '/transport/drivers', icon: <IdcardOutlined />, labelKey: 'nav.drivers' },
+      { path: '/transport/assignments', icon: <TeamOutlined />, labelKey: 'nav.assignments' },
+      { path: '/transport/reports', icon: <BarChartOutlined />, labelKey: 'nav.reports' },
+    ],
+  },
+];
+
+/* ── HR Manager ── */
+const hrManagerSections: NavSection[] = [
+  {
+    titleKey: 'nav.hr',
+    items: [
+      { path: '/hr/dashboard', icon: <DashboardOutlined />, labelKey: 'nav.dashboard' },
+      { path: '/staff', icon: <AuditOutlined />, labelKey: 'nav.staff' },
+      { path: '/teachers', icon: <SolutionOutlined />, labelKey: 'nav.teachers', readOnlyBadge: true },
+    ],
+  },
+];
+
+/* ── Training Center Admin navigation ── */
+const trainingCenterSections: NavSection[] = [
+  {
+    titleKey: 'nav.principal',
+    items: [
+      { path: '/formation/dashboard', icon: <DashboardOutlined />, labelKey: 'nav.dashboard' },
+    ],
+  },
+  {
+    titleKey: 'nav.users',
+    items: [
+      { path: '/users', icon: <UserOutlined />, labelKey: 'nav.users' },
+      { path: '/formation/learners', icon: <TeamOutlined />, labelKey: 'nav.learners' },
+      { path: '/formation/trainers', icon: <SolutionOutlined />, labelKey: 'nav.trainers' },
+      { path: '/formation/groups', icon: <AppstoreOutlined />, labelKey: 'nav.groups' },
+    ],
+  },
+  {
+    titleKey: 'nav.planning',
+    items: [
+      { path: '/formation/schedule', icon: <ScheduleOutlined />, labelKey: 'nav.schedule' },
+      { path: '/formation/evaluations', icon: <TrophyOutlined />, labelKey: 'nav.evaluations' },
+      { path: '/formation/cancelled-sessions', icon: <StopOutlined />, labelKey: 'nav.cancelledSessions' },
+    ],
+  },
+  {
+    titleKey: 'nav.administration',
+    items: [
+      { path: '/formation/finance', icon: <DollarOutlined />, labelKey: 'nav.finance' },
+      { path: '/analytics', icon: <BarChartOutlined />, labelKey: 'nav.analytics' },
+      { path: '/settings', icon: <SettingOutlined />, labelKey: 'nav.settings' },
+    ],
+  },
+];
+
+/* ── Role → sidebar mapping ── */
+function getSectionsForRole(role: OperationalRole): NavSection[] {
+  switch (role) {
+    case 'SUPER_ADMIN': return superAdminSections;
+    case 'GENERAL_SUPERVISOR': return supervisorSections;
+    case 'FINANCE_MANAGER': return financeManagerSections;
+    case 'LIBRARIAN': return librarianSections;
+    case 'CANTEEN_MANAGER': return canteenManagerSections;
+    case 'TRANSPORT_MANAGER': return transportManagerSections;
+    case 'HR_MANAGER': return hrManagerSections;
+    default: return schoolAdminSections;
+  }
+}
+
+/* ── Role badge colors ── */
+const ROLE_BADGE_COLORS: Partial<Record<OperationalRole, { bg: string; color: string }>> = {
+  GENERAL_SUPERVISOR: { bg: '#EFF6FF', color: '#2563EB' },
+  FINANCE_MANAGER: { bg: '#FFF7ED', color: '#EA580C' },
+  LIBRARIAN: { bg: '#F5F3FF', color: '#7C3AED' },
+  CANTEEN_MANAGER: { bg: '#ECFDF5', color: '#059669' },
+  TRANSPORT_MANAGER: { bg: '#FEF3C7', color: '#D97706' },
+  HR_MANAGER: { bg: '#FDF2F8', color: '#DB2777' },
+};
 
 interface SidebarProps {
   collapsed: boolean;
@@ -130,14 +333,37 @@ const normalizeLogoUrl = (url: string | null | undefined): string | null => {
 
 const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
   const location = useLocation();
-  const { user } = useAuth();
+  const { t } = useTranslation();
+  const { user, activeModules, operationalRole } = useAuth();
   const isActive = (path: string) => location.pathname.startsWith(path);
 
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
-  const sections = isSuperAdmin ? superAdminSections : schoolAdminSections;
+  const rawSections = getSectionsForRole(operationalRole);
+  const roleConfig = ROLE_CONFIGS[operationalRole];
+  const roleBadge = ROLE_BADGE_COLORS[operationalRole];
+  const isDedicatedRole = DEDICATED_DASHBOARD_ROLES.includes(operationalRole);
 
   const { data: schoolProfile } = useSchoolProfile({ enabled: !isSuperAdmin });
-  const school = schoolProfile as { logo_url?: string; name?: string; subscription_plan?: string } | undefined;
+  const school = schoolProfile as { logo_url?: string; name?: string; subscription_plan?: string; school_category?: string } | undefined;
+
+  // Use training center navigation when school is a training center
+  const isTrainingCenter = school?.school_category === 'TRAINING_CENTER';
+  const effectiveSections = (!isSuperAdmin && !isDedicatedRole && isTrainingCenter)
+    ? trainingCenterSections
+    : rawSections;
+
+  // Filter out nav items whose requiredModule is not active (school-level only)
+  const sections = isSuperAdmin || isDedicatedRole
+    ? effectiveSections
+    : effectiveSections
+        .map((s) => ({
+          ...s,
+          items: s.items.filter(
+            (item) => !item.requiredModule || activeModules.includes(item.requiredModule)
+          ),
+        }))
+        .filter((s) => s.items.length > 0);
+
   const schoolLogo = !isSuperAdmin ? normalizeLogoUrl(school?.logo_url) : null;
 
   // Track image load errors so we can fall back to initials
@@ -201,12 +427,20 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
         </div>
       )}
 
+      {/* Operational role badge */}
+      {roleBadge && !collapsed && (
+        <div className="sidebar__role-badge" style={{ background: roleBadge.bg, color: roleBadge.color }}>
+          <EyeOutlined />
+          <span>{roleConfig.label}</span>
+        </div>
+      )}
+
       {/* Navigation */}
       <div className="sidebar__nav">
         {sections.map((section) => (
-          <React.Fragment key={section.title}>
+          <React.Fragment key={section.titleKey}>
             {!collapsed && (
-              <div className="sidebar__section-title">{section.title}</div>
+              <div className="sidebar__section-title">{t(section.titleKey)}</div>
             )}
             {collapsed && <div className="sidebar__section-divider" />}
             {section.items.map((item) => {
@@ -217,12 +451,19 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
                   className={`sidebar__nav-item${isActive(item.path) ? ' sidebar__nav-item--active' : ''}`}
                 >
                   <span className="sidebar__nav-icon">{item.icon}</span>
-                  {!collapsed && <span className="sidebar__nav-label">{item.label}</span>}
+                  {!collapsed && (
+                    <>
+                      <span className="sidebar__nav-label">{t(item.labelKey)}</span>
+                      {item.readOnlyBadge && (
+                        <EyeOutlined style={{ fontSize: 10, opacity: 0.5, marginInlineStart: 'auto' }} />
+                      )}
+                    </>
+                  )}
                 </NavLink>
               );
 
               return collapsed ? (
-                <Tooltip key={item.path} title={item.label} placement="right" mouseEnterDelay={0.1}>
+                <Tooltip key={item.path} title={t(item.labelKey)} placement="right" mouseEnterDelay={0.1}>
                   {navItem}
                 </Tooltip>
               ) : (

@@ -11,40 +11,45 @@ import {
   CompressOutlined,
   ClockCircleOutlined,
 } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../hooks/useApi';
 import './Header.css';
 
-const pageTitles: Record<string, { title: string; breadcrumb: string[] }> = {
-  '/dashboard':            { title: 'Tableau de bord',             breadcrumb: ['Accueil'] },
-  '/students':             { title: 'Gestion des élèves',          breadcrumb: ['Académique', 'Élèves'] },
-  '/teachers':             { title: 'Gestion des enseignants',     breadcrumb: ['Académique', 'Enseignants'] },
-  '/classes':              { title: 'Gestion des classes',          breadcrumb: ['Académique', 'Classes'] },
-  '/grades':               { title: 'Notes & Bulletins',           breadcrumb: ['Académique', 'Notes'] },
-  '/notes-bulletins':      { title: 'Notes & Bulletins',           breadcrumb: ['Académique', 'Notes & Bulletins'] },
-  '/attendance':           { title: 'Suivi des absences',          breadcrumb: ['Académique', 'Absences'] },
-  '/timetable':            { title: 'Emploi du temps',             breadcrumb: ['Académique', 'Emploi du temps'] },
-  '/homework':             { title: 'Devoirs',                     breadcrumb: ['Académique', 'Devoirs'] },
-  '/announcements':        { title: 'Annonces',                    breadcrumb: ['Communication', 'Annonces'] },
-  '/messaging':            { title: 'Messagerie',                  breadcrumb: ['Communication', 'Messagerie'] },
-  '/financial':            { title: 'Gestion des paiements',       breadcrumb: ['Administration', 'Paiements'] },
-  '/analytics':            { title: 'Analytiques',                 breadcrumb: ['Administration', 'Analytiques'] },
-  '/settings':             { title: 'Paramètres',                  breadcrumb: ['Administration', 'Paramètres'] },
-  '/users':                { title: 'Gestion des utilisateurs',    breadcrumb: ['Gestion', 'Utilisateurs'] },
-  '/notifications':        { title: 'Notifications',               breadcrumb: ['Communication', 'Notifications'] },
-  '/platform/dashboard':   { title: 'Tableau de bord plateforme',  breadcrumb: ['Plateforme', 'Dashboard'] },
-  '/platform/schools':     { title: 'Gestion des écoles',          breadcrumb: ['Plateforme', 'Écoles'] },
-  '/platform/users':       { title: 'Gestion des utilisateurs',    breadcrumb: ['Plateforme', 'Utilisateurs'] },
-  '/platform/plans':       { title: 'Gestion des abonnements',     breadcrumb: ['Plateforme', 'Abonnements'] },
-  '/platform/analytics':   { title: 'Analytiques plateforme',      breadcrumb: ['Plateforme', 'Analytiques'] },
-  '/platform/settings':    { title: 'Paramètres plateforme',       breadcrumb: ['Plateforme', 'Paramètres'] },
-  '/platform/activity-logs': { title: 'Journal d\'activité',       breadcrumb: ['Plateforme', 'Journal'] },
-  '/platform/system-health': { title: 'Santé du système',          breadcrumb: ['Plateforme', 'Santé système'] },
-  '/platform/notifications': { title: 'Notifications',             breadcrumb: ['Plateforme', 'Notifications'] },
+/** Each entry stores i18n keys for title and breadcrumb trail */
+const pageKeys: Record<string, { titleKey: string; breadcrumbKeys: string[] }> = {
+  '/dashboard':              { titleKey: 'header.title.dashboard',          breadcrumbKeys: ['nav.principal'] },
+  '/students':               { titleKey: 'header.title.students',           breadcrumbKeys: ['nav.academic', 'nav.students'] },
+  '/teachers':               { titleKey: 'header.title.teachers',           breadcrumbKeys: ['nav.academic', 'nav.teachers'] },
+  '/classes':                { titleKey: 'header.title.classes',            breadcrumbKeys: ['nav.academic', 'nav.classes'] },
+  '/grades':                 { titleKey: 'header.title.grades',             breadcrumbKeys: ['nav.academic', 'nav.gradesAndReports'] },
+  '/notes-bulletins':        { titleKey: 'header.title.grades',             breadcrumbKeys: ['nav.academic', 'nav.gradesAndReports'] },
+  '/report-cards':           { titleKey: 'header.title.reportCards',        breadcrumbKeys: ['nav.academic', 'nav.reportCards'] },
+  '/attendance':             { titleKey: 'header.title.attendance',         breadcrumbKeys: ['nav.academic', 'nav.attendance'] },
+  '/attendance/reports':     { titleKey: 'header.title.attendanceReports',  breadcrumbKeys: ['nav.academic', 'nav.attendanceReports'] },
+  '/timetable':              { titleKey: 'header.title.timetable',          breadcrumbKeys: ['nav.academic', 'nav.timetable'] },
+  '/homework':               { titleKey: 'header.title.homework',           breadcrumbKeys: ['nav.academic', 'nav.homework'] },
+  '/announcements':          { titleKey: 'header.title.announcements',      breadcrumbKeys: ['nav.communication', 'nav.announcements'] },
+  '/messaging':              { titleKey: 'header.title.messaging',          breadcrumbKeys: ['nav.communication', 'nav.messaging'] },
+  '/financial':              { titleKey: 'header.title.financial',          breadcrumbKeys: ['nav.administration', 'nav.payments'] },
+  '/analytics':              { titleKey: 'header.title.analytics',          breadcrumbKeys: ['nav.administration', 'nav.analytics'] },
+  '/settings':               { titleKey: 'header.title.settings',           breadcrumbKeys: ['nav.administration', 'nav.settings'] },
+  '/users':                  { titleKey: 'header.title.users',              breadcrumbKeys: ['nav.users'] },
+  '/notifications':          { titleKey: 'header.title.notifications',      breadcrumbKeys: ['nav.communication', 'nav.notifications'] },
+  '/platform/dashboard':     { titleKey: 'header.title.dashboard',          breadcrumbKeys: ['nav.platform', 'nav.dashboard'] },
+  '/platform/schools':       { titleKey: 'nav.schools',                     breadcrumbKeys: ['nav.platform', 'nav.schools'] },
+  '/platform/users':         { titleKey: 'header.title.users',              breadcrumbKeys: ['nav.platform', 'nav.users'] },
+  '/platform/plans':         { titleKey: 'nav.subscriptions',               breadcrumbKeys: ['nav.platform', 'nav.subscriptions'] },
+  '/platform/analytics':     { titleKey: 'nav.platformAnalytics',           breadcrumbKeys: ['nav.platform', 'nav.analytics'] },
+  '/platform/settings':      { titleKey: 'nav.platformSettings',            breadcrumbKeys: ['nav.platform', 'nav.settings'] },
+  '/platform/activity-logs': { titleKey: 'nav.activityLogs',                breadcrumbKeys: ['nav.platform', 'nav.activityLogs'] },
+  '/platform/system-health': { titleKey: 'nav.systemHealth',                breadcrumbKeys: ['nav.platform', 'nav.systemHealth'] },
+  '/platform/notifications': { titleKey: 'header.title.notifications',      breadcrumbKeys: ['nav.platform', 'nav.notifications'] },
 };
 
 const Header: React.FC = () => {
   const { user, logout } = useAuth();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { data: notifData } = useNotifications();
@@ -56,10 +61,12 @@ const Header: React.FC = () => {
   const unreadCount = notifData?.results?.filter((n: any) => !n.is_read).length || 0;
   const recentNotifs = (notifData?.results || []).slice(0, 5);
 
-  const matchedPath = Object.keys(pageTitles)
+  const matchedPath = Object.keys(pageKeys)
     .sort((a, b) => b.length - a.length) // longest match first
     .find((p) => location.pathname.startsWith(p));
-  const pageInfo = matchedPath ? pageTitles[matchedPath] : { title: 'Tableau de bord', breadcrumb: ['Accueil'] };
+  const matched = matchedPath ? pageKeys[matchedPath] : null;
+  const pageTitle = matched ? t(matched.titleKey) : t('header.title.dashboard');
+  const breadcrumbs = matched ? matched.breadcrumbKeys.map((k) => t(k)) : [t('nav.principal')];
 
   useEffect(() => {
     const handleOutside = (e: MouseEvent) => {
@@ -104,34 +111,34 @@ const Header: React.FC = () => {
       <div className="header__left">
         {/* Breadcrumbs */}
         <div className="header__breadcrumbs">
-          {pageInfo.breadcrumb.map((crumb, i) => (
+          {breadcrumbs.map((crumb, i) => (
             <React.Fragment key={i}>
               {i > 0 && <span className="header__breadcrumb-sep">/</span>}
-              <span className={`header__breadcrumb ${i === pageInfo.breadcrumb.length - 1 ? 'header__breadcrumb--current' : ''}`}>
+              <span className={`header__breadcrumb ${i === breadcrumbs.length - 1 ? 'header__breadcrumb--current' : ''}`}>
                 {crumb}
               </span>
             </React.Fragment>
           ))}
         </div>
-        <h1 className="header__title">{pageInfo.title}</h1>
+        <h1 className="header__title">{pageTitle}</h1>
       </div>
 
       <div className="header__actions">
         {/* Search — opens command palette */}
-        <button className="header__icon-btn" title="Rechercher (Ctrl+K)" onClick={() => {
+        <button className="header__icon-btn" title={t('header.search')} onClick={() => {
           document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }));
         }}>
           <SearchOutlined />
         </button>
 
         {/* Fullscreen */}
-        <button className="header__icon-btn" title={isFullscreen ? 'Quitter plein écran' : 'Plein écran'} onClick={toggleFullscreen}>
+        <button className="header__icon-btn" title={isFullscreen ? t('header.exitFullscreen') : t('header.fullscreen')} onClick={toggleFullscreen}>
           {isFullscreen ? <CompressOutlined /> : <ExpandOutlined />}
         </button>
 
         {/* Notifications dropdown */}
         <div className="header__notif-wrapper" ref={notifRef}>
-          <button className="header__icon-btn" title="Notifications" onClick={() => setNotifDropdownOpen(v => !v)}>
+          <button className="header__icon-btn" title={t('nav.notifications')} onClick={() => setNotifDropdownOpen(v => !v)}>
             <BellOutlined />
           </button>
           {unreadCount > 0 && (
@@ -140,11 +147,11 @@ const Header: React.FC = () => {
           {notifDropdownOpen && (
             <div className="header__notif-dropdown">
               <div className="header__notif-dropdown-header">
-                <span>Notifications</span>
-                {unreadCount > 0 && <span className="header__notif-count">{unreadCount} non lue{unreadCount > 1 ? 's' : ''}</span>}
+                <span>{t('nav.notifications')}</span>
+                {unreadCount > 0 && <span className="header__notif-count">{t('header.unreadCount', { count: unreadCount })}</span>}
               </div>
               {recentNotifs.length === 0 ? (
-                <div className="header__notif-empty">Aucune notification</div>
+                <div className="header__notif-empty">{t('header.noNotifications')}</div>
               ) : (
                 recentNotifs.map((n: any) => {
                   const handleNotifClick = () => {
@@ -172,7 +179,7 @@ const Header: React.FC = () => {
                     >
                       <div className="header__notif-item-title">{n.title || 'Notification'}</div>
                       <div className="header__notif-item-msg">{n.message?.slice(0, 60) || ''}{n.message?.length > 60 ? '…' : ''}</div>
-                      <div className="header__notif-item-time"><ClockCircleOutlined /> {n.created_at ? new Date(n.created_at).toLocaleDateString('fr-FR') : ''}</div>
+                      <div className="header__notif-item-time"><ClockCircleOutlined /> {n.created_at ? new Date(n.created_at).toLocaleDateString(i18n.language === 'ar' ? 'ar-DZ' : 'fr-FR') : ''}</div>
                     </div>
                   );
                 })
@@ -181,7 +188,7 @@ const Header: React.FC = () => {
                 className="header__notif-view-all"
                 onClick={() => { setNotifDropdownOpen(false); navigate(notifsPath); }}
               >
-                Voir toutes les notifications →
+                {t('header.viewAllNotifications')}
               </button>
             </div>
           )}
@@ -207,14 +214,14 @@ const Header: React.FC = () => {
           {dropdownOpen && (
             <div className="header__dropdown">
               <button className="header__dropdown-btn" onClick={() => { setDropdownOpen(false); navigate(settingsPath); }}>
-                <UserOutlined /> Mon profil
+                <UserOutlined /> {t('header.myProfile')}
               </button>
               <button className="header__dropdown-btn" onClick={() => { setDropdownOpen(false); navigate(settingsPath); }}>
-                <SettingOutlined /> Paramètres
+                <SettingOutlined /> {t('nav.settings')}
               </button>
               <div className="header__dropdown-sep" />
               <button className="header__dropdown-btn header__dropdown-btn--danger" onClick={handleLogout}>
-                <LogoutOutlined /> Déconnexion
+                <LogoutOutlined /> {t('header.logout')}
               </button>
             </div>
           )}

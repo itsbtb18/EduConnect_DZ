@@ -16,10 +16,10 @@ interface AppealsTabProps {
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Tous les statuts' },
-  { value: 'PENDING', label: '🔴 En attente' },
-  { value: 'UNDER_REVIEW', label: '🟠 En cours d\'examen' },
-  { value: 'ACCEPTED', label: '🟢 Accepté' },
-  { value: 'REJECTED', label: '⚫ Rejeté' },
+  { value: 'PENDING', label: 'En attente' },
+  { value: 'UNDER_REVIEW', label: 'En cours d\'examen' },
+  { value: 'ACCEPTED', label: 'Accepté' },
+  { value: 'REJECTED', label: 'Rejeté' },
 ];
 
 const TYPE_OPTIONS = [
@@ -82,11 +82,11 @@ const AppealsTab: React.FC<AppealsTabProps> = ({ filters }) => {
         <Space>
           <Badge count={pendingCount || 0} overflowCount={99}>
             <Tag color="red" style={{ padding: '4px 12px', fontSize: 13 }}>
-              🔴 En attente
+              En attente
             </Tag>
           </Badge>
           <Tag color="green" style={{ padding: '4px 12px', fontSize: 13 }}>
-            ✅ Résolus: {resolved.length}
+            Résolus: {resolved.length}
           </Tag>
           <Tag style={{ padding: '4px 12px', fontSize: 13 }}>
             Total: {appeals.length}
@@ -103,7 +103,7 @@ const AppealsTab: React.FC<AppealsTabProps> = ({ filters }) => {
         <Empty description={
           statusFilter || typeFilter
             ? 'Aucun recours ne correspond aux filtres sélectionnés'
-            : 'Aucun recours pour le moment 🎉'
+            : 'Aucun recours pour le moment'
         } />
       ) : (
         <div style={{ maxHeight: 600, overflowY: 'auto', paddingRight: 4 }}>
@@ -115,7 +115,7 @@ const AppealsTab: React.FC<AppealsTabProps> = ({ filters }) => {
                 marginBottom: 8, paddingBottom: 4,
                 borderBottom: '2px solid #EF4444',
               }}>
-                🔴 En attente de traitement ({pending.length})
+                En attente de traitement ({pending.length})
               </div>
               {pending.map(appeal => (
                 <AppealCard
@@ -136,7 +136,7 @@ const AppealsTab: React.FC<AppealsTabProps> = ({ filters }) => {
                 marginBottom: 8, paddingBottom: 4,
                 borderBottom: '2px solid #E2E8F0',
               }}>
-                ✅ Traités ({resolved.length})
+                Traités ({resolved.length})
               </div>
               {resolved.map(appeal => (
                 <AppealCard

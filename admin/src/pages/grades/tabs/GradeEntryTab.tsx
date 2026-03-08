@@ -329,7 +329,7 @@ const GradeEntryTab: React.FC<GradeEntryTabProps> = ({ filters, classInfo }) => 
                 disabled={dirtyCount === 0}
                 style={{ background: '#00C9A7', borderColor: '#00C9A7' }}
               >
-                💾 Enregistrer ({dirtyCount})
+                Enregistrer ({dirtyCount})
               </Button>
               <PublishButton
                 published={allPublished}

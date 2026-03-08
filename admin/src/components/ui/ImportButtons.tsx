@@ -4,7 +4,7 @@
  * Shows:
  * - "Importer Excel" button (green border-dashed)
  * - "Importer CSV" button (blue border-dashed)
- * - "📄 Télécharger le template" button (downloads an .xlsx template)
+ * - "Télécharger le template" button (downloads an .xlsx template)
  *
  * On click of import buttons → toast message "disponible prochainement".
  * Template button → generates and downloads a real .xlsx file via SheetJS.
@@ -41,7 +41,7 @@ const ImportButtons: React.FC<ImportButtonsProps> = ({ templateType, style }) =>
 
   const handleImportClick = useCallback(() => {
     message.info({
-      content: "📥 L'import en masse sera disponible prochainement. Vous pouvez télécharger le template depuis cette page.",
+      content: "L'import en masse sera disponible prochainement. Vous pouvez télécharger le template depuis cette page.",
       duration: 5,
     });
   }, []);
@@ -57,7 +57,7 @@ const ImportButtons: React.FC<ImportButtonsProps> = ({ templateType, style }) =>
     XLSX.utils.book_append_sheet(wb, ws, templateType === 'teachers' ? 'Enseignants' : 'Élèves');
     XLSX.writeFile(wb, TEMPLATE_FILENAMES[templateType]);
 
-    message.success('📄 Template téléchargé !');
+    message.success('Template téléchargé !');
   }, [templateType]);
 
   return (
@@ -85,7 +85,7 @@ const ImportButtons: React.FC<ImportButtonsProps> = ({ templateType, style }) =>
         type="link"
         onClick={handleDownloadTemplate}
       >
-        📄 Télécharger le template
+        Télécharger le template
       </Button>
     </div>
   );

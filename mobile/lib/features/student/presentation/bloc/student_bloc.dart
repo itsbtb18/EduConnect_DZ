@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/di/injection.dart';
+import '../../../../core/storage/hive_storage_service.dart';
 import '../../data/models/grade_model.dart';
 import '../../data/models/homework_model.dart';
 import '../../data/models/academic_model.dart';
@@ -84,6 +85,7 @@ class StudentBloc extends Bloc<StudentEvent, StudentState> {
   final GradeRepository _gradeRepo = getIt<GradeRepository>();
   final HomeworkRepository _homeworkRepo = getIt<HomeworkRepository>();
   final AcademicRepository _academicRepo = getIt<AcademicRepository>();
+  final HiveStorageService _cache = getIt<HiveStorageService>();
 
   StudentBloc() : super(StudentInitial()) {
     on<StudentLoadGrades>(_onLoadGrades);
@@ -96,15 +98,32 @@ class StudentBloc extends Bloc<StudentEvent, StudentState> {
     StudentLoadGrades event,
     Emitter<StudentState> emit,
   ) async {
-    emit(StudentLoading());
+    // Serve cached data instantly, then refresh.
+    final cacheKey = 'grades_${event.subjectId}_${event.semesterId}';
+    final cached = _cache.getDomainSync('grades', cacheKey);
+    if (cached != null) {
+      final grades = (cached as List)
+          .map((e) => Grade.fromJson(e as Map<String, dynamic>))
+          .toList();
+      emit(StudentGradesLoaded(grades));
+    } else {
+      emit(StudentLoading());
+    }
+
     try {
       final grades = await _gradeRepo.getGrades(
         subjectId: event.subjectId,
         semesterId: event.semesterId,
       );
+      await _cache.cacheDomain(
+        'grades',
+        cacheKey,
+        grades.map((g) => g.toJson()).toList(),
+      );
       emit(StudentGradesLoaded(grades));
     } catch (e) {
-      emit(StudentError(e.toString()));
+      // Only emit error if we had no cached data.
+      if (cached == null) emit(StudentError(e.toString()));
     }
   }
 
@@ -112,12 +131,26 @@ class StudentBloc extends Bloc<StudentEvent, StudentState> {
     StudentLoadHomework event,
     Emitter<StudentState> emit,
   ) async {
-    emit(StudentLoading());
+    final cached = _cache.getDomainSync('homework', 'tasks');
+    if (cached != null) {
+      final tasks = (cached as List)
+          .map((e) => HomeworkTask.fromJson(e as Map<String, dynamic>))
+          .toList();
+      emit(StudentHomeworkLoaded(tasks));
+    } else {
+      emit(StudentLoading());
+    }
+
     try {
       final tasks = await _homeworkRepo.getTasks();
+      await _cache.cacheDomain(
+        'homework',
+        'tasks',
+        tasks.map((t) => t.toJson()).toList(),
+      );
       emit(StudentHomeworkLoaded(tasks));
     } catch (e) {
-      emit(StudentError(e.toString()));
+      if (cached == null) emit(StudentError(e.toString()));
     }
   }
 
@@ -125,12 +158,27 @@ class StudentBloc extends Bloc<StudentEvent, StudentState> {
     StudentLoadSchedule event,
     Emitter<StudentState> emit,
   ) async {
-    emit(StudentLoading());
+    final cached = _cache.getDomainSync('schedule', 'slots');
+    if (cached != null) {
+      final slots = (cached as List)
+          .map((e) => ScheduleSlot.fromJson(e as Map<String, dynamic>))
+          .toList();
+      emit(StudentScheduleLoaded(slots));
+    } else {
+      emit(StudentLoading());
+    }
+
     try {
       final slots = await _academicRepo.getSchedule();
+      await _cache.cacheDomain(
+        'schedule',
+        'slots',
+        slots.map((s) => s.toJson()).toList(),
+        ttl: const Duration(hours: 6),
+      );
       emit(StudentScheduleLoaded(slots));
     } catch (e) {
-      emit(StudentError(e.toString()));
+      if (cached == null) emit(StudentError(e.toString()));
     }
   }
 
@@ -138,12 +186,26 @@ class StudentBloc extends Bloc<StudentEvent, StudentState> {
     StudentLoadSubjects event,
     Emitter<StudentState> emit,
   ) async {
-    emit(StudentLoading());
+    final cached = _cache.getDomainSync('subjects', 'list');
+    if (cached != null) {
+      final subjects = (cached as List)
+          .map((e) => Subject.fromJson(e as Map<String, dynamic>))
+          .toList();
+      emit(StudentSubjectsLoaded(subjects));
+    } else {
+      emit(StudentLoading());
+    }
+
     try {
       final subjects = await _academicRepo.getSubjects();
+      await _cache.cacheDomain(
+        'subjects',
+        'list',
+        subjects.map((s) => s.toJson()).toList(),
+      );
       emit(StudentSubjectsLoaded(subjects));
     } catch (e) {
-      emit(StudentError(e.toString()));
+      if (cached == null) emit(StudentError(e.toString()));
     }
   }
 }

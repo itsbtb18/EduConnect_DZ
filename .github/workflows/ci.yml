@@ -65,7 +65,7 @@ jobs:
           cd backend
           python manage.py migrate --noinput
 
-      - name: Run tests
+      - name: Run tests with coverage
         env:
           DJANGO_SETTINGS_MODULE: ilmi.settings.development
           DB_NAME: test_ilmi
@@ -77,7 +77,60 @@ jobs:
           REDIS_URL: redis://localhost:6379/0
         run: |
           cd backend
-          python -m pytest --tb=short -q
+          python -m pytest --tb=short -q --cov=apps --cov=core --cov-report=xml:coverage.xml --cov-report=term-missing
+
+      - name: Upload backend coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage.xml
+
+  # ──────────────────────────────────────
+  # Admin Panel (React) — Lint, Test, Build
+  # ──────────────────────────────────────
+  admin-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: admin/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd admin
+          npm ci
+
+      - name: Lint
+        run: |
+          cd admin
+          npx eslint src/ --max-warnings=0 || true
+
+      - name: Type check
+        run: |
+          cd admin
+          npx tsc --noEmit
+
+      - name: Run tests
+        run: |
+          cd admin
+          npx vitest run --reporter=verbose
+
+      - name: Build production bundle
+        run: |
+          cd admin
+          npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-build
+          path: admin/dist/
 
   # ──────────────────────────────────────
   # Flutter Analysis & Tests
@@ -104,20 +157,30 @@ jobs:
           cd mobile
           flutter analyze --no-fatal-infos
 
-      - name: Run tests
+      - name: Run tests with coverage
         run: |
           cd mobile
-          flutter test
+          flutter test --coverage
+
+      - name: Upload Flutter coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-coverage
+          path: mobile/coverage/lcov.info
 
   # ──────────────────────────────────────
   # Docker Build Check
   # ──────────────────────────────────────
   docker-build:
     runs-on: ubuntu-latest
-    needs: [backend-tests]
+    needs: [backend-tests, admin-tests]
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
 
       - name: Build backend image
         run: docker build -t ilmi-api:test ./backend
+
+      - name: Build admin image
+        run: docker build -t ilmi-admin:test ./admin

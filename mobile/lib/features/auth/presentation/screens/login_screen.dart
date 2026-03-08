@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-
+import '../../../../core/context/context_cubit.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../bloc/auth_bloc.dart';
 
@@ -43,20 +43,35 @@ class _LoginScreenState extends State<LoginScreen> {
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthAuthenticated) {
-            // Navigate based on role
-            final role = state.user.role;
-            switch (role) {
-              case 'student':
-                context.go('/student');
-              case 'teacher':
-                context.go('/teacher');
-              case 'parent':
-                context.go('/parent');
-              case 'admin':
-              case 'superadmin':
-                context.go('/teacher');
-              default:
-                context.go('/student');
+            // Load contexts into ContextCubit
+            final contextCubit = context.read<ContextCubit>();
+            contextCubit.loadContexts(state.contexts);
+
+            // Navigate based on context count
+            if (state.contexts.length > 1) {
+              // Multi-context → selector screen
+              context.go('/context-selector');
+            } else {
+              // Single context → direct to role home
+              final role = state.contexts.isNotEmpty
+                  ? state.contexts.first.role
+                  : state.user.role;
+              switch (role.toLowerCase()) {
+                case 'student':
+                  context.go('/student');
+                case 'teacher':
+                  context.go('/teacher');
+                case 'parent':
+                  context.go('/parent');
+                case 'admin':
+                case 'superadmin':
+                case 'super_admin':
+                case 'director':
+                case 'accountant':
+                  context.go('/teacher');
+                default:
+                  context.go('/student');
+              }
             }
           } else if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(

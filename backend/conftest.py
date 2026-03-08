@@ -19,11 +19,10 @@ def school(db):
 
     return School.objects.create(
         name="Test School",
-        code="test-school",
+        subdomain="test-school",
         address="123 Test Street, Algiers",
         phone="0551234567",
         wilaya="Alger",
-        school_type="middle",
         is_active=True,
     )
 
@@ -53,10 +52,10 @@ def admin_user(db, school):
     from apps.accounts.models import User
 
     return User.objects.create_user(
-        email="admin@test-school.dz",
+        phone_number="0550000001",
         password="Test@1234",
         school=school,
-        role="admin",
+        role="ADMIN",
         first_name="Admin",
         last_name="Test",
         is_staff=True,
@@ -69,10 +68,10 @@ def teacher_user(db, school):
     from apps.accounts.models import User
 
     return User.objects.create_user(
-        email="teacher@test-school.dz",
+        phone_number="0550000002",
         password="Test@1234",
         school=school,
-        role="teacher",
+        role="TEACHER",
         first_name="Karim",
         last_name="Benmoussa",
     )
@@ -84,10 +83,10 @@ def student_user(db, school):
     from apps.accounts.models import User
 
     return User.objects.create_user(
-        email="student@test-school.dz",
+        phone_number="0550000003",
         password="Test@1234",
         school=school,
-        role="student",
+        role="STUDENT",
         first_name="Ahmed",
         last_name="Benali",
     )
@@ -99,10 +98,10 @@ def parent_user(db, school):
     from apps.accounts.models import User
 
     return User.objects.create_user(
-        email="parent@test-school.dz",
+        phone_number="0550000004",
         password="Test@1234",
         school=school,
-        role="parent",
+        role="PARENT",
         first_name="Mohamed",
         last_name="Benali",
     )

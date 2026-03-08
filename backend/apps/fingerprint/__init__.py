@@ -1,0 +1,1 @@
+"""Fingerprint / biometric attendance tracking."""

@@ -2,6 +2,7 @@
 Announcements views — admin CRUD, role-filtered reads, read tracking.
 """
 
+from django.db import models
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -10,7 +11,7 @@ from rest_framework import permissions, serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Announcement, AnnouncementRead
+from .models import Announcement, AnnouncementAttachment, AnnouncementRead
 from .serializers import AnnouncementCreateSerializer, AnnouncementSerializer
 
 # Reusable inline schema
@@ -118,7 +119,9 @@ class AnnouncementListCreateView(APIView):
             .prefetch_related("attachments")
         )
 
-        serializer = AnnouncementSerializer(qs, many=True)
+        serializer = AnnouncementSerializer(
+            qs, many=True, context={"request": request}
+        )
         return Response(serializer.data)
 
     @extend_schema(
@@ -156,12 +159,23 @@ class AnnouncementListCreateView(APIView):
             target_section_id=data.get("target_section_id"),
             target_class_id=data.get("target_class_id"),
             is_pinned=data.get("is_pinned", False),
+            is_urgent=data.get("is_urgent", False),
             publish_at=data.get("publish_at"),
             published_at=timezone.now() if not data.get("publish_at") else None,
         )
 
+        # Send FCM push notification via Celery task
+        if not data.get("publish_at"):
+            try:
+                from apps.chat.tasks import send_announcement_notification
+                send_announcement_notification.delay(str(announcement.id))
+            except Exception:
+                pass
+
         return Response(
-            AnnouncementSerializer(announcement).data,
+            AnnouncementSerializer(
+                announcement, context={"request": request}
+            ).data,
             status=status.HTTP_201_CREATED,
         )
 
@@ -199,7 +213,14 @@ class AnnouncementDetailView(APIView):
             is_deleted=False,
         )
 
-        serializer = AnnouncementSerializer(announcement)
+        # Increment views count
+        Announcement.objects.filter(pk=pk).update(
+            views_count=models.F("views_count") + 1
+        )
+
+        serializer = AnnouncementSerializer(
+            announcement, context={"request": request}
+        )
         return Response(serializer.data)
 
     @extend_schema(
@@ -234,6 +255,7 @@ class AnnouncementDetailView(APIView):
             "target_section_id",
             "target_class_id",
             "is_pinned",
+            "is_urgent",
             "publish_at",
         ]
         for field in allowed_fields:
@@ -246,7 +268,11 @@ class AnnouncementDetailView(APIView):
                     setattr(announcement, field, request.data[field])
 
         announcement.save()
-        return Response(AnnouncementSerializer(announcement).data)
+        return Response(
+            AnnouncementSerializer(
+                announcement, context={"request": request}
+            ).data
+        )
 
     @extend_schema(
         tags=["announcements"],
@@ -312,3 +338,204 @@ class AnnouncementMarkReadView(APIView):
         )
 
         return Response({"detail": "Marked as read."})
+
+
+# ---------------------------------------------------------------------------
+# 4. AnnouncementImageUploadView — upload image for an announcement
+# ---------------------------------------------------------------------------
+
+
+class AnnouncementImageUploadView(APIView):
+    """
+    POST /api/v1/announcements/<id>/upload-image/
+    Upload an image for an existing announcement.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    @extend_schema(
+        tags=["announcements"],
+        summary="Upload announcement image",
+        description="Upload an image for an announcement. Requires ADMIN or SECTION_ADMIN role.",
+        request={"multipart/form-data": {"type": "object", "properties": {"image": {"type": "string", "format": "binary"}}}},
+        responses={
+            200: AnnouncementSerializer,
+            400: OpenApiResponse(description="No image file provided."),
+            403: OpenApiResponse(description="Not a school admin."),
+            404: OpenApiResponse(description="Not found."),
+        },
+    )
+    def post(self, request, pk):
+        if request.user.role not in ("ADMIN", "SECTION_ADMIN"):
+            return Response(
+                {"detail": "Only admins can upload images."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        announcement = get_object_or_404(
+            Announcement,
+            pk=pk,
+            school=request.user.school,
+            is_deleted=False,
+        )
+
+        image = request.FILES.get("image")
+        if not image:
+            return Response(
+                {"detail": "No image file provided."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Validate file type
+        ext = image.name.rsplit(".", 1)[-1].lower() if "." in image.name else ""
+        if ext not in {"png", "jpg", "jpeg", "gif", "webp"}:
+            return Response(
+                {"detail": "Only image files (png, jpg, jpeg, gif, webp) are allowed."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Validate size (5MB max for images)
+        if image.size > 5 * 1024 * 1024:
+            return Response(
+                {"detail": "Image too large. Max 5 MB."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        announcement.image = image
+        announcement.save(update_fields=["image"])
+
+        return Response(
+            AnnouncementSerializer(
+                announcement, context={"request": request}
+            ).data
+        )
+
+
+# ---------------------------------------------------------------------------
+# 4b. AnnouncementAttachmentUploadView — upload files for announcement
+# ---------------------------------------------------------------------------
+
+ANNOUNCEMENT_ALLOWED_EXTENSIONS = {
+    "png", "jpg", "jpeg", "gif", "webp",
+    "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+    "mp4", "mov",
+}
+
+
+class AnnouncementAttachmentUploadView(APIView):
+    """POST /api/v1/announcements/<id>/upload-attachment/"""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        if request.user.role not in ("ADMIN", "SECTION_ADMIN"):
+            return Response(
+                {"detail": "Only admins can upload attachments."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        announcement = get_object_or_404(
+            Announcement,
+            pk=pk,
+            school=request.user.school,
+            is_deleted=False,
+        )
+
+        uploaded_file = request.FILES.get("file")
+        if not uploaded_file:
+            return Response(
+                {"detail": "No file provided."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if uploaded_file.size > 25 * 1024 * 1024:
+            return Response(
+                {"detail": "File too large. Max 25 MB."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        ext = (
+            uploaded_file.name.rsplit(".", 1)[-1].lower()
+            if "." in uploaded_file.name
+            else ""
+        )
+        if ext not in ANNOUNCEMENT_ALLOWED_EXTENSIONS:
+            return Response(
+                {"detail": f"Extension not allowed. Accepted: {', '.join(sorted(ANNOUNCEMENT_ALLOWED_EXTENSIONS))}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        attachment = AnnouncementAttachment.objects.create(
+            announcement=announcement,
+            file=uploaded_file,
+            file_name=uploaded_file.name,
+        )
+
+        return Response(
+            {
+                "id": str(attachment.id),
+                "file": request.build_absolute_uri(attachment.file.url),
+                "file_name": attachment.file_name,
+                "created_at": attachment.created_at.isoformat(),
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+# ---------------------------------------------------------------------------
+# 5. AnnouncementReadReceiptsView — list who read an announcement
+# ---------------------------------------------------------------------------
+
+
+class AnnouncementReadReceiptsView(APIView):
+    """
+    GET /api/v1/announcements/<id>/readers/
+    List users who have read the announcement (admin only).
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    @extend_schema(
+        tags=["announcements"],
+        summary="List announcement readers",
+        description="List all users who have read this announcement. Requires ADMIN or SECTION_ADMIN role.",
+        responses={200: inline_serializer(
+            "AnnouncementReadersResponse",
+            fields={
+                "total_reads": serializers.IntegerField(),
+                "readers": serializers.ListField(child=serializers.DictField()),
+            },
+        )},
+    )
+    def get(self, request, pk):
+        if request.user.role not in ("ADMIN", "SECTION_ADMIN"):
+            return Response(
+                {"detail": "Only admins can view read receipts."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        announcement = get_object_or_404(
+            Announcement,
+            pk=pk,
+            school=request.user.school,
+            is_deleted=False,
+        )
+
+        reads = AnnouncementRead.objects.filter(
+            announcement=announcement,
+        ).select_related("user").order_by("-read_at")
+
+        readers = [
+            {
+                "user_id": str(r.user_id),
+                "name": f"{r.user.first_name} {r.user.last_name}".strip(),
+                "role": r.user.role,
+                "read_at": r.read_at.isoformat() if r.read_at else None,
+            }
+            for r in reads
+        ]
+
+        return Response({
+            "total_reads": len(readers),
+            "readers": readers,
+        })

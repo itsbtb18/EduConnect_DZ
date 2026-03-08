@@ -21,12 +21,30 @@ interface User {
   subscription_plan?: string;
 }
 
+/** Operational roles that can access the admin panel */
+export type OperationalRole =
+  | 'SUPER_ADMIN'
+  | 'ADMIN'
+  | 'SECTION_ADMIN'
+  | 'GENERAL_SUPERVISOR'
+  | 'FINANCE_MANAGER'
+  | 'LIBRARIAN'
+  | 'CANTEEN_MANAGER'
+  | 'TRANSPORT_MANAGER'
+  | 'HR_MANAGER'
+  | 'TEACHER'
+  | 'PARENT'
+  | 'STUDENT';
+
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   isSuperAdmin: boolean;
   isAdmin: boolean;
+  /** The operational role of the current user */
+  operationalRole: OperationalRole;
+  activeModules: string[];
   login: (phone_number: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -40,9 +58,20 @@ export const useAuth = () => {
   return context;
 };
 
+/** Decode the payload of a JWT (no verification — just read claims). */
+function decodeJwtPayload(token: string): Record<string, unknown> {
+  try {
+    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(base64));
+  } catch {
+    return {};
+  }
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeModules, setActiveModules] = useState<string[]>([]);
 
   const fetchUser = useCallback(async () => {
     try {
@@ -56,6 +85,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       data.school_name = data.school_detail?.name || '';
       data.subscription_plan = data.school_detail?.subscription_plan || '';
       setUser(data);
+
+      // Extract active_modules from JWT payload
+      const payload = decodeJwtPayload(token);
+      setActiveModules(Array.isArray(payload.active_modules) ? payload.active_modules as string[] : []);
     } catch {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
@@ -91,6 +124,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   const isAdmin = isSuperAdmin || user?.role === 'ADMIN' || user?.role === 'SECTION_ADMIN';
+  const operationalRole: OperationalRole = (user?.role as OperationalRole) || 'STUDENT';
 
   return (
     <AuthContext.Provider
@@ -100,6 +134,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         isSuperAdmin,
         isAdmin,
+        operationalRole,
+        activeModules,
         login,
         logout,
         refreshUser: fetchUser,

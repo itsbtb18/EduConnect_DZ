@@ -169,6 +169,7 @@
 .msg-avatar--eleve    { background: #F59E0B; }
 .msg-avatar--admin    { background: #8B5CF6; }
 .msg-avatar--default  { background: var(--text-tertiary); }
+.msg-avatar--room     { background: #6366F1; }
 
 /* Small avatar (chat header) */
 .msg-avatar--sm {
@@ -982,4 +983,194 @@
     max-height: 100vh;
     border-radius: 0;
   }
+}
+
+/* ── Tabs ── */
+.msg-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-default);
+  flex-shrink: 0;
+}
+.msg-tab {
+  flex: 1;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s;
+  border-bottom: 2px solid transparent;
+}
+.msg-tab:hover { color: var(--text-secondary); }
+.msg-tab--active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* ── Room create button ── */
+.msg-room-create-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+  border: none;
+  background: none;
+  cursor: pointer;
+  width: 100%;
+  border-bottom: 1px solid var(--border-default);
+}
+.msg-room-create-btn:hover { background: var(--bg-surface-2); }
+
+/* ── Search close btn ── */
+.msg-search__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  padding: 4px;
+}
+.msg-search__close:hover { color: var(--text-primary); }
+
+/* ── Bubble pin badge ── */
+.msg-bubble--pinned {
+  border-left: 3px solid var(--accent);
+}
+.msg-bubble__pin-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--accent);
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+/* ── Bubble status (read receipts) ── */
+.msg-bubble__status {
+  margin-left: 4px;
+  font-size: 11px;
+}
+
+/* ── Bubble menu button ── */
+.msg-bubble__menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  padding: 2px;
+  margin-left: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  vertical-align: middle;
+}
+.msg-bubble:hover .msg-bubble__menu-btn { opacity: 1; }
+.msg-bubble__menu-btn:hover { color: var(--text-primary); }
+
+/* ── Context menu ── */
+.msg-bubble__context-menu {
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  background: var(--bg-surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+  z-index: 50;
+}
+.msg-bubble__context-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  border-radius: 6px;
+  width: 100%;
+  text-align: left;
+}
+.msg-bubble__context-menu button:hover {
+  background: var(--bg-surface-2);
+  color: var(--text-primary);
+}
+
+/* Make bubble relative for context menu positioning */
+.msg-bubble { position: relative; }
+
+/* ── Template picker ── */
+.msg-template-picker {
+  position: absolute;
+  bottom: 60px;
+  left: 12px;
+  right: 12px;
+  background: var(--bg-surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  max-height: 300px;
+  display: flex;
+  flex-direction: column;
+  z-index: 50;
+}
+.msg-template-picker__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-default);
+  font-size: 13px;
+  font-weight: 600;
+}
+.msg-template-picker__header button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-tertiary);
+}
+.msg-template-picker__list {
+  overflow-y: auto;
+  max-height: 240px;
+}
+.msg-template-picker__item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 16px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-default);
+}
+.msg-template-picker__item:hover { background: var(--bg-surface-2); }
+.msg-template-picker__item:last-child { border-bottom: none; }
+.msg-template-picker__item-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+.msg-template-picker__item-preview {
+  font-size: 12px;
+  color: var(--text-tertiary);
 }

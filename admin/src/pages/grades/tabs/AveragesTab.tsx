@@ -298,7 +298,7 @@ const AveragesTab: React.FC<AveragesTabProps> = ({ filters, classInfo }) => {
             loading={recalcTrimAvg.isPending}
             disabled={isLocked}
           >
-            🔄 Recalculer tout
+            Recalculer tout
           </Button>
           <Tag color={allTrimPublished ? 'green' : 'default'}>
             {trimesterAverages.filter(ta => ta.is_published).length}/{trimesterAverages.length} publiées
@@ -310,7 +310,7 @@ const AveragesTab: React.FC<AveragesTabProps> = ({ filters, classInfo }) => {
             onPublish={handlePublishAll}
             loading={publishTrimAvg.isPending}
             disabled={trimesterAverages.length === 0 || isLocked}
-            label="📢 Publier toutes les moyennes"
+            label="Publier toutes les moyennes"
             confirmMessage="Publier toutes les moyennes du trimestre ? Les parents/élèves pourront les consulter."
           />
           {!isLocked ? (
@@ -320,7 +320,7 @@ const AveragesTab: React.FC<AveragesTabProps> = ({ filters, classInfo }) => {
               disabled={!allTrimPublished}
               style={allTrimPublished ? { background: '#EF4444', borderColor: '#EF4444', color: '#fff' } : undefined}
             >
-              🔒 Verrouiller le trimestre
+              Verrouiller le trimestre
             </Button>
           ) : (
             <Button
@@ -328,7 +328,7 @@ const AveragesTab: React.FC<AveragesTabProps> = ({ filters, classInfo }) => {
               onClick={() => setUnlockConfirmOpen(true)}
               style={{ background: '#F59E0B', borderColor: '#F59E0B', color: '#fff' }}
             >
-              🔓 Déverrouiller (urgence)
+              Déverrouiller (urgence)
             </Button>
           )}
         </Space>
@@ -348,7 +348,7 @@ const AveragesTab: React.FC<AveragesTabProps> = ({ filters, classInfo }) => {
 
       {/* Lock confirmation modal */}
       <Modal
-        title="🔒 Verrouiller le trimestre"
+        title="Verrouiller le trimestre"
         open={lockConfirmOpen}
         onCancel={() => { setLockConfirmOpen(false); setLockConfirmText(''); }}
         onOk={handleLock}
@@ -378,7 +378,7 @@ const AveragesTab: React.FC<AveragesTabProps> = ({ filters, classInfo }) => {
 
       {/* Unlock confirmation modal */}
       <Modal
-        title="🔓 Déverrouiller le trimestre (urgence)"
+        title="Déverrouiller le trimestre (urgence)"
         open={unlockConfirmOpen}
         onCancel={() => { setUnlockConfirmOpen(false); setUnlockReason(''); }}
         onOk={handleUnlock}
